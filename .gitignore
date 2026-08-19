@@ -1,0 +1,29 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# env & secrets — KHÔNG BAO GIỜ commit
+.env
+.env.*
+!.env.example
+
+# hardhat
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/types/
+packages/contracts/coverage/
+packages/contracts/fhevmTemp/
+
+# next.js
+apps/web/.next/
+apps/web/out/
+apps/web/next-env.d.ts
+
+# build outputs
+dist/
+*.tsbuildinfo
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
