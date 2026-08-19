@@ -1695,7 +1695,7 @@ Deliverables:
 - Epoch state machine, batch snapshot, multiply-high random ticket, batch selection.
 - Employer prize funding and encrypted pending winnings.
 - Claim/claimFor and ACL coverage.
-- Unit/integration/invariant suite with Alice/Bob/Carol.
+- Unit/integration/invariant suite with Jimmer/Bob/Carol.
 - First Sepolia dev deployment.
 
 Exit gate:
@@ -1771,7 +1771,7 @@ Never cut encrypted draw, withdrawal, correct accounting, user decrypt, privacy 
 | SPIKE-01 | Pin FHE/OZ/SDK versions and prove Sepolia encrypt/decrypt | P0 | None | Minimal live tx + locked versions |
 | SPIKE-02 | Verify ERC-7984 actual-transfer callback/pull semantics | P0 | SPIKE-01 | Contract test with requested > available |
 | ARCH-01 | Initialize monorepo, manifests and CI | P0 | None | Clean install/build/test |
-| SC-01 | Deposit and encrypted principal accounting | P0 | SPIKE-02 | Alice deposit/decrypt test |
+| SC-01 | Deposit and encrypted principal accounting | P0 | SPIKE-02 | Jimmer deposit/decrypt test |
 | SC-02 | Partial withdraw + `withdrawAll` in every phase | P0 | SC-01 | No-loss invariant suite |
 | SC-03 | TWAB checkpoint/frozen epoch weights | P0 | SC-01 | Boundary and timing tests |
 | SC-04 | Multiply-high RNG ticket and batch selection | P0 | SC-03 | Distribution, one-winner and reroll tests |
@@ -1846,11 +1846,11 @@ Use two browser profiles/wallets and a pre-funded employer. Prepare one epoch cl
 |---|---|---|
 | 0:00–0:15 | Real-person pitch: public balances expose savers; PayDay Pot encrypts amount/TWAB/result | Face + product tagline |
 | 0:15–0:35 | Landing: employer-funded public prize, hidden values, principal available | Privacy boundary card |
-| 0:35–0:58 | Alice deposits confidential cUSDC | Real tx; no clear pool deposit amount |
-| 0:58–1:18 | Alice signs EIP-712 and sees her own balance/TWAB | Observer view stays masked |
+| 0:35–0:58 | Jimmer deposits confidential cUSDC | Real tx; no clear pool deposit amount |
+| 0:58–1:18 | Jimmer signs EIP-712 and sees her own balance/TWAB | Observer view stays masked |
 | 1:18–1:42 | Employer boost + Fairness Receipt explanation | Sponsor reserve separate from principal |
 | 1:42–2:05 | Trigger snapshot/randomness/selection batches | Real tx links and cursor |
-| 2:05–2:30 | Alice/Bob independently reveal result | Winner positive; loser zero; no public winner event |
+| 2:05–2:30 | Jimmer/Bob independently reveal result | Winner positive; loser zero; no public winner event |
 | 2:30–2:48 | Winner claims encrypted prize | Claim tx + disclosure of address/timing caveat |
 | 2:48–3:00 | User `withdrawAll()` principal; show repo/tests/contracts | No-loss proof + CTA |
 

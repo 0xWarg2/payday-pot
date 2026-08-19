@@ -201,7 +201,7 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
   - invalid proof;
   - wrong token/callback;
   - duplicate submission protection at client reducer.
-- Verify Alice can decrypt updated principal; Bob cannot.
+- Verify Jimmer can decrypt updated principal; Bob cannot.
 
 ### Deliverables
 
@@ -212,9 +212,9 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
 
 ### Exit gate
 
-- [ ] Alice deposits encrypted cUSDC and decrypts exact credited principal.
+- [ ] Jimmer deposits encrypted cUSDC and decrypts exact credited principal.
 - [ ] Requested > available cannot inflate principal.
-- [ ] Bob/employer cannot decrypt Alice principal.
+- [ ] Bob/employer cannot decrypt Jimmer principal.
 - [ ] No plaintext amount in event/log/backend.
 - [ ] New handle has correct ACL.
 - [ ] Deposit test is deterministic in local FHE mode.
@@ -227,7 +227,7 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
 
 ### EOD demo
 
-Alice confidential deposit → contract receipt → Alice reveal → Bob decrypt denied.
+Jimmer confidential deposit → contract receipt → Jimmer reveal → Bob decrypt denied.
 
 ---
 
@@ -336,7 +336,7 @@ Deposit → pause contract → withdrawAll → decrypt/verify zero remaining pri
 
 ### EOD demo
 
-Alice saves full epoch, Bob joins halfway → locally decrypt test weights 2:1.
+Jimmer saves full epoch, Bob joins halfway → locally decrypt test weights 2:1.
 
 ---
 
@@ -398,7 +398,7 @@ ticket = floor((R × encryptedTotalWeight) / 2^64)
 
 ### EOD demo
 
-Alice/Bob/Carol frozen weights → permissionless batch draw → local test decrypt confirms exactly one winner.
+Jimmer/Bob/Carol frozen weights → permissionless batch draw → local test decrypt confirms exactly one winner.
 
 ---
 
@@ -421,7 +421,7 @@ Alice/Bob/Carol frozen weights → permissionless batch draw → local test decr
 
 ### Integration work
 
-- Alice/Bob/Carol local scenario:
+- Jimmer/Bob/Carol local scenario:
   - different TWAB weights;
   - employer funds prize;
   - draw;
@@ -560,7 +560,7 @@ Incognito landing → connect/switch → enroll → masked dashboard → reveal/
 
 ### Exit gate
 
-- [ ] Alice deposits and withdraws through UI using real contract.
+- [ ] Jimmer deposits and withdraws through UI using real contract.
 - [ ] Employer funds real prize through UI.
 - [ ] Every step/error identifies exact recovery.
 - [ ] Draft amount never persists or enters telemetry.

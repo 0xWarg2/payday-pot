@@ -6,8 +6,8 @@
  * Nằm trong demo/ (ngoài test/) nên KHÔNG chạy cùng `pnpm test`.
  * Dùng hardhat test runner vì đó là đường duy nhất plugin FHEVM init mock in-process.
  *
- * Flow: deploy → Alice encrypt+set → Alice decrypt → Alice add → decrypt lại
- *       → Bob decrypt Alice (PHẢI FAIL) → tổng kết.
+ * Flow: deploy → Jimmer encrypt+set → Jimmer decrypt → Jimmer add → decrypt lại
+ *       → Bob decrypt Jimmer (PHẢI FAIL) → tổng kết.
  */
 import { FhevmType } from "@fhevm/hardhat-plugin";
 import { ethers, fhevm } from "hardhat";
@@ -21,7 +21,7 @@ describe("PayDay Pot — Day 1 Compatibility Spike Demo", () => {
     if (!fhevm.isMock) {
       this.skip();
     }
-    const [, alice, bob] = await ethers.getSigners();
+    const [, jimmer, bob] = await ethers.getSigners();
 
     line("\n  ━━━ PayDay Pot — Day 1 Compatibility Spike Demo ━━━\n");
 
@@ -30,30 +30,30 @@ describe("PayDay Pot — Day 1 Compatibility Spike Demo", () => {
     const addr = await contract.getAddress();
     ok(`CompatSpike deployed: ${addr}`);
 
-    // 2. Alice encrypts 1000 client-side and writes it
-    const input = await fhevm.createEncryptedInput(addr, alice.address).add64(1000n).encrypt();
-    await (await contract.connect(alice).setValue(input.handles[0], input.inputProof)).wait();
-    ok("Alice encrypted 1000 client-side and stored it (tx contains only ciphertext)");
+    // 2. Jimmer encrypts 1000 client-side and writes it
+    const input = await fhevm.createEncryptedInput(addr, jimmer.address).add64(1000n).encrypt();
+    await (await contract.connect(jimmer).setValue(input.handles[0], input.inputProof)).wait();
+    ok("Jimmer encrypted 1000 client-side and stored it (tx contains only ciphertext)");
 
-    // 3. Alice user-decrypts her own value
-    const handle1 = await contract.getValue(alice.address);
-    const clear1 = await fhevm.userDecryptEuint(FhevmType.euint64, handle1, addr, alice);
-    ok(`Alice EIP-712 user-decrypts her value: ${clear1}`);
+    // 3. Jimmer user-decrypts her own value
+    const handle1 = await contract.getValue(jimmer.address);
+    const clear1 = await fhevm.userDecryptEuint(FhevmType.euint64, handle1, addr, jimmer);
+    ok(`Jimmer EIP-712 user-decrypts their value: ${clear1}`);
 
-    // 4. Alice adds 500 homomorphically
-    const input2 = await fhevm.createEncryptedInput(addr, alice.address).add64(500n).encrypt();
-    await (await contract.connect(alice).addValue(input2.handles[0], input2.inputProof)).wait();
-    const handle2 = await contract.getValue(alice.address);
-    const clear2 = await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, alice);
+    // 4. Jimmer adds 500 homomorphically
+    const input2 = await fhevm.createEncryptedInput(addr, jimmer.address).add64(500n).encrypt();
+    await (await contract.connect(jimmer).addValue(input2.handles[0], input2.inputProof)).wait();
+    const handle2 = await contract.getValue(jimmer.address);
+    const clear2 = await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, jimmer);
     ok(`FHE.add on ciphertext: 1000 + 500 = ${clear2} (contract never saw plaintext)`);
 
-    // 5. Bob tries to decrypt Alice's value — must fail
+    // 5. Bob tries to decrypt Jimmer's value — must fail
     try {
       await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, bob);
-      throw new Error("PRIVACY BREACH: bob decrypted alice's value!");
+      throw new Error("PRIVACY BREACH: bob decrypted jimmer's value!");
     } catch (e) {
       if ((e as Error).message.includes("PRIVACY BREACH")) throw e;
-      no("Bob attempts to decrypt Alice's handle → DENIED by ACL");
+      no("Bob attempts to decrypt Jimmer's handle → DENIED by ACL");
     }
 
     line("\n  ━━━ Result: encrypt → store → homomorphic add → user-decrypt → ACL enforced ━━━");

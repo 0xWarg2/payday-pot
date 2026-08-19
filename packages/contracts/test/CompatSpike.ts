@@ -7,7 +7,7 @@ import { CompatSpike, CompatSpike__factory } from "../types";
 
 type Signers = {
   deployer: HardhatEthersSigner;
-  alice: HardhatEthersSigner;
+  jimmer: HardhatEthersSigner;
   bob: HardhatEthersSigner;
 };
 
@@ -30,7 +30,7 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
 
   before(async function () {
     const ethSigners = await ethers.getSigners();
-    signers = { deployer: ethSigners[0], alice: ethSigners[1], bob: ethSigners[2] };
+    signers = { deployer: ethSigners[0], jimmer: ethSigners[1], bob: ethSigners[2] };
   });
 
   beforeEach(async function () {
@@ -42,62 +42,62 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
   });
 
   it("uninitialized value is the zero handle (not encrypted zero)", async function () {
-    const handle = await contract.getValue(signers.alice.address);
+    const handle = await contract.getValue(signers.jimmer.address);
     expect(handle).to.eq(ethers.ZeroHash);
   });
 
-  it("setValue: alice writes and user-decrypts her exact value", async function () {
-    const input = await encrypt64(contractAddress, signers.alice, 123_456n);
-    await (await contract.connect(signers.alice).setValue(input.handles[0], input.inputProof)).wait();
+  it("setValue: jimmer writes and user-decrypts her exact value", async function () {
+    const input = await encrypt64(contractAddress, signers.jimmer, 123_456n);
+    await (await contract.connect(signers.jimmer).setValue(input.handles[0], input.inputProof)).wait();
 
-    const handle = await contract.getValue(signers.alice.address);
-    const clear = await fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.alice);
+    const handle = await contract.getValue(signers.jimmer.address);
+    const clear = await fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.jimmer);
     expect(clear).to.eq(123_456n);
   });
 
   it("addValue: accumulates across calls (FHE.add + deliberate zero init)", async function () {
-    const first = await encrypt64(contractAddress, signers.alice, 100n);
-    await (await contract.connect(signers.alice).addValue(first.handles[0], first.inputProof)).wait();
+    const first = await encrypt64(contractAddress, signers.jimmer, 100n);
+    await (await contract.connect(signers.jimmer).addValue(first.handles[0], first.inputProof)).wait();
 
-    const second = await encrypt64(contractAddress, signers.alice, 250n);
-    await (await contract.connect(signers.alice).addValue(second.handles[0], second.inputProof)).wait();
+    const second = await encrypt64(contractAddress, signers.jimmer, 250n);
+    await (await contract.connect(signers.jimmer).addValue(second.handles[0], second.inputProof)).wait();
 
-    const handle = await contract.getValue(signers.alice.address);
-    const clear = await fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.alice);
+    const handle = await contract.getValue(signers.jimmer.address);
+    const clear = await fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.jimmer);
     expect(clear).to.eq(350n);
   });
 
-  it("NEGATIVE ACL: bob cannot decrypt alice's handle", async function () {
-    const input = await encrypt64(contractAddress, signers.alice, 777n);
-    await (await contract.connect(signers.alice).setValue(input.handles[0], input.inputProof)).wait();
+  it("NEGATIVE ACL: bob cannot decrypt jimmer's handle", async function () {
+    const input = await encrypt64(contractAddress, signers.jimmer, 777n);
+    await (await contract.connect(signers.jimmer).setValue(input.handles[0], input.inputProof)).wait();
 
-    const handle = await contract.getValue(signers.alice.address);
+    const handle = await contract.getValue(signers.jimmer.address);
     await expect(
       fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.bob),
     ).to.be.rejected;
   });
 
-  it("NEGATIVE ACL: deployer (admin) cannot decrypt alice's handle either", async function () {
-    const input = await encrypt64(contractAddress, signers.alice, 999n);
-    await (await contract.connect(signers.alice).setValue(input.handles[0], input.inputProof)).wait();
+  it("NEGATIVE ACL: deployer (admin) cannot decrypt jimmer's handle either", async function () {
+    const input = await encrypt64(contractAddress, signers.jimmer, 999n);
+    await (await contract.connect(signers.jimmer).setValue(input.handles[0], input.inputProof)).wait();
 
-    const handle = await contract.getValue(signers.alice.address);
+    const handle = await contract.getValue(signers.jimmer.address);
     await expect(
       fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.deployer),
     ).to.be.rejected;
   });
 
-  it("isolation: alice and bob values are independent", async function () {
-    const a = await encrypt64(contractAddress, signers.alice, 11n);
-    await (await contract.connect(signers.alice).setValue(a.handles[0], a.inputProof)).wait();
+  it("isolation: jimmer and bob values are independent", async function () {
+    const a = await encrypt64(contractAddress, signers.jimmer, 11n);
+    await (await contract.connect(signers.jimmer).setValue(a.handles[0], a.inputProof)).wait();
     const b = await encrypt64(contractAddress, signers.bob, 22n);
     await (await contract.connect(signers.bob).setValue(b.handles[0], b.inputProof)).wait();
 
     const aClear = await fhevm.userDecryptEuint(
       FhevmType.euint64,
-      await contract.getValue(signers.alice.address),
+      await contract.getValue(signers.jimmer.address),
       contractAddress,
-      signers.alice,
+      signers.jimmer,
     );
     const bClear = await fhevm.userDecryptEuint(
       FhevmType.euint64,
@@ -110,16 +110,16 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
   });
 
   it("input proof bound to another user is rejected", async function () {
-    // Encrypted input created for alice must not be usable by bob.
-    const input = await encrypt64(contractAddress, signers.alice, 555n);
+    // Encrypted input created for jimmer must not be usable by bob.
+    const input = await encrypt64(contractAddress, signers.jimmer, 555n);
     await expect(contract.connect(signers.bob).setValue(input.handles[0], input.inputProof)).to.be
       .reverted;
   });
 
   it("events contain no amount", async function () {
-    const input = await encrypt64(contractAddress, signers.alice, 42n);
-    await expect(contract.connect(signers.alice).setValue(input.handles[0], input.inputProof))
+    const input = await encrypt64(contractAddress, signers.jimmer, 42n);
+    await expect(contract.connect(signers.jimmer).setValue(input.handles[0], input.inputProof))
       .to.emit(contract, "ValueChanged")
-      .withArgs(signers.alice.address);
+      .withArgs(signers.jimmer.address);
   });
 });

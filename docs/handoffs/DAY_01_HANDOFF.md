@@ -18,7 +18,7 @@
 ```bash
 cd "packages/contracts" && pnpm demo
 ```
-Expected: 5 dòng narration — deploy → Alice encrypt 1000 → decrypt 1000 → FHE.add ra 1500 → 🔒 Bob bị ACL chặn. Kết thúc `1 passing`.
+Expected: 5 dòng narration — deploy → Jimmer encrypt 1000 → decrypt 1000 → FHE.add ra 1500 → 🔒 Bob bị ACL chặn. Kết thúc `1 passing`.
 
 Demo phụ: `pnpm validate:registry` (PASS 16/16 qua public RPC) · web: `cd apps/web && pnpm build && pnpm start` → `/spike` → bấm "Init SDK" → 2 dòng ✅.
 

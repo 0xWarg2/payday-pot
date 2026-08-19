@@ -130,7 +130,7 @@ Contract:
 
 Tests:
 - [ ] Deposit thường / requested > available / zero / invalid proof / wrong token
-- [ ] Alice decrypt được principal của mình; Bob và employer bị từ chối
+- [ ] Jimmer decrypt được principal của mình; Bob và employer bị từ chối
 - [ ] Partial withdraw, withdrawAll idempotent, withdraw khi paused
 - [ ] Property: chuỗi deposit/withdraw ngẫu nhiên bảo toàn principal
 - [ ] Request > balance không burn claim, không leak qua error message
@@ -193,7 +193,7 @@ full capped draw vừa trong bounded tx trên số HCU đã đo.
 - [ ] Credit encrypted `pendingPrize` trong winner scan + ACL cho từng user
 - [ ] `claim()` idempotent; giảm liability bằng actual transfer; KHÔNG làm `claimFor`
 - [ ] Finalize/reset epoch không đụng principal
-- [ ] Script integration Alice/Bob/Carol: weights khác nhau → fund → draw →
+- [ ] Script integration Jimmer/Bob/Carol: weights khác nhau → fund → draw →
       từng người decrypt kết quả riêng → winner claim → tất cả withdrawAll
 - [ ] Negative ACL: employer/keeper/user khác đều bị từ chối
 - [ ] Draft `PRIVACY.md`, `THREAT_MODEL.md`, `KNOWN_LIMITATIONS.md` từ behavior thật
@@ -240,7 +240,7 @@ own position · wrong-network/rejected recover được.
 Tests: rejected approval/tx, wrong chain, relayer timeout, duplicate-submit,
 draft không vào persistence/telemetry, employer negative-permission.
 
-**Exit gate:** Alice deposit/withdraw qua UI trên contract thật · employer fund
+**Exit gate:** Jimmer deposit/withdraw qua UI trên contract thật · employer fund
 prize thật qua UI · mọi error chỉ đúng recovery · giá trị mới masked đến khi
 reveal tươi.
 
