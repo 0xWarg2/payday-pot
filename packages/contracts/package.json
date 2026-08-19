@@ -50,6 +50,7 @@
     "deploy:localhost": "hardhat deploy --network localhost",
     "deploy:sepolia": "hardhat deploy --network sepolia",
     "verify:sepolia": "hardhat verify --network sepolia",
-    "chain": "hardhat node --network hardhat --no-deploy"
+    "chain": "hardhat node --network hardhat --no-deploy",
+    "demo": "hardhat test demo/demo-day1.ts"
   }
 }
