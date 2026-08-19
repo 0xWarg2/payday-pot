@@ -2,7 +2,7 @@
   "name": "payday-pot",
   "version": "0.1.0",
   "private": true,
-  "description": "Confidential prize-savings pool on Zama FHEVM — Season 4",
+  "description": "Confidential prize-savings pool on Zama FHEVM \u2014 Season 4",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
