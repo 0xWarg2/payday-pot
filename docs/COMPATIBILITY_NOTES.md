@@ -55,6 +55,9 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 4. **COOP/COEP bắt buộc** (next.config headers) → đã verify `crossOriginIsolated: true` trong production build.
 5. Đổi tên `.umd.cjs` → `.umd.js` khi copy (tránh MIME sai).
 6. `hardhat run` KHÔNG init được fhevm mock (plugin chỉ init qua `hardhat test` hoặc `--network localhost|sepolia`) → demo/scripts cần mock phải chạy qua test runner (xem `packages/contracts/demo/`).
+7. **SDK network KHÔNG dùng `window.ethereum`**: nếu MetaMask đang đứng mạng khác lúc `createInstance` → `eip712Domain()` gọi nhầm mạng → CALL_EXCEPTION. Luôn truyền RPC Sepolia cố định; wallet chỉ để ký tx/EIP-712.
+8. **Address phải checksummed**: SDK validate `getChecksumAddress(a) === a` — MetaMask trả lowercase → `getAddress()` trước khi đưa vào `createEncryptedInput`/`userDecrypt`.
+9. **`createEIP712`/`userDecrypt` nhận `startTimestamp`/`durationDays` là `number`** (UintNumber check `typeof === "number"`), KHÔNG nhận string như docs cũ.
 
 ## 5. Trạng thái verify
 
