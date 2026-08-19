@@ -65,7 +65,8 @@ export default function SpikePage() {
   const [log, setLog] = useState<string[]>([]);
   const [sdkReady, setSdkReady] = useState(false);
   const [account, setAccount] = useState<string>("");
-  const [contractAddr, setContractAddr] = useState<string>("");
+  // CompatSpike trên Sepolia — xem deployments/sepolia.json
+  const [contractAddr, setContractAddr] = useState<string>("0xceEee18891D4d53699E2Ab28C402fA0C5D721603");
   const [value, setValue] = useState<string>("1000");
   const [decrypted, setDecrypted] = useState<string>("");
   const [busy, setBusy] = useState(false);
