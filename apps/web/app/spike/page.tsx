@@ -85,7 +85,10 @@ export default function SpikePage() {
         kmsParams: "/kms_lib_bg.wasm",
       });
       say("✅ WASM loaded (cross-origin isolated: " + String(crossOriginIsolated) + ")");
-      const network = window.ethereum ?? "https://ethereum-sepolia-rpc.publicnode.com";
+      // Luôn đọc chain qua RPC Sepolia cố định — không dùng window.ethereum:
+      // MetaMask có thể đang đứng ở mạng khác lúc init → CALL_EXCEPTION.
+      // MetaMask chỉ dùng để ký tx/EIP-712 (qua ethers signer ở bước 2–4).
+      const network = "https://ethereum-sepolia-rpc.publicnode.com";
       const instance = await sdk.createInstance({ ...sdk.SepoliaConfig, network });
       sdkRef.current = instance as unknown as SdkInstance;
       setSdkReady(true);
