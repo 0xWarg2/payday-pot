@@ -12,6 +12,7 @@ internal freeze 04/09 18:00 ICT. Network: **Ethereum Sepolia** (testnet).
 | `docs/PAYDAY_POT_IMPLEMENTATION_PLAN.md` | Spec chi tiết: screens (§7–11), contract math (§17–18), privacy (§15), tests (§22) |
 | `docs/PAYDAY_POT_VISUAL_STYLE.md` | Chỉ khi tạo ảnh build-in-public |
 | `COMPATIBILITY_NOTES.md` (tạo ở Day 1) | Trước khi đụng bất kỳ FHE/ERC-7984 API nào |
+| `docs/ERROR_RECOVERY_MATRIX.md` | Khi làm bất kỳ error state / pending state / UI báo lỗi — tiêu chí chấm "handle errors gracefully", chỗ winner S3 bị chất vấn |
 
 Plan 10 ngày cũ (`PAYDAY_POT_10_DAY_BUILD_PLAN.md`) đã bị **override về lịch**
 bởi `EXECUTION_PLAN.md`; nội dung task/gate của nó vẫn tham khảo được.
