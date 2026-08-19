@@ -51,6 +51,7 @@
     "deploy:sepolia": "hardhat deploy --network sepolia",
     "verify:sepolia": "hardhat verify --network sepolia",
     "chain": "hardhat node --network hardhat --no-deploy",
-    "demo": "hardhat test demo/demo-day1.ts"
+    "demo": "hardhat test demo/demo-day1.ts",
+    "validate:registry": "hardhat run scripts/validate-registry.ts"
   }
 }
