@@ -81,6 +81,11 @@ Hard rules giữ nguyên từ plan gốc: không qua ngày khi P0 gate chưa đ�
 polish khi vertical slice chưa xong; mỗi ngày kết thúc bằng demo <5 phút,
 tests xanh, docs cập nhật, commit/tag.
 
+**Demo rule (chốt 19/08):** mỗi ngày/phase kết thúc bằng MỘT lệnh demo duy nhất,
+output sạch có narration (kiểu `pnpm demo` Day 1) — không phải "chạy tests rồi
+tự suy ra". Lệnh demo + expected output ghi vào mục **Demo** của handoff ngày đó
+để ngày sau (và video submission) reproduce được ngay.
+
 ---
 
 ## Day 1 — 19/08 — Foundation & compatibility spike
@@ -88,18 +93,18 @@ tests xanh, docs cập nhật, commit/tag.
 **Mục tiêu:** không còn phỏng đoán nào về versions, SDK/WASM, wrapper, ERC-7984 API.
 
 Sáng:
-- [ ] `git init` + pnpm workspace: `apps/web`, `packages/contracts`, `packages/sdk`, `packages/shared`
-- [ ] Start từ official FHEVM Hardhat template; pin exact versions
+- [x] `git init` + pnpm workspace: `apps/web`, `packages/contracts`, `packages/sdk`, `packages/shared`
+- [x] Start từ official FHEVM Hardhat template; pin exact versions
       (`@fhevm/solidity`, Hardhat FHE plugin, OZ Confidential, Zama relayer SDK, wagmi/viem)
-- [ ] `deployments/sepolia.json` schema — single source of truth cho address/ABI
+- [x] `deployments/sepolia.json` schema — single source of truth cho address/ABI
 
 Chiều:
-- [ ] Validate registry `0x2f0750...128e` ↔ `cUSDCMock 0x7c5B...3639` ↔ underlying `0x9b5C...DFfF` bằng script runtime
-- [ ] Minimal contract: encrypted input verify + `FHE.add` + `allowThis/allow` + getter
-- [ ] Minimal page: init SDK/WASM → connect Sepolia → encrypt input → tx → EIP-712 user-decrypt
-- [ ] Verify COOP/COEP headers trong production build không phá wallet
-- [ ] Chốt D2: ERC-7984 transfer-and-call callback vs approved pull — đường nào trả actual ciphertext thì chọn, chỉ ship 1 đường
-- [ ] `COMPATIBILITY_NOTES.md`: versions, API path, RNG security note
+- [x] Validate registry `0x2f0750...128e` ↔ `cUSDCMock 0x7c5B...3639` ↔ underlying `0x9b5C...DFfF` bằng script runtime
+- [x] Minimal contract: encrypted input verify + `FHE.add` + `allowThis/allow` + getter
+- [◐] Minimal page: init SDK/WASM ✅ (production build, crossOriginIsolated) → connect/tx/decrypt chờ ví (B7)
+- [x] Verify COOP/COEP headers trong production build không phá wallet
+- [x] Chốt D2: ERC-7984 transfer-and-call callback vs approved pull — đường nào trả actual ciphertext thì chọn, chỉ ship 1 đường
+- [x] `COMPATIBILITY_NOTES.md`: versions, API path, RNG security note
 
 **Exit gate:** clean clone install xanh · minimal contract deploy local+Sepolia ·
 browser encrypt + EIP-712 decrypt thành công 1 giá trị thật · wrapper pair
@@ -296,7 +301,7 @@ trên trang công bố — phải đọc trực tiếp trong form NGAY khi mở,
 
 | Day | Date | Gate | Tests | Demo | Docs | Status |
 |---:|---|---|---|---|---|---|
-| 1 | 19/08 | Compatibility proven | ☐ | ☐ | ☐ | In progress |
+| 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | Local ✅ — live Sepolia chờ ví |
 | 2 | 20/08 | Money in/out + invariants | ☐ | ☐ | ☐ | — |
 | 3 | 21/08 | TWAB correct | ☐ | ☐ | ☐ | — |
 | 4 | 22/08 | Encrypted draw correct | ☐ | ☐ | ☐ | — |
