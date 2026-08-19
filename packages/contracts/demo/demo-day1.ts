@@ -7,7 +7,7 @@
  * Dùng hardhat test runner vì đó là đường duy nhất plugin FHEVM init mock in-process.
  *
  * Flow: deploy → Jimmer encrypt+set → Jimmer decrypt → Jimmer add → decrypt lại
- *       → Bob decrypt Jimmer (PHẢI FAIL) → tổng kết.
+ *       → Warg decrypt Jimmer (PHẢI FAIL) → tổng kết.
  */
 import { FhevmType } from "@fhevm/hardhat-plugin";
 import { ethers, fhevm } from "hardhat";
@@ -21,7 +21,7 @@ describe("PayDay Pot — Day 1 Compatibility Spike Demo", () => {
     if (!fhevm.isMock) {
       this.skip();
     }
-    const [, jimmer, bob] = await ethers.getSigners();
+    const [, jimmer, warg] = await ethers.getSigners();
 
     line("\n  ━━━ PayDay Pot — Day 1 Compatibility Spike Demo ━━━\n");
 
@@ -47,13 +47,13 @@ describe("PayDay Pot — Day 1 Compatibility Spike Demo", () => {
     const clear2 = await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, jimmer);
     ok(`FHE.add on ciphertext: 1000 + 500 = ${clear2} (contract never saw plaintext)`);
 
-    // 5. Bob tries to decrypt Jimmer's value — must fail
+    // 5. Warg tries to decrypt Jimmer's value — must fail
     try {
-      await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, bob);
-      throw new Error("PRIVACY BREACH: bob decrypted jimmer's value!");
+      await fhevm.userDecryptEuint(FhevmType.euint64, handle2, addr, warg);
+      throw new Error("PRIVACY BREACH: warg decrypted jimmer's value!");
     } catch (e) {
       if ((e as Error).message.includes("PRIVACY BREACH")) throw e;
-      no("Bob attempts to decrypt Jimmer's handle → DENIED by ACL");
+      no("Warg attempts to decrypt Jimmer's handle → DENIED by ACL");
     }
 
     line("\n  ━━━ Result: encrypt → store → homomorphic add → user-decrypt → ACL enforced ━━━");

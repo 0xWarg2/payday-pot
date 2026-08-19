@@ -201,7 +201,7 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
   - invalid proof;
   - wrong token/callback;
   - duplicate submission protection at client reducer.
-- Verify Jimmer can decrypt updated principal; Bob cannot.
+- Verify Jimmer can decrypt updated principal; Warg cannot.
 
 ### Deliverables
 
@@ -214,7 +214,7 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
 
 - [ ] Jimmer deposits encrypted cUSDC and decrypts exact credited principal.
 - [ ] Requested > available cannot inflate principal.
-- [ ] Bob/employer cannot decrypt Jimmer principal.
+- [ ] Warg/employer cannot decrypt Jimmer principal.
 - [ ] No plaintext amount in event/log/backend.
 - [ ] New handle has correct ACL.
 - [ ] Deposit test is deterministic in local FHE mode.
@@ -227,7 +227,7 @@ Connect wallet → write encrypted value → sign user-decrypt → reveal own va
 
 ### EOD demo
 
-Jimmer confidential deposit → contract receipt → Jimmer reveal → Bob decrypt denied.
+Jimmer confidential deposit → contract receipt → Jimmer reveal → Warg decrypt denied.
 
 ---
 
@@ -336,7 +336,7 @@ Deposit → pause contract → withdrawAll → decrypt/verify zero remaining pri
 
 ### EOD demo
 
-Jimmer saves full epoch, Bob joins halfway → locally decrypt test weights 2:1.
+Jimmer saves full epoch, Warg joins halfway → locally decrypt test weights 2:1.
 
 ---
 
@@ -398,7 +398,7 @@ ticket = floor((R × encryptedTotalWeight) / 2^64)
 
 ### EOD demo
 
-Jimmer/Bob/Carol frozen weights → permissionless batch draw → local test decrypt confirms exactly one winner.
+Jimmer/Warg/Carol frozen weights → permissionless batch draw → local test decrypt confirms exactly one winner.
 
 ---
 
@@ -421,7 +421,7 @@ Jimmer/Bob/Carol frozen weights → permissionless batch draw → local test dec
 
 ### Integration work
 
-- Jimmer/Bob/Carol local scenario:
+- Jimmer/Warg/Carol local scenario:
   - different TWAB weights;
   - employer funds prize;
   - draw;

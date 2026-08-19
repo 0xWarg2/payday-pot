@@ -1695,7 +1695,7 @@ Deliverables:
 - Epoch state machine, batch snapshot, multiply-high random ticket, batch selection.
 - Employer prize funding and encrypted pending winnings.
 - Claim/claimFor and ACL coverage.
-- Unit/integration/invariant suite with Jimmer/Bob/Carol.
+- Unit/integration/invariant suite with Jimmer/Warg/Carol.
 - First Sepolia dev deployment.
 
 Exit gate:
@@ -1850,7 +1850,7 @@ Use two browser profiles/wallets and a pre-funded employer. Prepare one epoch cl
 | 0:58–1:18 | Jimmer signs EIP-712 and sees her own balance/TWAB | Observer view stays masked |
 | 1:18–1:42 | Employer boost + Fairness Receipt explanation | Sponsor reserve separate from principal |
 | 1:42–2:05 | Trigger snapshot/randomness/selection batches | Real tx links and cursor |
-| 2:05–2:30 | Jimmer/Bob independently reveal result | Winner positive; loser zero; no public winner event |
+| 2:05–2:30 | Jimmer/Warg independently reveal result | Winner positive; loser zero; no public winner event |
 | 2:30–2:48 | Winner claims encrypted prize | Claim tx + disclosure of address/timing caveat |
 | 2:48–3:00 | User `withdrawAll()` principal; show repo/tests/contracts | No-loss proof + CTA |
 

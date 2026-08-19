@@ -8,7 +8,7 @@ import { CompatSpike, CompatSpike__factory } from "../types";
 type Signers = {
   deployer: HardhatEthersSigner;
   jimmer: HardhatEthersSigner;
-  bob: HardhatEthersSigner;
+  warg: HardhatEthersSigner;
 };
 
 async function deployFixture() {
@@ -30,7 +30,7 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
 
   before(async function () {
     const ethSigners = await ethers.getSigners();
-    signers = { deployer: ethSigners[0], jimmer: ethSigners[1], bob: ethSigners[2] };
+    signers = { deployer: ethSigners[0], jimmer: ethSigners[1], warg: ethSigners[2] };
   });
 
   beforeEach(async function () {
@@ -67,13 +67,13 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
     expect(clear).to.eq(350n);
   });
 
-  it("NEGATIVE ACL: bob cannot decrypt jimmer's handle", async function () {
+  it("NEGATIVE ACL: warg cannot decrypt jimmer's handle", async function () {
     const input = await encrypt64(contractAddress, signers.jimmer, 777n);
     await (await contract.connect(signers.jimmer).setValue(input.handles[0], input.inputProof)).wait();
 
     const handle = await contract.getValue(signers.jimmer.address);
     await expect(
-      fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.bob),
+      fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.warg),
     ).to.be.rejected;
   });
 
@@ -87,11 +87,11 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
     ).to.be.rejected;
   });
 
-  it("isolation: jimmer and bob values are independent", async function () {
+  it("isolation: jimmer and warg values are independent", async function () {
     const a = await encrypt64(contractAddress, signers.jimmer, 11n);
     await (await contract.connect(signers.jimmer).setValue(a.handles[0], a.inputProof)).wait();
-    const b = await encrypt64(contractAddress, signers.bob, 22n);
-    await (await contract.connect(signers.bob).setValue(b.handles[0], b.inputProof)).wait();
+    const b = await encrypt64(contractAddress, signers.warg, 22n);
+    await (await contract.connect(signers.warg).setValue(b.handles[0], b.inputProof)).wait();
 
     const aClear = await fhevm.userDecryptEuint(
       FhevmType.euint64,
@@ -101,18 +101,18 @@ describe("CompatSpike (Day 1 compatibility spike)", function () {
     );
     const bClear = await fhevm.userDecryptEuint(
       FhevmType.euint64,
-      await contract.getValue(signers.bob.address),
+      await contract.getValue(signers.warg.address),
       contractAddress,
-      signers.bob,
+      signers.warg,
     );
     expect(aClear).to.eq(11n);
     expect(bClear).to.eq(22n);
   });
 
   it("input proof bound to another user is rejected", async function () {
-    // Encrypted input created for jimmer must not be usable by bob.
+    // Encrypted input created for jimmer must not be usable by warg.
     const input = await encrypt64(contractAddress, signers.jimmer, 555n);
-    await expect(contract.connect(signers.bob).setValue(input.handles[0], input.inputProof)).to.be
+    await expect(contract.connect(signers.warg).setValue(input.handles[0], input.inputProof)).to.be
       .reverted;
   });
 
