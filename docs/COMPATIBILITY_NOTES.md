@@ -1,4 +1,4 @@
-# COMPATIBILITY_NOTES — Day 1 (19/08/2026)
+# COMPATIBILITY_NOTES — cập nhật Day 2 (20/08/2026)
 
 Nguồn sự thật về version pins, quirks, và Decision D2. Mọi ngày sau đọc file này trước khi cài thêm dependency.
 
@@ -39,7 +39,7 @@ Lý do chọn callback:
 
 Withdraw: pot giữ quỹ → `FHE.allowTransient(amount, token)` rồi `confidentialTransfer(user, amount)`; `withdrawAll` không bao giờ bị chặn (rule #1).
 
-⚠️ Việc Day 2 phải verify: (a) hành vi refund-khi-ebool-false của `ConfidentialWrapperV3` trên Sepolia có giống OZ ERC7984 0.5.3 không (local test dùng OZ mock, live test dùng token thật); (b) token contract được cấp ACL đọc ebool trả về (`FHE.allowTransient(success, token)`).
+Trạng thái verify Day 2: (b) ✅ **verified local** — token cần **dual grant** trên retval, xem quirk #11. (a) ◐ refund-khi-ebool-false **verified local** với OZ ERC7984 0.5.3 (test `refunds cap+1 in full`) — hành vi `ConfidentialWrapperV3` live trên Sepolia chưa probe (stretch P1 chưa chạy) → **recheck Day 9** trước khi deploy pot thật.
 
 Quirk phát hiện: **ConfidentialWrapperV3 có deny list** (`isBlocked`/`blockUser`) và `maxTotalSupply` — user bị block sẽ fail deposit/withdraw ở tầng token; không phải bug của pot. Ghi vào KNOWN_LIMITATIONS.
 
@@ -68,7 +68,10 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 | Registry validation `pnpm validate:registry` | ✅ PASS 16/16 |
 | SDK init trong Next.js **production build** | ✅ crossOriginIsolated=true, instance created |
 | Live Sepolia: deploy + browser encrypt→tx | ✅ 19/08 — CompatSpike `0xceEe…1603`, setValue tx `0x2ab7a4b7…737ab` mined |
-| Live Sepolia: EIP-712 user-decrypt trong browser | 🟡 code đã fix (quirks 7–9) — chờ user bấm "Decrypt my value" xác nhận ra 1000 |
+| Live Sepolia: EIP-712 user-decrypt trong browser | ✅ 20/08 — user xác nhận "Decrypt my value" trên /spike ra đúng **1000** |
+| PayDayPot deposit/withdraw local (43 tests + property seed 0xda72 + HCU) | ✅ 20/08, `pnpm test` 43 passing |
+| Demo local `pnpm demo:day2` (deposit→ACL→partial→cap refund→pause-proof exit) | ✅ 20/08 |
+| Refund-on-ebool-false của wrapper LIVE Sepolia | ◐ local-verified only (OZ 0.5.3) — recheck Day 9 (xem §2) |
 
 ## 6. Checklist chuẩn bị ví (user tự làm, ~10 phút)
 
@@ -82,3 +85,13 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 > RPC: mặc định dùng public RPC `ethereum-sepolia-rpc.publicnode.com` — **không cần
 > đăng ký Infura**. Nếu public RPC rate-limit khi deploy, fallback:
 > `npx hardhat vars set INFURA_API_KEY` (config tự ưu tiên Infura khi key tồn tại).
+
+## 7. Quirks contract (Day 2 — FHE mock + OZ confidential 0.5.3)
+
+10. **Deterministic handle aliasing**: handle = `keccak(op, lhs, rhs, scalar, aclAddr, chainId)` — **không có counter** (xem `FhevmHandleCoder.js` trong mock-utils; executor thật cùng công thức). Hai op giống hệt inputs → CÙNG handle → **ACL đi theo handle, không theo biến**. Hệ quả thực tế: pot có 1 depositor thì `_totalPrincipal` (= `add(zero, credited)`) alias đúng handle principal của depositor → user "decrypt được total". Vô hại về thông tin (alias đòi hỏi lịch sử op giống hệt ⇒ giá trị vốn tự biết), nhưng: (a) test ACL contract-only phải cho lịch sử phân kỳ trước (2+ depositor) rồi mới assert rejected; (b) đừng bao giờ dựa vào "handle khác nhau" như một cơ chế bảo mật.
+11. **Dual ACL grant trên callback retval**: token check `FHE.isAllowed(retval, receiver)` **và** tự chạy `FHE.select(retval,…)` → pot phải grant CẢ HAI: `FHE.allowThis(ok)` + `FHE.allowTransient(ok, msg.sender)`. Thiếu 1 trong 2 → revert `ERC7984UtilsUnauthorizedUseOfEncryptedAmount` hoặc ACL error.
+12. **Custom errors bubble qua token**: `ERC7984Utils.checkOnTransferReceived` catch rồi re-revert đúng reason bytes (`revert(add(32, reason), mload(reason))`) → selector `NotToken`/`PoolFull`/`EnforcedPause` sống sót qua `confidentialTransferAndCall` → test assert được bằng `revertedWithCustomError(pot, …)`.
+13. **FHE ops trong constructor revert dưới `hardhat deploy`** (hệ quả quirk #6 — mock coprocessor chỉ init trong test runner; Sepolia thật không bị). Pattern: constructor FHE-free, lazy-init `FHE.isInitialized(x) ? x : FHE.asEuint64(0)` tại mutation đầu tiên.
+14. **Plugin 0.4.2 có sẵn đồ đo**: `fhevm.computeTransactionHCU(receipt)` → `{globalHCU, maxHCUDepth}` (sync) và `fhevm.debugger.decryptEuint(FhevmType, handle)` (mock-only, bypass ACL — chỉ dùng inspect invariant trong test, không bao giờ là product path). HCU đo thật Day 2: deposit ~2.08M/20M global, depth 780k/5M.
+15. **OZ confidential-contracts KHÔNG ship mocks** (`files` trong package.json loại `/mocks/`) → tự viết `TestUSDC` + `TestConfidentialUSDC is ERC7984ERC20Wrapper, ZamaEthereumConfig` (OZ ERC7984 không tự set coprocessor). Funding path test mirror live: mint → approve → wrap.
+16. **`@types/chai-as-promised` phải cài riêng** (pin 7.1.8 khớp @types/chai v4) — runtime `.to.be.rejected` hoạt động từ Day 1 (plugin tự `chai.use`) nhưng `pnpm typecheck` fail nếu thiếu types.

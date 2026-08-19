@@ -120,20 +120,20 @@ uncertainty sang Day 2.
 **Mục tiêu:** tiền vào và ra vault confidentially, principal conservation có property test.
 
 Contract:
-- [ ] `PayDayPot.sol` non-upgradeable: immutable token/employer/epochDuration/caps
-- [ ] Encrypted zero init tường minh (không dùng uninitialized handle như 0)
-- [ ] Deposit theo đường đã chốt D2; credit **actualTransferred**, không credit request
-- [ ] Lazy registration khi deposit đầu > 0 (P-4)
-- [ ] `withdraw(externalEuint64, proof)` + `withdrawAll()` không cần reveal trước
-- [ ] ReentrancyGuard, CEI; pause chỉ chặn deposit/new-draw, KHÔNG chặn withdraw/claim
-- [ ] ACL refresh trên mọi handle mới; events chỉ chứa action/user/epoch
+- [x] `PayDayPot.sol` non-upgradeable: immutable token/employer/epochDuration/caps
+- [x] Encrypted zero init tường minh (không dùng uninitialized handle như 0; lazy-init vì quirk #6 chặn FHE trong constructor dưới `hardhat deploy`)
+- [x] Deposit theo đường đã chốt D2; credit **actualTransferred**, không credit request
+- [x] Registration **plaintext-gated** khi deposit đầu (P-4 REVISED — gate ">0" bất khả thi không leak; xem KNOWN_LIMITATIONS)
+- [x] `withdraw(externalEuint64, proof)` + `withdrawAll()` không cần reveal trước
+- [x] ReentrancyGuard, CEI; pause chỉ chặn deposit/new-draw, KHÔNG chặn withdraw/claim
+- [x] ACL refresh trên mọi handle mới; events chỉ chứa action/user/epoch
 
 Tests:
-- [ ] Deposit thường / requested > available / zero / invalid proof / wrong token
-- [ ] Jimmer decrypt được principal của mình; Warg và employer bị từ chối
-- [ ] Partial withdraw, withdrawAll idempotent, withdraw khi paused
-- [ ] Property: chuỗi deposit/withdraw ngẫu nhiên bảo toàn principal
-- [ ] Request > balance không burn claim, không leak qua error message
+- [x] Deposit thường / requested > available / zero / invalid proof / wrong token / fake caller / cap boundaries / pool full
+- [x] Jimmer decrypt được principal của mình; Warg và employer bị từ chối
+- [x] Partial withdraw, withdrawAll idempotent, withdraw khi paused
+- [x] Property: chuỗi deposit/withdraw ngẫu nhiên bảo toàn principal (30 ops, seed 0xda72)
+- [x] Request > balance không burn claim, không leak qua error message (FHE.min clamp)
 
 **Exit gate:** toàn bộ trên xanh local · không plaintext amount trong event/log ·
 không admin sweep.
@@ -261,7 +261,8 @@ reveal tươi.
       (DOM/storage/network/telemetry)
 
 **Exit gate (Product Complete):** browser E2E xanh · draw resume sau khi kill
-keeper · claim đòi positive reveal + finalized · withdrawal reachable từ Draw Room.
+keeper · claim đòi positive reveal + finalized · withdrawal reachable từ Draw Room ·
+**mọi dòng ngày-6/7/8 trong `ERROR_RECOVERY_MATRIX.md` đã tick (UI + action + test)**.
 
 ---
 
@@ -288,21 +289,89 @@ Chiều:
 
 | Ngày | Việc |
 |---|---|
-| 28–30/08 | Hardening: relayer latency, stale handles, HCU benchmark tại cap thật, lặp live smoke ≥2 lần |
+| 28–30/08 | Hardening: relayer latency, stale handles, HCU benchmark tại cap thật, lặp live smoke ≥2 lần. **Đóng hết dòng còn ☐ trong `ERROR_RECOVERY_MATRIX.md`** |
 | 31/08–01/09 | README + `ARCHITECTURE/DRAW_PROTOCOL/PRIVACY/THREAT_MODEL/RUNBOOK/KNOWN_LIMITATIONS` final; polish microcopy; architecture visual; rehearse video <2:50 |
-| 02–04/09 | Tag `v1.0.0-season4`; quay video real-person; X thread; **mở form đọc toàn bộ trước** (one-shot!); verify mọi link signed-out; submit trước freeze 04/09 18:00 ICT |
+| 02–04/09 | Tag `v1.0.0-season4`; quay video real-person; X intro thread; verify mọi link signed-out; submit trước freeze 04/09 18:00 ICT |
 
-**Lưu ý form:** rule "video ≤3 phút" và "tên không chứa Zama" chưa verify được
-trên trang công bố — phải đọc trực tiếp trong form NGAY khi mở, không đợi 04/09.
+### Submission prep — checklist bắt buộc
 
----
+**Đường nộp bài (đã mở trực tiếp và xác nhận 20/08):**
+`forms.zama.org/developer-program-mainnet-season4-bounty-track` → redirect về
+`forms.zama.org`, và **đây là trang nhiều bước, không phải form hiện field ngay**:
+
+1. Bước 1 — trang giới thiệu challenge (requirements, rewards, deadline, resources).
+   Nút cuối trang: **"See the challenge"**.
+2. Bước 2 — brief đầy đủ: objective, why this matters, requirements, topics to cover,
+   submission requirements, judging criteria. Nút cuối trang: **"Submit my project"**.
+3. Bước 3 — form field thật nằm sau nút đó. Chưa mở (để user tự mở khi submit).
+
+→ **Post X KHÔNG phải kênh nộp bài.** X thread chỉ là 1 trong 4 deliverable. Kênh nộp
+duy nhất là form ở bước 3. Không có bước đăng ký/wallet-connect nào chắn trước
+(guild.xyz **đã ngừng dùng**, community chuyển sang `community.zama.org`).
+
+**Mở tới bước 3 đọc field từ Day 2–3, đừng đợi 04/09.**
+
+Deliverable (theo trang submission + traceability §4 của IMPLEMENTATION_PLAN):
+
+- [ ] **dApp hoạt động** — contract + frontend, public HTTPS URL, chạy được từ incognito
+- [ ] **Live demo site** deploy sẵn, không cần setup riêng ngoài hướng dẫn
+- [ ] **Video ≤3 phút**, **người thật pitch**, tốc độ bình thường, **không AI-generated**.
+      Chứa: full cycle + user-decrypt + **~30s recovery** (xem ERROR_RECOVERY_MATRIX)
+      + nói thẳng prize = employer-funded sponsored yield + RNG là PRNG mockup
+- [ ] **Intro thread hoặc article trên X** — đây là deliverable, không phải optional.
+      Tag `@zama_fhe` + `#ZamaDeveloperProgram`. Build log hằng ngày ở
+      `docs/social/day-NN-x-posts.md`, thread tổng hợp viết ở 02–04/09
+- [ ] **Public GitHub** — signed-out xem được; link trong form trỏ **release tag
+      `v1.0.0-season4`**, KHÔNG trỏ `main` (main còn commit tiếp sau submit)
+- [ ] `deployments/sepolia.json` khớp source đã verify trên explorer (address, block,
+      commit, ABI hash)
+- [ ] Tên project không chứa "Zama"; framing sponsored-yield có trong README + video
+- [ ] `KNOWN_LIMITATIONS.md`: RNG mockup, wrapper deny list + maxTotalSupply, sponsored
+      yield thay vì real yield
+
+Ghi chú từ forum (staff Zama trả lời trực tiếp, S3): **commit tiếp sau khi submit là
+được**, nên làm trên branch mới. → sau khi submit thì polish trên branch khác, tag đã
+submit giữ nguyên.
+
+### Judging criteria — nguyên văn từ trang challenge (20/08)
+
+| Tiêu chí | Nguyên văn | Ta trả bằng gì |
+|---|---|---|
+| Correctness | "Do deposit, draw, claim, and withdraw produce the expected results onchain? Are EIP-712 flows implemented correctly?" | Invariant tests + full-cycle Sepolia smoke (Day 9) |
+| Confidentiality design | "What stays encrypted? Is winner selection provably fair and deposit-weighted? Is any leakage minimal and documented?" | PRIVACY.md + TWAB/multiply-high doc + negative ACL tests |
+| UX | "Is the app pleasant to use? **Does it handle approvals and errors gracefully?**" | `ERROR_RECOVERY_MATRIX.md` (R13/R14/R8/R15 bắt buộc) |
+| Code quality | "clean, readable, well-typed, and well-documented" | TS strict monorepo, version pins, NatSpec |
+| Production-readiness | "Is the live deployment stable on Sepolia? Could a real user trust it today?" | RC Day 9 + runbook + failure drill |
+
+**Ba yêu cầu brief nói rõ mà plan phải khớp:**
+
+1. *"Automate draws, or provide a documented keeper/admin flow to trigger them"* →
+   keeper permissionless + manual fallback documented (đã có Day 9).
+2. *"Provide a faucet or clear instructions so judges can obtain the test token"* →
+   faucet nằm trong `/onboarding` (đã có trong scope cắt).
+3. *"A mock yield source on Sepolia is acceptable (e.g., an admin-funded prize reserve),
+   as long as the README documents how it works and how a real yield source would plug
+   in"* → **framing sponsored-yield của mình được brief cho phép tường minh**. Chỉ cần
+   README có mục "how a real yield source plugs in". Không phải điểm yếu nữa.
+
+**Video — shot list brief yêu cầu, đúng thứ tự:** depositing → decrypting your pool
+balance → a draw being triggered → claiming a prize → withdrawing principal, + giải
+thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 phút, **người thật**,
+**tốc độ bình thường — không tăng tốc video**, không AI voice.
+
+### Kênh visibility phụ (không bắt buộc, rẻ)
+
+- `community.zama.org` category **Bounty Track**: post build thread + demo walkthrough
+  như submission S3 đã làm; staff trả lời thread kỹ thuật trong ngày.
+- Thread khiếu nại kết quả chấm thì không có ai xử lý → không xây chiến lược dựa vào
+  fairness của judging, xây dựa vào "khó chê".
 
 ## Scorecard (cập nhật EOD mỗi ngày)
 
 | Day | Date | Gate | Tests | Demo | Docs | Status |
 |---:|---|---|---|---|---|---|
-| 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | Local ✅ — live Sepolia chờ ví |
-| 2 | 20/08 | Money in/out + invariants | ☐ | ☐ | ☐ | — |
+| 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | ✅ Full — user xác nhận live user-decrypt trên /spike ra đúng 1000 (20/08) |
+| 2 | 20/08 | Money in/out + invariants | ✅ 43 pass (+property+HCU) | ✅ `pnpm demo:day2` | ✅ | ✅ Local full — deposit callback, withdraw/withdrawAll, conservation, pause-proof exit |
 | 3 | 21/08 | TWAB correct | ☐ | ☐ | ☐ | — |
 | 4 | 22/08 | Encrypted draw correct | ☐ | ☐ | ☐ | — |
 | 5 | 23/08 | Protocol full cycle | ☐ | ☐ | ☐ | — |

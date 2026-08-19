@@ -8,7 +8,6 @@ import type { HardhatUserConfig } from "hardhat/config";
 import { vars } from "hardhat/config";
 
 import "./tasks/accounts";
-import "./tasks/FHECounter";
 
 // Run 'npx hardhat vars setup' to see the list of variables that need to be set
 
@@ -23,6 +22,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   namedAccounts: {
     deployer: 0,
+    employer: 4,
   },
   etherscan: {
     apiKey: {

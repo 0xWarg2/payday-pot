@@ -21,6 +21,7 @@
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.20",
+    "@types/chai-as-promised": "7.1.8",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.10.0",
     "@zama-fhe/relayer-sdk": "0.4.1",
@@ -52,6 +53,7 @@
     "verify:sepolia": "hardhat verify --network sepolia",
     "chain": "hardhat node --network hardhat --no-deploy",
     "demo": "hardhat test demo/demo-day1.ts",
+    "demo:day2": "hardhat test demo/demo-day2.ts",
     "validate:registry": "hardhat run scripts/validate-registry.ts"
   }
 }
