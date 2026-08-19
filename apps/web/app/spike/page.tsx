@@ -102,7 +102,7 @@ export default function SpikePage() {
   }, [say]);
 
   const connect = useCallback(async () => {
-    if (!window.ethereum) return say("❌ Không thấy wallet (cài MetaMask)");
+    if (!window.ethereum) return say("❌ No wallet found (install MetaMask)");
     setBusy(true);
     try {
       const accounts = (await window.ethereum.request({ method: "eth_requestAccounts" })) as string[];
@@ -123,15 +123,15 @@ export default function SpikePage() {
 
   const encryptAndSet = useCallback(async () => {
     const sdk = sdkRef.current;
-    if (!sdk || !account || !window.ethereum) return say("❌ Cần init SDK + connect wallet trước");
-    if (!contractAddr) return say("❌ Nhập địa chỉ CompatSpike (deploy ở bước B7)");
+    if (!sdk || !account || !window.ethereum) return say("❌ Init SDK + connect wallet first");
+    if (!contractAddr) return say("❌ Enter the CompatSpike contract address");
     setBusy(true);
     try {
       say("⏳ Encrypting client-side…");
       const buffer = sdk.createEncryptedInput(getAddress(contractAddr.trim()), account);
       buffer.add64(BigInt(value));
       const { handles, inputProof } = await buffer.encrypt();
-      say("✅ Encrypted + proof generated (relayer). Tx chỉ chứa ciphertext.");
+      say("✅ Encrypted + proof generated (relayer). Tx carries ciphertext only.");
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new Contract(contractAddr, COMPAT_SPIKE_ABI, signer);
@@ -148,8 +148,8 @@ export default function SpikePage() {
 
   const decrypt = useCallback(async () => {
     const sdk = sdkRef.current;
-    if (!sdk || !account || !window.ethereum) return say("❌ Cần init SDK + connect wallet trước");
-    if (!contractAddr) return say("❌ Nhập địa chỉ CompatSpike");
+    if (!sdk || !account || !window.ethereum) return say("❌ Init SDK + connect wallet first");
+    if (!contractAddr) return say("❌ Enter the CompatSpike contract address");
     setBusy(true);
     try {
       const caddr = getAddress(contractAddr.trim());
@@ -179,7 +179,7 @@ export default function SpikePage() {
         days,
       );
       setDecrypted(String(result[handle]));
-      say("✅ User-decrypt OK — giá trị hiển thị bên dưới (không log)");
+      say("✅ User-decrypt OK — value shown below (never logged)");
     } catch (e) {
       say("❌ decrypt: " + (e as Error).message);
     } finally {
@@ -191,7 +191,7 @@ export default function SpikePage() {
     <main style={{ maxWidth: 640, margin: "40px auto", padding: 16 }}>
       <h1 style={{ fontSize: 20 }}>🧪 PayDay Pot — Day 1 Compatibility Spike</h1>
       <p style={{ color: "#9aa4b2", fontSize: 13 }}>
-        Throwaway page: chứng minh SDK init → encrypt → tx → EIP-712 user-decrypt trong production build.
+        Throwaway page: prove SDK init → encrypt → tx → EIP-712 user-decrypt in a production build.
       </p>
 
       <div style={box}>
