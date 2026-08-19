@@ -27,7 +27,8 @@ type SdkInstance = {
     encrypt: () => Promise<{ handles: Uint8Array[]; inputProof: Uint8Array }>;
   };
   generateKeypair: () => { publicKey: string; privateKey: string };
-  createEIP712: (pubKey: string, contracts: string[], start: string, days: string) => {
+  // SDK 0.4.1: start/days phải là number (UintNumber check), không nhận string
+  createEIP712: (pubKey: string, contracts: string[], start: number, days: number) => {
     domain: Record<string, unknown>;
     types: Record<string, unknown>;
     message: Record<string, unknown>;
@@ -39,8 +40,8 @@ type SdkInstance = {
     signature: string,
     contracts: string[],
     user: string,
-    start: string,
-    days: string,
+    start: number,
+    days: number,
   ) => Promise<Record<string, bigint | boolean | string>>;
 };
 
@@ -158,8 +159,8 @@ export default function SpikePage() {
       const handle = (await contract.getFunction("getValue")(account)) as string;
       say(`ℹ️ Handle: ${handle.slice(0, 10)}…`);
       const keypair = sdk.generateKeypair();
-      const start = Math.floor(Date.now() / 1000).toString();
-      const days = "1";
+      const start = Math.floor(Date.now() / 1000);
+      const days = 1;
       const eip712 = sdk.createEIP712(keypair.publicKey, [caddr], start, days);
       say("⏳ EIP-712 sign + userDecrypt via relayer…");
       const signature = await signer.signTypedData(
