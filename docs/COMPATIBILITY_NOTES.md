@@ -70,9 +70,11 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 
 1. MetaMask → tạo **account mới chỉ để dev** (không dùng ví chính).
 2. Xin Sepolia ETH miễn phí: Google "Alchemy Sepolia faucet" / Infura faucet / pk910 PoW faucet (~0.5 ETH là dư).
-3. Free API key: đăng ký [infura.io](https://infura.io) (hoặc Alchemy) → tạo project → copy key.
-4. Tự chạy trong `packages/contracts/` (không đưa key cho ai):
+3. Tự chạy trong `packages/contracts/` (không đưa seed phrase cho ai):
    ```bash
    npx hardhat vars set MNEMONIC
-   npx hardhat vars set INFURA_API_KEY
    ```
+
+> RPC: mặc định dùng public RPC `ethereum-sepolia-rpc.publicnode.com` — **không cần
+> đăng ký Infura**. Nếu public RPC rate-limit khi deploy, fallback:
+> `npx hardhat vars set INFURA_API_KEY` (config tự ưu tiên Infura khi key tồn tại).
