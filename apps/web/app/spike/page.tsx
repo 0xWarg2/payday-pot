@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { BrowserProvider, Contract, type Eip1193Provider } from "ethers";
+import { BrowserProvider, Contract, getAddress, type Eip1193Provider } from "ethers";
 
 const SEPOLIA_CHAIN_ID = 11155111;
 const SEPOLIA_HEX = "0xaa36a7";
@@ -110,7 +110,8 @@ export default function SpikePage() {
         say("⏳ Switching to Sepolia…");
         await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEPOLIA_HEX }] });
       }
-      setAccount(accounts[0] ?? "");
+      // relayer-sdk đòi address checksummed — MetaMask trả về lowercase
+      setAccount(accounts[0] ? getAddress(accounts[0]) : "");
       say(`✅ Connected ${accounts[0]?.slice(0, 6)}…${accounts[0]?.slice(-4)} on chain ${SEPOLIA_CHAIN_ID}`);
     } catch (e) {
       say("❌ connect: " + (e as Error).message);
@@ -126,7 +127,7 @@ export default function SpikePage() {
     setBusy(true);
     try {
       say("⏳ Encrypting client-side…");
-      const buffer = sdk.createEncryptedInput(contractAddr, account);
+      const buffer = sdk.createEncryptedInput(getAddress(contractAddr.trim()), account);
       buffer.add64(BigInt(value));
       const { handles, inputProof } = await buffer.encrypt();
       say("✅ Encrypted + proof generated (relayer). Tx chỉ chứa ciphertext.");
@@ -150,15 +151,16 @@ export default function SpikePage() {
     if (!contractAddr) return say("❌ Nhập địa chỉ CompatSpike");
     setBusy(true);
     try {
+      const caddr = getAddress(contractAddr.trim());
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new Contract(contractAddr, COMPAT_SPIKE_ABI, provider);
+      const contract = new Contract(caddr, COMPAT_SPIKE_ABI, provider);
       const handle = (await contract.getFunction("getValue")(account)) as string;
       say(`ℹ️ Handle: ${handle.slice(0, 10)}…`);
       const keypair = sdk.generateKeypair();
       const start = Math.floor(Date.now() / 1000).toString();
       const days = "1";
-      const eip712 = sdk.createEIP712(keypair.publicKey, [contractAddr], start, days);
+      const eip712 = sdk.createEIP712(keypair.publicKey, [caddr], start, days);
       say("⏳ EIP-712 sign + userDecrypt via relayer…");
       const signature = await signer.signTypedData(
         eip712.domain as never,
@@ -166,11 +168,11 @@ export default function SpikePage() {
         eip712.message as never,
       );
       const result = await sdk.userDecrypt(
-        [{ handle, contractAddress: contractAddr }],
+        [{ handle, contractAddress: caddr }],
         keypair.privateKey,
         keypair.publicKey,
         signature.replace("0x", ""),
-        [contractAddr],
+        [caddr],
         account,
         start,
         days,
