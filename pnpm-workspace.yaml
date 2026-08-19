@@ -2,8 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
-  keccak: set this to true or false
-  secp256k1: set this to true or false
+  sharp: set this to true or false
 onlyBuiltDependencies:
   - keccak
   - secp256k1
+  - sharp

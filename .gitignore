@@ -27,3 +27,7 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+apps/web/public/relayer-sdk-js.umd.js
+apps/web/public/workerHelpers.js
+apps/web/public/tfhe_bg.wasm
+apps/web/public/kms_lib_bg.wasm
