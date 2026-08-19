@@ -67,7 +67,8 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 | Demo local `pnpm demo` (encrypt→add→decrypt→ACL denied) | ✅ 19/08 |
 | Registry validation `pnpm validate:registry` | ✅ PASS 16/16 |
 | SDK init trong Next.js **production build** | ✅ crossOriginIsolated=true, instance created |
-| Live Sepolia: deploy + browser encrypt→tx→user-decrypt | ⬜ chờ ví (B7) — việc đầu tiên khi user set MNEMONIC/INFURA_API_KEY |
+| Live Sepolia: deploy + browser encrypt→tx | ✅ 19/08 — CompatSpike `0xceEe…1603`, setValue tx `0x2ab7a4b7…737ab` mined |
+| Live Sepolia: EIP-712 user-decrypt trong browser | 🟡 code đã fix (quirks 7–9) — chờ user bấm "Decrypt my value" xác nhận ra 1000 |
 
 ## 6. Checklist chuẩn bị ví (user tự làm, ~10 phút)
 

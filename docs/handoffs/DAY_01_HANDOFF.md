@@ -9,9 +9,12 @@
 | Registry/cUSDC pair validated bằng script | ✅ PASS 16/16 |
 | Decision D2 chốt + evidence | ✅ callback (`confidentialTransferAndCall`) |
 | SDK chạy trong Next.js production build | ✅ crossOriginIsolated=true, instance created |
-| Browser encrypt + EIP-712 decrypt live Sepolia | ⬜ **chờ ví** — việc duy nhất còn lại của Day 1 |
+| Browser encrypt + EIP-712 decrypt live Sepolia | 🟡 **encrypt + tx ĐÃ XONG live** — chỉ còn user bấm "Decrypt my value" |
 
-**Red rule đang treo:** "Day 1 chưa có live user-decrypt" → B7 là việc ĐẦU TIÊN của Day 2, trước mọi việc khác.
+**Live Sepolia đã đạt (cập nhật cuối 19/08):**
+- CompatSpike deployed: `0xceEee18891D4d53699E2Ab28C402fA0C5D721603` (block 11522269, deploy tx `0x57de1950...c3cbc`, 613k gas, deployer = ví index 0 từ mnemonic user).
+- User đã gửi 4 tx `setValue` thành công từ MetaMask (ví index 2 `0xd830...829a`), vd tx `0x2ab7a4b7...737ab` — encrypt client-side + proof + tx mined ✅.
+- **Còn lại duy nhất**: user bấm "Decrypt my value" trên `/spike` ra đúng 1000 → đóng gate. Mọi lỗi decrypt đã fix (xem quirks 7–9), chưa có xác nhận cuối từ user.
 
 ## Demo (chạy lại được ngay)
 
@@ -30,6 +33,10 @@ Demo phụ: `pnpm validate:registry` (PASS 16/16 qua public RPC) · web: `cd app
 - `c7c2001` validate-registry script — PASS 16/16, evidence cho D2
 - `53a8099` apps/web /spike — relayer-sdk UMD + WASM init OK production build
 - `463ff9d` COMPATIBILITY_NOTES — pins, D2, quirks
+- `d620086` public RPC mặc định cho Sepolia (Infura optional — user đã set INFURA_API_KEY nên đang dùng Infura)
+- `3ea646b` **deploy CompatSpike lên Sepolia** + address vào deployments/sepolia.json + prefill /spike
+- `57368a3`+`4a65d53`+`56ec247` 3 fix live-browser: SDK network = RPC cố định; checksum address; start/days = number (quirks 7–9, f742433)
+- `bcee676` spike page logs sang tiếng Anh · `0d3cdc5` docs/WEB3_LEARNING_PATH.md (user đang học web3 qua dự án)
 
 Files quan trọng: `packages/contracts/contracts/CompatSpike.sol`, `test/CompatSpike.ts`, `demo/demo-day1.ts`, `scripts/validate-registry.ts`, `apps/web/app/spike/page.tsx`, `apps/web/scripts/copy-relayer-sdk.mjs`, `docs/COMPATIBILITY_NOTES.md`.
 
@@ -43,8 +50,9 @@ Files quan trọng: `packages/contracts/contracts/CompatSpike.sol`, `test/Compat
 
 ## Đang dở / blockers
 
-- **B7 live Sepolia spike** — blocked chờ user: MetaMask dev account + faucet ETH + Infura key + tự chạy `npx hardhat vars set MNEMONIC` / `INFURA_API_KEY` (checklist trong COMPATIBILITY_NOTES §6). Sau đó: `pnpm deploy:sepolia` → điền address vào `deployments/sepolia.json` → mở /spike → encrypt→tx→decrypt → chụp tx hash.
+- **B7 chỉ còn 1 click**: user chưa xác nhận "Decrypt my value" ra 1000 trên `/spike` (mọi bug đã fix, encrypt+tx live đã pass). Hỏi user đầu Day 2; user tự chạy web bằng `cd apps/web && pnpm dev -p 4100`.
 - ConfidentialWrapperV3 refund-behavior (ebool false) chưa verify trên live token → test Day 2.
+- Uncommitted trên working tree (từ session khác, không đụng): `CLAUDE.md`, `docs/EXECUTION_PLAN.md` (modified), `.claude/skills/`, `docs/ERROR_RECOVERY_MATRIX.md`, `docs/social/` (untracked).
 
 ## Số liệu đo được
 
@@ -54,10 +62,14 @@ Files quan trọng: `packages/contracts/contracts/CompatSpike.sol`, `test/Compat
 
 ## Việc đầu tiên của ngày mai (Day 2 — 20/08)
 
-1. **B7**: hỏi user đã set vars chưa → deploy CompatSpike Sepolia + verify → live browser decrypt → đóng gate Day 1, cập nhật scorecard.
-2. Bắt đầu `PayDayPot.sol`: skeleton + deposit qua callback D2 + withdrawAll (rule #1) — local mock dùng OZ `ERC7984ERC20Wrapper` làm token test.
+1. **Đóng B7**: hỏi user đã bấm "Decrypt my value" ra 1000 chưa (user tự chạy `pnpm dev -p 4100` trong apps/web). Xong → tick gate cuối, cập nhật scorecard Day 1 = full ✅.
+2. Bắt đầu `PayDayPot.sol`: skeleton + deposit qua callback D2 + withdrawAll (rule #1) — local mock dùng OZ `ERC7984ERC20Wrapper` làm token test. Xóa FHECounter template files khi PayDayPot lands.
 3. Reproduce trạng thái: `pnpm install && pnpm -r test` + đọc `CLAUDE.md`, `docs/COMPATIBILITY_NOTES.md`, file này.
+4. Context user: đang học web3 từ đầu qua dự án (docs/WEB3_LEARNING_PATH.md) — giải thích khái niệm mới bằng analogy web2 khi làm việc.
 
 ## Tx hashes / addresses mới
 
-- Chưa có tx Sepolia (B7 pending). Registry/cUSDC/USDC addresses trong `packages/shared/src/manifest.ts` — đã validate 19/08.
+- **CompatSpike (Sepolia)**: `0xceEee18891D4d53699E2Ab28C402fA0C5D721603` — deploy tx `0x57de19501d680781c7791f0008e6035231cd0ed5791dea253739d93c434c3cbc`, block 11522269. Manifest: `deployments/sepolia.json`.
+- setValue live tx (ví dụ): `0x2ab7a4b7e1eabfc72fd0d19640a94ddece6f8e232210f453d1ef0110b0d737ab`.
+- Registry/cUSDC/USDC addresses trong `packages/shared/src/manifest.ts` — đã validate 19/08.
+- Secrets: user đã set `MNEMONIC` + `INFURA_API_KEY` trong hardhat vars (local machine).
