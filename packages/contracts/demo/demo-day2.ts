@@ -32,7 +32,7 @@ describe("PayDay Pot — Day 2 Deposit/Withdraw Demo", () => {
     const signers = await ethers.getSigners();
     const [, jimmer, warg, , employer] = signers;
 
-    line("\n  ━━━ PayDay Pot — Day 2: tiền vào/ra vault, không ai thấy số ━━━\n");
+    line("\n  ━━━ PayDay Pot — Day 2: money in, money out, nobody sees the numbers ━━━\n");
 
     // 1. Deploy the full stack
     const usdc = await (await ethers.getContractFactory("TestUSDC")).deploy();
@@ -43,13 +43,13 @@ describe("PayDay Pot — Day 2 Deposit/Withdraw Demo", () => {
     ).deploy(tokenAddress, employer.address, 7n * 24n * 3600n, 10_000n * M, 32);
     const potAddress = await pot.getAddress();
     ok(`Stack deployed — TestUSDC → ctUSDC wrapper → PayDayPot ${potAddress}`);
-    info("Config: cap 10,000 ctUSDC/người, 32 người, epoch 7 ngày");
+    info("Config: 10,000 ctUSDC cap per user, 32 participants, 7-day epoch");
 
     // 2. Jimmer wraps — the LAST number anyone sees in plaintext
     await usdc.mint(jimmer.address, 15_000n * M);
     await usdc.connect(jimmer).approve(tokenAddress, 15_000n * M);
     await token.connect(jimmer).wrap(jimmer.address, 15_000n * M);
-    ok("Jimmer wrap 15,000 USDC → ctUSDC (wrap amount là con số public CUỐI CÙNG)");
+    ok("Jimmer wraps 15,000 USDC → ctUSDC (the wrap amount is the LAST public number)");
 
     const deposit = async (user: HardhatEthersSigner, amount: bigint) => {
       const enc = await fhevm.createEncryptedInput(tokenAddress, user.address).add64(amount).encrypt();
@@ -66,33 +66,33 @@ describe("PayDay Pot — Day 2 Deposit/Withdraw Demo", () => {
     const depositTx = await deposit(jimmer, 6_000n * M);
     const depositReceipt = (await depositTx.wait())!;
     const potLogs = depositReceipt.logs.filter((l) => l.address === potAddress);
-    ok(`Jimmer deposits enc(6,000) — pot emits ${potLogs.length} events, data field: "${potLogs[0].data}" (KHÔNG amount)`);
-    ok(`Jimmer tự decrypt principal: ${fmt(await principalOf(jimmer))}`);
+    ok(`Jimmer deposits enc(6,000) — pot emits ${potLogs.length} events, data field: "${potLogs[0].data}" (NO amount)`);
+    ok(`Jimmer decrypts their own principal: ${fmt(await principalOf(jimmer))}`);
 
     // 4. ACL: nobody else can read it
     const handle = await pot.principalOf(jimmer.address);
     for (const [who, signer] of [
-      ["Warg (người chơi khác)", warg],
-      ["Employer (người tài trợ)", employer],
+      ["Warg (another saver)", warg],
+      ["Employer (the sponsor)", employer],
     ] as const) {
       try {
         await fhevm.userDecryptEuint(FhevmType.euint64, handle, potAddress, signer);
         throw new Error(`PRIVACY BREACH: ${who} decrypted jimmer's principal!`);
       } catch (e) {
         if ((e as Error).message.includes("PRIVACY BREACH")) throw e;
-        no(`${who} thử decrypt principal của Jimmer → DENIED by ACL`);
+        no(`${who} tries to decrypt Jimmer's principal → DENIED by ACL`);
       }
     }
 
     // 5. Partial withdraw 1,500
     const wenc = await fhevm.createEncryptedInput(potAddress, jimmer.address).add64(1_500n * M).encrypt();
     await (await pot.connect(jimmer).withdraw(wenc.handles[0], wenc.inputProof)).wait();
-    ok(`Partial withdraw enc(1,500) → principal còn ${fmt(await principalOf(jimmer))}, ví ${fmt(await walletOf(jimmer))}`);
+    ok(`Partial withdraw enc(1,500) → principal now ${fmt(await principalOf(jimmer))}, wallet ${fmt(await walletOf(jimmer))}`);
 
     // 6. Over-cap deposit — silently refunded, all-or-nothing
     await (await deposit(jimmer, 8_000n * M)).wait(); // headroom chỉ 5,500
-    ok(`Deposit enc(8,000) vượt headroom 5,500 → token TỰ refund toàn bộ, principal vẫn ${fmt(await principalOf(jimmer))}`);
-    info("Tx vẫn thành công — không revert, không lộ bit nào về lý do");
+    ok(`Deposit enc(8,000) exceeds the 5,500 headroom → token refunds it ALL, principal still ${fmt(await principalOf(jimmer))}`);
+    info("Tx still succeeds — no revert, not one bit leaked about why");
 
     // 7. Pause: deposits blocked, withdrawals NEVER blocked
     await (await pot.pause()).wait();
@@ -101,11 +101,11 @@ describe("PayDay Pot — Day 2 Deposit/Withdraw Demo", () => {
       throw new Error("BUG: deposit passed while paused!");
     } catch (e) {
       if ((e as Error).message.includes("BUG")) throw e;
-      no("Pot paused → deposit bị chặn (EnforcedPause)");
+      no("Pot paused → deposit blocked (EnforcedPause)");
     }
     const wAllTx = await pot.connect(jimmer).withdrawAll();
     const wAllHcu = fhevm.computeTransactionHCU((await wAllTx.wait())!);
-    ok(`withdrawAll() CHẠY XUYÊN PAUSE → principal ${fmt(await principalOf(jimmer))}, ví phục hồi ${fmt(await walletOf(jimmer))}`);
+    ok(`withdrawAll() RUNS THROUGH THE PAUSE → principal ${fmt(await principalOf(jimmer))}, wallet restored to ${fmt(await walletOf(jimmer))}`);
 
     // 8. Recap: conservation + HCU
     const total = await fhevm.debugger.decryptEuint(FhevmType.euint64, await pot.totalPrincipal());
@@ -115,11 +115,11 @@ describe("PayDay Pot — Day 2 Deposit/Withdraw Demo", () => {
     );
     const depositHcu = fhevm.computeTransactionHCU(depositReceipt);
     if (total !== 0n || potBalance !== 0n) throw new Error("CONSERVATION VIOLATED");
-    ok(`Conservation: totalPrincipal = ${total}, pot token balance = ${potBalance} — khớp tuyệt đối`);
+    ok(`Conservation: totalPrincipal = ${total}, pot token balance = ${potBalance} — exact match`);
     info(
-      `HCU thật: deposit ${depositHcu.globalHCU.toLocaleString("en-US")}/20M, withdrawAll ${wAllHcu.globalHCU.toLocaleString("en-US")}/20M — còn ~90% headroom cho TWAB Day 3`,
+      `Measured HCU: deposit ${depositHcu.globalHCU.toLocaleString("en-US")}/20M, withdrawAll ${wAllHcu.globalHCU.toLocaleString("en-US")}/20M — ~90% headroom left for Day 3 TWAB`,
     );
 
-    line("\n  ━━━ Day 2: deposit/withdraw confidential end-to-end, no-loss bằng chứng property test ━━━\n");
+    line("\n  ━━━ Day 2: confidential deposit/withdraw end-to-end, no-loss proven by property test ━━━\n");
   });
 });
