@@ -90,6 +90,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     // ---------------------------------------------------------------------
 
     event EpochStarted(uint256 indexed epochId, uint64 start, uint64 end);
+    /// @dev Snapshot events carry only public counters (participant slots,
+    ///      cursor position) — weights stay encrypted end-to-end.
+    event SnapshotStarted(uint256 indexed epochId, uint32 participantCount);
+    event SnapshotProgress(uint256 indexed epochId, uint32 cursor);
+    event SnapshotCompleted(uint256 indexed epochId);
     event Registered(address indexed user, uint256 indexed epochId);
     /// @dev Emitted on every deposit ATTEMPT — the encrypted cap verdict cannot
     ///      be branched on, so a refunded (over-cap) deposit also emits this.
@@ -162,24 +167,14 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         bytes calldata /* data */
     ) external nonReentrant whenNotPaused returns (ebool) {
         if (msg.sender != address(TOKEN)) revert NotToken(msg.sender);
-        if (_epochs[currentEpochId].phase != EpochPhase.Open) revert WrongPhase();
+        // Deposits close at epochEnd even while the phase is still Open —
+        // beginSnapshot may lag, and the participant list/order/count must be
+        // immutable from the freeze point onward (Day 3).
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Open || block.timestamp >= ep.end) revert WrongPhase();
 
         Account storage acc = _accounts[from];
-
-        // Plaintext-gated registration (P-4 revised, user-approved): the gate
-        // uses only public facts (caller is the token, pool not full). A deposit
-        // later refunded by the encrypted cap check still occupies a slot —
-        // documented in KNOWN_LIMITATIONS.md.
-        if (!acc.registered) {
-            if (_participants.length >= PARTICIPANT_CAP) revert PoolFull();
-            acc.registered = true;
-            acc.principal = FHE.asEuint64(0);
-            FHE.allowThis(acc.principal);
-            FHE.allow(acc.principal, from);
-            _participants.push(from);
-            emit Registered(from, currentEpochId);
-        }
-
+        _registerIfNeeded(acc, from);
         _checkpoint(from);
 
         // Lazy zero-init (uninitialized handle ≠ encrypted zero, CompatSpike pattern).
@@ -209,6 +204,21 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         FHE.allowThis(ok);
         FHE.allowTransient(ok, msg.sender);
         return ok;
+    }
+
+    /// @dev Plaintext-gated registration (P-4 revised, user-approved): the gate
+    ///      uses only public facts (caller is the token, pool not full). A
+    ///      deposit later refunded by the encrypted cap check still occupies a
+    ///      slot — documented in KNOWN_LIMITATIONS.md.
+    function _registerIfNeeded(Account storage acc, address from) private {
+        if (acc.registered) return;
+        if (_participants.length >= PARTICIPANT_CAP) revert PoolFull();
+        acc.registered = true;
+        acc.principal = FHE.asEuint64(0);
+        FHE.allowThis(acc.principal);
+        FHE.allow(acc.principal, from);
+        _participants.push(from);
+        emit Registered(from, currentEpochId);
     }
 
     // ---------------------------------------------------------------------
@@ -309,6 +319,77 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     }
 
     // ---------------------------------------------------------------------
+    // Snapshot — freeze weights at epochEnd, batch by cursor (Day 3).
+    // Both functions are PERMISSIONLESS and never pausable: the snapshot is
+    // deterministic bookkeeping of an already-finished epoch, and gating it
+    // on the owner would add a liveness dependency to epoch resolution (R4).
+    // The one-shot "new draw" step that pause DOES block is Day 4's random
+    // request — never this.
+    // ---------------------------------------------------------------------
+
+    /// @notice Move the current epoch from Open to Snapshotting once its end
+    ///         has passed. Anyone may call — a keeper is a convenience, never
+    ///         a privilege (rule #7).
+    /// @dev    With zero participants the snapshot completes in the same tx
+    ///         and the epoch lands in Drawing with an encrypted-zero total —
+    ///         no decrypt needed to detect emptiness.
+    function beginSnapshot() external {
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Open || block.timestamp < ep.end) revert WrongPhase();
+
+        // Lazy FHE init — never in the constructor (quirk #13).
+        ep.totalWeight = FHE.asEuint64(0);
+        FHE.allowThis(ep.totalWeight);
+        ep.phase = EpochPhase.Snapshotting;
+        ep.snapshotCursor = 0;
+        emit SnapshotStarted(currentEpochId, uint32(_participants.length));
+
+        if (_participants.length == 0) {
+            ep.phase = EpochPhase.Drawing;
+            emit SnapshotCompleted(currentEpochId);
+        }
+    }
+
+    /// @notice Freeze up to `maxSteps` participants' weights at epochEnd and
+    ///         fold them into the epoch's encrypted total. Permissionless —
+    ///         any wallet can continue from the stored cursor (R4); a request
+    ///         past the end of the list is clamped, and the tx that processes
+    ///         the last participant flips the epoch to Drawing.
+    /// @dev    A participant's frozen weight is their raw twabArea after
+    ///         _checkpoint clamps accrual to epochEnd (P-1: no division —
+    ///         the multiply-high draw is scale-invariant). Participants who
+    ///         already checkpointed at epochEnd (e.g. withdrew after the
+    ///         cutoff) hit the zero-elapsed short-circuit: their frozen
+    ///         weight is untouched, only the total-add runs.
+    function snapshotBatch(uint32 maxSteps) external {
+        if (maxSteps == 0) revert InvalidConfig();
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Snapshotting) revert WrongPhase();
+
+        uint32 cursor = ep.snapshotCursor;
+        uint32 count = uint32(_participants.length);
+        uint256 want = uint256(cursor) + uint256(maxSteps); // no uint32 overflow
+        uint32 stop = want > count ? count : uint32(want);
+
+        euint64 total = ep.totalWeight;
+        for (uint32 i = cursor; i < stop; ++i) {
+            address user = _participants[i];
+            _checkpoint(user); // now ≥ end ⇒ clamps to end: freezes twabArea
+            total = FHE.add(total, _accounts[user].twabArea);
+        }
+        ep.totalWeight = total;
+        FHE.allowThis(total); // contract-only ACL, same policy as _totalPrincipal
+        ep.snapshotCursor = stop;
+        emit SnapshotProgress(currentEpochId, stop);
+
+        if (stop == count) {
+            // Cursor deliberately stays == count; Day 4 decides its reuse.
+            ep.phase = EpochPhase.Drawing;
+            emit SnapshotCompleted(currentEpochId);
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Pause — deposits only. Withdrawals are never pausable.
     // ---------------------------------------------------------------------
 
@@ -366,5 +447,20 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     function epochInfo(uint256 epochId) external view returns (uint64 start, uint64 end, EpochPhase phase) {
         Epoch storage ep = _epochs[epochId];
         return (ep.start, ep.end, ep.phase);
+    }
+
+    /// @notice Encrypted total frozen weight for `epochId`. The handle itself
+    ///         is public info; the ACL is contract-only — no user, employer or
+    ///         owner can decrypt it (Day 4's draw consumes it inside FHE ops).
+    /// @dev    Zero handle (uninitialized) until beginSnapshot — UIs must
+    ///         render that as "unavailable", never as the number 0.
+    function totalWeightOf(uint256 epochId) external view returns (euint64) {
+        return _epochs[epochId].totalWeight;
+    }
+
+    /// @notice Snapshot progress for `epochId`: participants folded into the
+    ///         total so far, and the frozen list length ("x/32 processed", R4).
+    function snapshotProgress(uint256 epochId) external view returns (uint32 cursor, uint32 total) {
+        return (_epochs[epochId].snapshotCursor, uint32(_participants.length));
     }
 }
