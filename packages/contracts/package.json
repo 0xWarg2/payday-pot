@@ -54,6 +54,7 @@
     "chain": "hardhat node --network hardhat --no-deploy",
     "demo": "hardhat test demo/demo-day1.ts",
     "demo:day2": "hardhat test demo/demo-day2.ts",
+    "demo:day3": "hardhat test demo/demo-day3.ts",
     "validate:registry": "hardhat run scripts/validate-registry.ts"
   }
 }
