@@ -146,12 +146,12 @@ không admin sweep.
 
 **Mục tiêu:** weight = encrypted balance × time, đóng băng đúng tại `epochEnd`.
 
-- [ ] Account: `euint64 principal`, `euint64 twabArea` (P-3), `uint64 lastCheckpoint`
-- [ ] `_checkpoint(user, min(now, epochEnd))` trước mọi mutation
-- [ ] `area += balance × publicElapsed`; KHÔNG chia epochDuration (P-1)
-- [ ] Snapshot batch + cursor; freeze participant list/order/count
-- [ ] Deposit disabled trong snapshot; withdraw vẫn chạy (checkpoint trước)
-- [ ] Enforce caps P-3 tại deposit (per-user principal cap)
+- [x] Account: `euint64 principal`, `euint64 twabArea` (P-3), `uint64 lastCheckpoint`
+- [x] `_checkpoint(user, min(now, epochEnd))` trước mọi mutation
+- [x] `area += balance × publicElapsed`; KHÔNG chia epochDuration (P-1)
+- [x] Snapshot batch + cursor; freeze participant list/order/count
+- [x] Deposit disabled trong snapshot; withdraw vẫn chạy (checkpoint trước) — gate tại `epochEnd`, chặt hơn plan (KNOWN_LIMITATIONS §6)
+- [x] Enforce caps P-3 tại deposit (per-user principal cap) — guard Day 2 giữ nguyên + boundary tests 2^64 (constructor revert, max-accrual 99.85% không wrap)
 
 Tests: 100 full epoch vs 100 half epoch = 2:1 · 50 nửa đầu + 100 nửa sau = 75 tương đối ·
 last-second deposit ≈ 0 · delayed draw không cộng thêm sau `epochEnd` ·
@@ -372,7 +372,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 |---:|---|---|---|---|---|---|
 | 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | ✅ Full — user xác nhận live user-decrypt trên /spike ra đúng 1000 (20/08) |
 | 2 | 20/08 | Money in/out + invariants | ✅ 43 pass (+property+HCU) | ✅ `pnpm demo:day2` | ✅ | ✅ Local full — deposit callback, withdraw/withdrawAll, conservation, pause-proof exit |
-| 3 | 21/08 | TWAB correct | ☐ | ☐ | ☐ | — |
+| 3 | 21/08 | TWAB correct | ✅ 69 pass (26 TWAB exact-equality + HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
 | 4 | 22/08 | Encrypted draw correct | ☐ | ☐ | ☐ | — |
 | 5 | 23/08 | Protocol full cycle | ☐ | ☐ | ☐ | — |
 | 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |
