@@ -262,16 +262,50 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     }
 
     // ---------------------------------------------------------------------
-    // TWAB checkpoint — Day 2 stub, Day 3 fills the accrual body.
+    // TWAB checkpoint — weight = encrypted balance × public time (Day 3).
     // ---------------------------------------------------------------------
 
-    /// @dev Called before every principal mutation. Day 3 inserts the
-    ///      twabArea += principal·dt accrual here without changing the
-    ///      signature or any call site.
+    /// @dev Called before EVERY principal mutation, so the accrued area always
+    ///      reflects the balance as it stood during the elapsed interval:
+    ///      twabArea += principal × (min(now, epochEnd) − lastCheckpoint).
+    ///
+    ///      P-1: the area is NEVER divided by epochDuration onchain — the
+    ///      Day 4 multiply-high draw is scale-invariant, so the raw area IS
+    ///      the weight; the displayed average is client-side after decrypt.
+    ///      P-3: participantCap·perUserCap·epochDuration < 2^64 (constructor)
+    ///      guarantees the euint64 accrual can never wrap.
+    ///
+    ///      The short-circuits branch ONLY on public plaintext (timestamps —
+    ///      lastCheckpointOf is already a public view), never on encrypted
+    ///      state. A never-stamped account (last == 0) holds a provably zero
+    ///      principal — registration stamps before the first credit — so
+    ///      skipping the mul there changes nothing and saves ~544k HCU.
+    ///
+    ///      twabArea/lastCheckpoint are scoped to the CURRENT epoch: Day 5's
+    ///      startNewEpoch must reset both for every participant.
     function _checkpoint(address user) private {
         uint64 epochEnd = _epochs[currentEpochId].end;
         uint64 nowClamped = uint64(block.timestamp) < epochEnd ? uint64(block.timestamp) : epochEnd;
-        _accounts[user].lastCheckpoint = nowClamped;
+        Account storage acc = _accounts[user];
+        uint64 last = acc.lastCheckpoint;
+
+        if (last == 0 || nowClamped <= last) {
+            acc.lastCheckpoint = nowClamped;
+            return;
+        }
+
+        uint64 elapsed = nowClamped - last; // public plaintext
+
+        euint64 area = acc.twabArea;
+        if (!FHE.isInitialized(area)) {
+            area = FHE.asEuint64(0); // lazy-init: uninitialized handle ≠ encrypted zero
+        }
+        area = FHE.add(area, FHE.mul(acc.principal, elapsed)); // scalar mul — no FHE.div anywhere
+        acc.twabArea = area;
+        FHE.allowThis(area);
+        FHE.allow(area, user); // user only — employer/keeper/owner get no ACL
+
+        acc.lastCheckpoint = nowClamped;
     }
 
     // ---------------------------------------------------------------------
@@ -302,6 +336,15 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///         UIs must render that as "unavailable", never as the number 0.
     function totalPrincipal() external view returns (euint64) {
         return _totalPrincipal;
+    }
+
+    /// @notice Encrypted TWAB area for `user` this epoch (Σ principal·dt) —
+    ///         decryptable only by the user themself. The raw area IS the draw
+    ///         weight (P-1); average = area / EPOCH_DURATION, client-side.
+    /// @dev    Returns the zero handle (uninitialized) until the first accrual —
+    ///         UIs must render that as "unavailable", never as the number 0.
+    function twabAreaOf(address user) external view returns (euint64) {
+        return _accounts[user].twabArea;
     }
 
     function isRegistered(address user) external view returns (bool) {
