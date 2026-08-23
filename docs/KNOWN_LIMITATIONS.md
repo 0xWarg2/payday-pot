@@ -2,7 +2,7 @@
 
 Giới hạn **đã biết, có chủ đích hoặc ngoài tầm kiểm soát** của contract/app.
 Đây KHÔNG phải bug list — mỗi mục có lý do và (nếu có) hướng xử lý tương lai.
-Cập nhật: Day 2 (20/08/2026).
+Cập nhật: Day 3 (23/08/2026).
 
 ## 1. Token-layer: deny-list + maxTotalSupply nằm ngoài pot (R3)
 
@@ -70,3 +70,19 @@ random sẽ được nâng cấp. Draw của pot (Day 5) dùng đúng API này:
 Sản phẩm bảo mật **amount/balance/TWAB/winnings**. Địa chỉ ví, thời điểm tx,
 số lần deposit/withdraw, và **wrap amount** (bước ERC20→ERC7984 là plaintext
 cuối cùng) vẫn public trên chain. Không được mô tả sản phẩm là "anonymous".
+
+## 6. Deposit-dead-window sau `epochEnd` (Day 3 → hết khi Day 5 ship)
+
+Deposit callback gate `phase != Open || block.timestamp >= epoch.end →
+WrongPhase` — cửa deposit đóng **đúng tại `epochEnd`**, kể cả khi phase còn
+`Open` vì chưa ai gọi `beginSnapshot`. Có chủ đích: đóng khe hở giữa lúc epoch
+hết hạn và lúc snapshot bắt đầu, để participant list/order/count bất biến từ
+`end` (freeze behavioral — DRAW_PROTOCOL §1) và không deposit nào lọt vào sau
+giờ chốt weight.
+
+**Hệ quả tạm thời**: từ `epochEnd` cho tới khi `startNewEpoch` (Day 5) mở
+epoch kế tiếp, mọi deposit bị từ chối — pool "đóng cửa nhận tiền" trong suốt
+snapshot/draw/settle. Withdraw không bị ảnh hưởng (chạy ở mọi phase — R10).
+Day 5 thu hẹp window này về đúng thời gian resolve epoch; UI Day 7 phải hiển
+thị "entries closed — next round opens soon" thay vì lỗi trần (`epochInfo`
+public, phân biệt được với các WrongPhase khác).

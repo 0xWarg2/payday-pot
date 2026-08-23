@@ -1,0 +1,86 @@
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <!-- Day 3 — your ticket = money × time. 1 ý chính: cùng tiền, gấp đôi thời gian → ticket đúng 2×.
+       Style: docs/PAYDAY_POT_VISUAL_STYLE.md — giấy #F7F3E7, nét wobble, lime saving, cyan encrypted.
+       Encrypted values = dot mask, KHÔNG BAO GIỜ số plaintext. -->
+  <defs>
+    <filter id="wobble" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+    </filter>
+    <pattern id="inkdots" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="2.1" fill="#1f1b16" opacity="0.75"/>
+      <circle cx="10" cy="10" r="2.1" fill="#1f1b16" opacity="0.75"/>
+    </pattern>
+    <pattern id="cyandots" width="15" height="15" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="2.8" fill="#0FB9D6"/>
+      <circle cx="11" cy="11" r="2.8" fill="#0FB9D6"/>
+    </pattern>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="900" fill="#F7F3E7"/>
+  <rect x="0" y="0" width="1600" height="900" filter="url(#grain)"/>
+
+  <!-- title -->
+  <text x="60" y="92" font-family="Marker Felt, Comic Sans MS, cursive" font-size="60" fill="#1f1b16">PAYDAY POT</text>
+  <text x="60" y="142" font-family="Bradley Hand, Segoe Print, cursive" font-size="34" fill="#1f1b16">day 3 — your ticket = money × time</text>
+  <text x="60" y="184" font-family="Noteworthy, Segoe Print, cursive" font-size="26" fill="#1f1b16" opacity="0.85">74 tests green</text>
+
+  <!-- payday line + clock -->
+  <g filter="url(#wobble)">
+    <line x1="1120" y1="248" x2="1120" y2="580" stroke="#1f1b16" stroke-width="3" stroke-dasharray="10 8"/>
+    <circle cx="1120" cy="208" r="26" fill="#F7F3E7" stroke="#1f1b16" stroke-width="4"/>
+    <line x1="1120" y1="208" x2="1120" y2="190" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="1120" y1="208" x2="1133" y2="216" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <text x="1158" y="218" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">payday</text>
+
+  <!-- row 1: in at the start, held all week -->
+  <text x="350" y="303" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">in at the start — held all week</text>
+  <g filter="url(#wobble)">
+    <rect x="350" y="330" width="770" height="46" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
+    <circle cx="300" cy="353" r="34" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
+    <circle cx="300" cy="353" r="34" fill="url(#inkdots)"/>
+  </g>
+
+  <!-- row 2: same money, in at halftime (first half = dashed empty) -->
+  <g filter="url(#wobble)">
+    <rect x="350" y="470" width="316" height="46" fill="none" stroke="#1f1b16" stroke-width="2.5" stroke-dasharray="9 8" opacity="0.55"/>
+    <rect x="735" y="470" width="385" height="46" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
+    <circle cx="700" cy="493" r="34" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
+    <circle cx="700" cy="493" r="34" fill="url(#inkdots)"/>
+  </g>
+  <text x="735" y="562" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">same money, in at halftime</text>
+
+  <!-- encrypted weights: cyan dot blobs, area 2:1 -->
+  <text x="1330" y="248" font-family="Bradley Hand, Segoe Print, cursive" font-size="26" fill="#1f1b16" text-anchor="middle">twice the time</text>
+  <text x="1330" y="281" font-family="Bradley Hand, Segoe Print, cursive" font-size="26" fill="#1f1b16" text-anchor="middle">→ exactly 2× the ticket</text>
+  <g filter="url(#wobble)">
+    <ellipse cx="1330" cy="353" rx="92" ry="57" fill="url(#cyandots)" stroke="#1f1b16" stroke-width="3.5"/>
+    <ellipse cx="1330" cy="493" rx="65" ry="40" fill="url(#cyandots)" stroke="#1f1b16" stroke-width="3.5"/>
+  </g>
+
+  <!-- stamp: frozen at payday -->
+  <g transform="rotate(-5 1120 660)" opacity="0.9">
+    <g filter="url(#wobble)">
+      <rect x="932" y="622" width="376" height="76" fill="none" stroke="#1f1b16" stroke-width="5"/>
+      <rect x="941" y="631" width="358" height="58" fill="none" stroke="#1f1b16" stroke-width="2"/>
+    </g>
+    <text x="1120" y="674" font-family="Marker Felt, Comic Sans MS, cursive" font-size="38" fill="#1f1b16" text-anchor="middle">FROZEN AT PAYDAY</text>
+  </g>
+
+  <!-- bottom note: no-loss -->
+  <text x="60" y="806" font-family="Noteworthy, Segoe Print, cursive" font-size="30" fill="#1f1b16">withdraw anytime — the ticket you earned stays in the draw</text>
+  <g filter="url(#wobble)">
+    <circle cx="1010" cy="796" r="20" fill="#C6F04B" stroke="#1f1b16" stroke-width="3.5"/>
+    <line x1="1046" y1="796" x2="1102" y2="796" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="1102" y1="796" x2="1088" y2="786" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="1102" y1="796" x2="1088" y2="806" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- built with -->
+  <text x="1540" y="864" font-family="Bradley Hand, Segoe Print, cursive" font-size="24" fill="#1f1b16" opacity="0.7" text-anchor="end">built with ZAMA</text>
+</svg>
