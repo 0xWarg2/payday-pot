@@ -13,7 +13,7 @@ P0 của ngày đạt. Repo public: <https://github.com/0xWarg2/payday-pot>.
 | Withdraw sống trong snapshot | ✅ withdrawAll xanh trong Snapshotting, xanh cả khi **paused + Snapshotting đồng thời** (R10 contract-full) |
 | Caps enforced + documented | ✅ boundary: constructor product `== 2^64` → `InvalidConfig`; max-accrual 99.85% của 2^64 decrypt đúng từng đơn vị — `euint64` đủ, không cần promote |
 | Đo HCU thực tế → `DRAW_PROTOCOL.md` | ✅ bảng đo thật + marginal ≈689k/participant + **batch ceiling 21/tx** (sửa ước lượng ~29 của P-3) |
-| Toàn bộ tests xanh local | ✅ **69 passing** (43 cũ nguyên vẹn + 26 TWAB) |
+| Toàn bộ tests xanh local | ✅ **74 passing** (43 cũ nguyên vẹn + 26 TWAB + 5 HCU Day 3) |
 | Demo 1 lệnh | ✅ `pnpm demo:day3` |
 
 ## Demo (chạy lại được ngay)
@@ -117,7 +117,7 @@ trigger-only. Sau đó ticket math P-2: promote `euint128`,
 
 ## Số liệu
 
-- Test suite: **69 passing** (43 Day 1–2 nguyên vẹn + 26 TWAB), demo:day3 `1 passing (~189ms)`.
+- Test suite: **74 passing** (43 Day 1–2 nguyên vẹn + 26 TWAB + 5 HCU Day 3), demo:day3 `1 passing (~189ms)`.
 - Batch ceiling đo thật: **21 participants/tx** (depth-bound) — pool 32 = 2 tx.
 - Branch `dev` trước merge: 7 commits ahead `main` (social leftovers, CLAUDE.md
   git-flow, `_checkpoint`, phase machine, 26 tests, HCU+demo, docs Day 3).

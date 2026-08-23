@@ -27,7 +27,7 @@
   <!-- title -->
   <text x="60" y="92" font-family="Marker Felt, Comic Sans MS, cursive" font-size="60" fill="#1f1b16">PAYDAY POT</text>
   <text x="60" y="142" font-family="Bradley Hand, Segoe Print, cursive" font-size="34" fill="#1f1b16">day 3 — your ticket = money × time</text>
-  <text x="60" y="184" font-family="Noteworthy, Segoe Print, cursive" font-size="26" fill="#1f1b16" opacity="0.85">69 tests green</text>
+  <text x="60" y="184" font-family="Noteworthy, Segoe Print, cursive" font-size="26" fill="#1f1b16" opacity="0.85">74 tests green</text>
 
   <!-- payday line + clock -->
   <g filter="url(#wobble)">

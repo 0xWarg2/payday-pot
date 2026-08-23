@@ -372,7 +372,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 |---:|---|---|---|---|---|---|
 | 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | ✅ Full — user xác nhận live user-decrypt trên /spike ra đúng 1000 (20/08) |
 | 2 | 20/08 | Money in/out + invariants | ✅ 43 pass (+property+HCU) | ✅ `pnpm demo:day2` | ✅ | ✅ Local full — deposit callback, withdraw/withdrawAll, conservation, pause-proof exit |
-| 3 | 21/08 | TWAB correct | ✅ 69 pass (26 TWAB exact-equality + HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
+| 3 | 21/08 | TWAB correct | ✅ 74 pass (26 TWAB exact-equality + 5 HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
 | 4 | 22/08 | Encrypted draw correct | ☐ | ☐ | ☐ | — |
 | 5 | 23/08 | Protocol full cycle | ☐ | ☐ | ☐ | — |
 | 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |

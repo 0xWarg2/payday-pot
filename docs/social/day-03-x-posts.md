@@ -3,7 +3,7 @@
 Voice: all-lowercase, câu ngắn, giọng dev kể cho dev. Ngân sách jargon: tối đa 2 tên
 kỹ thuật / post. Không buzzword. Không "anonymous". Prize = employer-funded sponsored
 yield. Facts từ `docs/handoffs/DAY_03_HANDOFF.md` + `docs/DRAW_PROTOCOL.md` — mọi con
-số đã verify (69 tests, 2:1 exact, HCU đo thật, ceiling 21/tx).
+số đã verify (74 tests, 2:1 exact, HCU đo thật, ceiling 21/tx).
 
 ---
 
@@ -26,7 +26,7 @@ in full, the ticket already earned stays in the draw
 transaction's budget, so a full pool of 32 closes in 2 transactions. anyone can push
 those — including the employer, who still can't read a single weight
 
-69 tests green. fun constraint: you can't divide by an encrypted number onchain. so
+74 tests green. fun constraint: you can't divide by an encrypted number onchain. so
 the draw never divides at all — weight stays raw money×seconds, and the win
 probability comes out identical.
 
@@ -40,7 +40,7 @@ day 4: the draw — one encrypted random number, used once, no rerolls.
 
 day 3 of payday pot — your draw ticket is balance × time, all encrypted. same
 deposit, half the time → exactly half the ticket, to the unit. tickets freeze at
-payday; withdraw after, yours survives. 69 tests green.
+payday; withdraw after, yours survives. 74 tests green.
 
 day 4: the draw.
 
@@ -83,7 +83,7 @@ measured today — freezing one saver ≈ 3.4% of it, so a 32-person pool closes
 transactions. my pre-measurement estimate for one of the steps was 18× too
 pessimistic. measure, don't model.
 
-69 tests green. day 4: the draw — one encrypted random number, no rerolls.
+74 tests green. day 4: the draw — one encrypted random number, no rerolls.
 
 @zama_fhe #ZamaDeveloperProgram
 
