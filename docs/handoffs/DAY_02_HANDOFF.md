@@ -1,4 +1,7 @@
-# Day 2 Handoff — 20/08/2026
+# Day 2 Handoff — 20/08/2026 (cập nhật 23/08: repo lên GitHub, demo tiếng Anh)
+
+**Repo public: <https://github.com/0xWarg2/payday-pot>** — push thẳng `main`,
+chưa tách `dev` (user quyết định để sau). HEAD lúc push: `f4c104c`.
 
 ## Trạng thái gate (từ EXECUTION_PLAN Day 2)
 
@@ -23,7 +26,9 @@ ra đúng **1000** (20/08) → B7 ✅, scorecard Day 1 = Full.
 cd "packages/contracts" && pnpm demo:day2
 ```
 
-Expected narration: deploy stack → Jimmer wrap 15,000 (public cuối cùng) →
+Narration đã chuyển **tiếng Anh** (commit `f4c104c`, cho video build-in-public;
+comment trong code vẫn tiếng Việt). Expected flow: deploy stack → Jimmer wrap
+15,000 (public cuối cùng) →
 deposit enc(6,000), event data `"0x"` → tự decrypt ✅ 6,000 → Warg 🔒 / employer 🔒
 DENIED → partial withdraw 1,500 → deposit 8,000 vượt headroom 5,500 → **refund
 im lặng, tx vẫn success** → pause: deposit chặn (EnforcedPause), `withdrawAll()`
