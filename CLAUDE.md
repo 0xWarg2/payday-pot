@@ -94,5 +94,10 @@ cd apps/web && pnpm dev
 - FHE/ERC-7984 API chưa chắc chắn → spike/compile/test trước, không xây abstraction trước.
 - Không qua ngày mới khi exit gate P0 của ngày hiện tại chưa đạt (xem EXECUTION_PLAN).
 - EOD mỗi ngày: tests xanh + demo <5 phút + cập nhật scorecard + commit.
+- Git flow: KHÔNG commit trực tiếp lên `main`. Mọi thay đổi commit trên branch
+  `dev` (checkout `dev` trước khi bắt đầu). Chỉ merge `dev` → `main` khi exit
+  gate P0 của ngày đạt (tests xanh + demo chạy + docs/scorecard cập nhật),
+  merge bằng `git merge --no-ff` với message `Merge dev: Day N — <milestone>`.
+  Giữ `dev` sống sau merge; push cả `dev` lẫn `main`.
 - Secrets: private key/RPC key chỉ trong `.env` (gitignored), không bao giờ
   `NEXT_PUBLIC_*`, không hardcode, không vào git history.
