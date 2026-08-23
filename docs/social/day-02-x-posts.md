@@ -133,3 +133,22 @@ needs — that budget, not gas, is the real constraint you design around.
 
 - `@zama_fhe` + `#ZamaDeveloperProgram` dòng cuối, đoạn riêng. Thread: post 1 + post cuối.
 - Hashtag giữ camel-case. Tối đa thêm `#FHE`. Chưa dùng chữ "submission".
+
+## Ảnh minh hoạ
+
+`docs/social/images/day-02.png` (3200×1800, 16:9 — nguồn: `day-02.svg`).
+
+Nội dung: 1 ý chính = pot với balance dạng dot mask (không bao giờ số thật) +
+3 fact của Day 2 quanh nó — "credits only what actually arrived", "over the cap →
+refunded, in silence", "withdraw — always open" (mũi tên đi xuyên stamp `PAUSED`) +
+"Σ savers = pot · 43 tests". Chưa vẽ prize/draw vì Day 2 chưa có (rule
+`PAYDAY_POT_VISUAL_STYLE.md`: chỉ vẽ thứ đã tồn tại).
+
+Render lại sau khi sửa SVG:
+
+```bash
+cd docs/social/images && { echo '<html><body style="margin:0;background:#F7F3E7">'; cat day-02.svg; echo '</body></html>'; } > _w.html && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=1600,900 --screenshot=day-02.png "file://$PWD/_w.html" && rm _w.html
+```
+
+Font phụ thuộc macOS (Marker Felt / Bradley Hand / Noteworthy) — render trên máy
+khác sẽ fallback khác. Dùng luôn PNG đã commit, đừng re-render trên CI.

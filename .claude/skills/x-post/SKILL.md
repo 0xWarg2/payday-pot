@@ -110,6 +110,22 @@ Nếu ngày đó có demo command (rule của repo: mỗi ngày 1 lệnh demo ou
 - không cắt dòng chứng minh privacy (vd `acl denied`) — đó là điểm ăn tiền
 - ảnh build-in-public thì theo `docs/PAYDAY_POT_VISUAL_STYLE.md`
 
+### Ảnh: pipeline đã dùng (day 2 trở đi)
+
+Không có tool image-gen trong session → vẽ bằng **SVG tay** rồi rasterize:
+
+1. `docs/social/images/day-NN.svg`, viewBox 1600×900. Giấy `#F7F3E7` + `feTurbulence`
+   grain; nét đen qua filter `feDisplacementMap` (scale ~3) cho wobble; lime `#C6F04B`
+   cho saving/principal; cyan `#0FB9D6` cho encrypted/onchain. Font macOS:
+   `Marker Felt` (title) / `Bradley Hand` (label) / `Noteworthy` (note).
+2. **1 ý chính + tối đa 5 câu label ngắn**. Encrypted value vẽ bằng dot/hatch mask,
+   **không bao giờ số plaintext**. Chỉ vẽ feature đã tồn tại ngày đó.
+   `built with ZAMA` nhỏ ở góc, luôn nhỏ hơn title `PAYDAY POT`.
+3. Rasterize 2× (3200×1800) bằng headless Chrome — lệnh copy trong
+   `docs/social/day-02-x-posts.md` §Ảnh minh hoạ. Commit cả `.svg` và `.png`.
+4. Xem lại PNG bằng mắt trước khi đưa user: chữ đè nhau và chữ tràn khỏi canvas là
+   lỗi hay gặp nhất (`text-anchor="end"` cho mọi label sát lề phải).
+
 ## Bước 6 — output
 
 Ghi vào `docs/social/day-NN-x-posts.md` (tạo dir nếu chưa có), gồm: mỗi variant một

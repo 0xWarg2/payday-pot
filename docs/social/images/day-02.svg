@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="hatch" width="14" height="14" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="14" stroke="#3a3a38" stroke-width="1.15" opacity="0.5"/>
+    </pattern>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahk" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#1c1c1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round; }
+    .cy-t  { fill:none; stroke:#0FB9D6; stroke-width:2.2; stroke-linecap:round; }
+    .lime  { fill:#C6F04B; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
+
+  <!-- paper -->
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
+
+  <!-- ============ title ============ -->
+  <g filter="url(#marker)">
+    <path d="M86 108 L556 96 L560 142 L88 152 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="92" y="140" class="title" font-size="66" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="96" y="188" class="hand" font-size="35" fill="#3d3d39">day 2 — money in, money out</text>
+  <g filter="url(#rough2)">
+    <path d="M88 210 C 240 206, 430 214, 620 208" class="ink-t" opacity="0.55"/>
+  </g>
+
+  <!-- ============ saver ============ -->
+  <g filter="url(#rough)">
+    <circle cx="214" cy="428" r="27" class="ink"/>
+    <path d="M214 456 L214 536" class="ink"/>
+    <path d="M214 478 L166 508 M214 478 L268 470" class="ink"/>
+    <path d="M214 536 L184 596 M214 536 L246 594" class="ink"/>
+  </g>
+
+  <!-- masked amount held by the saver -->
+  <g filter="url(#rough2)">
+    <path d="M286 392 L432 386 L436 448 L290 454 Z" class="cy-t"/>
+  </g>
+  <g fill="#0FB9D6">
+    <circle cx="312" cy="420" r="7.5"/><circle cx="340" cy="418" r="7.5"/>
+    <circle cx="368" cy="420" r="7.5"/><circle cx="396" cy="418" r="7.5"/>
+  </g>
+
+  <!-- ============ arrow in ============ -->
+  <g filter="url(#rough)">
+    <path d="M444 414 C 520 408, 566 430, 636 452" class="cy" marker-end="url(#ah)"/>
+  </g>
+  <text x="404" y="345" class="hand" font-size="31">credits only what actually arrived</text>
+  <g filter="url(#rough2)">
+    <path d="M470 358 C 520 372, 540 386, 548 400" class="ink-t" opacity="0.45"/>
+  </g>
+
+  <!-- ============ the pot ============ -->
+  <g filter="url(#rough)">
+    <path d="M664 424 L1014 420 L962 706 L714 710 Z" fill="#C6F04B" fill-opacity="0.30" stroke="#1c1c1a" stroke-width="3"/>
+    <path d="M664 424 L1014 420 L962 706 L714 710 Z" fill="url(#hatch)" stroke="none"/>
+    <ellipse cx="839" cy="423" rx="176" ry="27" fill="#F7F3E7" stroke="#1c1c1a" stroke-width="3"/>
+  </g>
+  <!-- encrypted balances inside: masked marks, never numbers -->
+  <g fill="#0FB9D6" opacity="0.92">
+    <circle cx="742" cy="492" r="8"/><circle cx="774" cy="488" r="8"/><circle cx="806" cy="492" r="8"/><circle cx="838" cy="488" r="8"/>
+    <circle cx="766" cy="560" r="8"/><circle cx="798" cy="556" r="8"/><circle cx="830" cy="560" r="8"/><circle cx="862" cy="556" r="8"/><circle cx="894" cy="560" r="8"/>
+    <circle cx="788" cy="628" r="8"/><circle cx="820" cy="624" r="8"/><circle cx="852" cy="628" r="8"/>
+  </g>
+  <g filter="url(#rough2)">
+    <path d="M726 516 L916 510 M750 584 L928 578 M772 652 L900 646" class="ink-t" opacity="0.35"/>
+  </g>
+  <text x="672" y="762" class="hand" font-size="30">balances stay encrypted</text>
+
+  <!-- ============ cap line + over-cap bounce ============ -->
+  <g filter="url(#marker)">
+    <path d="M646 388 L1052 380" stroke="#C6F04B" stroke-width="9" stroke-linecap="round" stroke-dasharray="26 16" fill="none"/>
+  </g>
+  <text x="1064" y="392" class="note" font-size="25">your cap</text>
+  <g filter="url(#rough)">
+    <path d="M1214 214 C 1140 268, 1062 322, 1004 366" class="cy-t"/>
+    <path d="M1004 366 C 1076 358, 1156 330, 1236 288" class="cy" marker-end="url(#ah)"/>
+  </g>
+  <g filter="url(#rough2)">
+    <path d="M986 348 L1022 384 M1022 348 L986 384" class="ink-t" opacity="0.7"/>
+  </g>
+  <text x="1206" y="176" class="hand" font-size="31">over the cap →</text>
+  <text x="1206" y="212" class="hand" font-size="31">refunded, in silence</text>
+
+  <!-- ============ withdraw out ============ -->
+  <g filter="url(#rough)">
+    <path d="M706 664 C 592 692, 452 690, 336 672" class="cy" marker-end="url(#ah)"/>
+  </g>
+  <text x="252" y="722" class="hand" font-size="31">withdraw — always open</text>
+
+  <!-- paused stamp, withdraw still walks through it -->
+  <g transform="rotate(-7 470 806)" filter="url(#rough)">
+    <rect x="342" y="768" width="256" height="78" class="ink"/>
+    <rect x="352" y="778" width="236" height="58" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="470" y="820" class="title" font-size="41" text-anchor="middle" transform="rotate(-7 470 806)" fill="#2a2a26">PAUSED</text>
+  <g filter="url(#rough2)">
+    <path d="M604 780 C 646 752, 666 716, 662 686" class="ink-t" marker-end="url(#ahk)" opacity="0.75"/>
+  </g>
+
+  <!-- ============ conservation ============ -->
+  <g filter="url(#marker)">
+    <path d="M1032 762 L1318 754 L1320 796 L1034 804 Z" class="lime" opacity="0.55"/>
+  </g>
+  <text x="1040" y="794" class="hand" font-size="38">Σ savers  =  pot</text>
+  <text x="1038" y="840" class="note" font-size="25">43 tests · nothing appears, nothing vanishes</text>
+  <g filter="url(#rough2)">
+    <path d="M1010 746 C 1130 730, 1290 740, 1342 768 C 1370 800, 1290 816, 1150 814 C 1050 810, 1000 790, 1010 746"
+          class="ink-t" opacity="0.42"/>
+  </g>
+
+  <!-- ============ built with zama ============ -->
+  <text x="1428" y="878" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1544" y="878" class="title" font-size="26" text-anchor="end" opacity="0.85" letter-spacing="2">ZAMA</text>
+</svg>
