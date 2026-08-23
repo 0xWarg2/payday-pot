@@ -101,8 +101,12 @@ nếu ceiling tụt dưới 8.
 - **Refund-on-ebool-false chỉ verify local (OZ 0.5.3)** — recheck Day 9
   (mang từ Day 2, không đổi).
 - UI-half của R2/R10/R15 + banner "entries closed" (KNOWN_LIMITATIONS §6) chờ Day 7.
-- Side task EXECUTION_PLAN dòng ~312 (mở form Zama S4 tới bước 3, ghi field
-  thật): best-effort cuối session — nếu chưa làm thì Day 4 làm.
+- ~~Side task: mở form Zama S4 tới bước 3~~ → **✅ ĐÃ LÀM 23/08** (chỉ đọc, không
+  điền): toàn bộ field + 3 cảnh báo ghi trong EXECUTION_PLAN §Submission prep.
+  Điểm chết người: **mỗi email submit đúng 1 lần, không sửa được**; Description
+  **max 140 ký tự** phải draft trước; video chỉ nhận host X/YouTube/Loom;
+  **handle X của Zama đã đổi → tag `@zama`, bỏ `@zama_fhe`** (skill + draft day-3
+  đã sửa, post day 1–2 đã đăng thì kệ).
 - Cursor reuse cho select phase (DRAW_PROTOCOL §6.5): quyết lúc viết Day 4.
 
 ## Việc đầu tiên Day 4

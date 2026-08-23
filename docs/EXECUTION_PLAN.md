@@ -303,13 +303,47 @@ Chiều:
    Nút cuối trang: **"See the challenge"**.
 2. Bước 2 — brief đầy đủ: objective, why this matters, requirements, topics to cover,
    submission requirements, judging criteria. Nút cuối trang: **"Submit my project"**.
-3. Bước 3 — form field thật nằm sau nút đó. Chưa mở (để user tự mở khi submit).
+3. Bước 3 — wizard nộp bài thật. **Đã mở đọc toàn bộ field 23/08** (chỉ đọc, chưa điền
+   gì) — cấu trúc: Submission guidelines → Step1. Register → Step2. Submit → Thank you.
 
 → **Post X KHÔNG phải kênh nộp bài.** X thread chỉ là 1 trong 4 deliverable. Kênh nộp
 duy nhất là form ở bước 3. Không có bước đăng ký/wallet-connect nào chắn trước
 (guild.xyz **đã ngừng dùng**, community chuyển sang `community.zama.org`).
 
-**Mở tới bước 3 đọc field từ Day 2–3, đừng đợi 04/09.**
+**Field thật của wizard (đọc từ schema nhúng trong trang, 23/08):**
+
+*Submission guidelines (interstitial — 3 cảnh báo quyết định chiến lược):*
+
+- ⚠️ **Mỗi email chỉ submit được MỘT lần, và response KHÔNG sửa được sau khi submit**
+  → single-shot; freeze 04/09 18:00 ICT là chốt thật, mọi link phải final trước khi bấm.
+- Email phải đúng — **sai email ảnh hưởng eligibility nhận rewards**.
+- Project name chứa "Zama" → **không đủ điều kiện** (giờ là rule chính thức của form,
+  không chỉ là guideline của mình).
+
+*Step1. Register:* Email\* · GitHub profile\* (url) · X profile\* (url) · LinkedIn
+(url, optional) · "Add team members" (textarea optional — mỗi dòng: name, email,
+wallet, GitHub profile, role).
+
+*Step2. Submit:*
+
+| Field | Kiểu | Ghi chú |
+|---|---|---|
+| Project name | text\* | không chứa "Zama" |
+| Description | text\*, **max 140 ký tự** | phải draft + đếm trước, không viết tại chỗ |
+| Link to smart contract code base | url\* | trỏ tag `v1.0.0-season4` |
+| Link to frontend code base | url\* | monorepo → dán cùng link với contract |
+| Demo website | url\* | live site, chạy được incognito |
+| Video pitch | url\* | ≤3 phút, người thật, không AI voice/video, không tua nhanh. **Chỉ nhận host X / YouTube / Loom** — "posting your video on X and sharing the X link is preferred" |
+| Link to X post | url\* | "tagging **@zama** and using the hashtag #ZamaDeveloperProgram"; chấp nhận single post / thread / article / chính pitch video |
+| Leaderboard nếu thắng? | dropdown\* | "Yes, with my GitHub and X profile" / "No, I prefer to be anonymous" — quyết trước 04/09 |
+| Feedback on the Bounty Track | text, optional | "What were the biggest friction points?" |
+| Nhận email dev updates từ Zama | checkbox, optional | |
+| CAPTCHA | bắt buộc | user tự thao tác toàn bộ bước submit |
+
+⚠️ **Handle X của Zama đã đổi: `@zama` (không còn `@zama_fhe`)** — verify 23/08:
+form ghi "tagging @zama", thank-you page link `x.com/zama`, và profile `x.com/zama`
+là account thật (266K followers, bio Zama Protocol, domain mới zama.org). Mọi post
+từ Day 3 trở đi tag `@zama`; skill x-post đã sửa theo.
 
 Deliverable (theo trang submission + traceability §4 của IMPLEMENTATION_PLAN):
 
@@ -319,8 +353,10 @@ Deliverable (theo trang submission + traceability §4 của IMPLEMENTATION_PLAN)
       Chứa: full cycle + user-decrypt + **~30s recovery** (xem ERROR_RECOVERY_MATRIX)
       + nói thẳng prize = employer-funded sponsored yield + RNG là PRNG mockup
 - [ ] **Intro thread hoặc article trên X** — đây là deliverable, không phải optional.
-      Tag `@zama_fhe` + `#ZamaDeveloperProgram`. Build log hằng ngày ở
-      `docs/social/day-NN-x-posts.md`, thread tổng hợp viết ở 02–04/09
+      Tag `@zama` (handle mới — xem cảnh báo trên) + `#ZamaDeveloperProgram`. Build log
+      hằng ngày ở `docs/social/day-NN-x-posts.md`, thread tổng hợp viết ở 02–04/09
+- [ ] **Description ≤140 ký tự** draft sẵn + đếm bằng script (field bắt buộc của form,
+      không viết tại chỗ lúc submit)
 - [ ] **Public GitHub** — signed-out xem được; link trong form trỏ **release tag
       `v1.0.0-season4`**, KHÔNG trỏ `main` (main còn commit tiếp sau submit)
 - [ ] `deployments/sepolia.json` khớp source đã verify trên explorer (address, block,
