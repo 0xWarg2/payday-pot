@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {FHE, ebool, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, ebool, euint64, euint128, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -41,7 +41,8 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         euint64 principal; // encrypted current deposit balance
         euint64 twabArea; // encrypted Σ principal·dt, accrued in _checkpoint (Day 3)
         uint64 lastCheckpoint; // plaintext timestamp of last accrual, clamped to epoch end
-        euint64 pendingPrize; // Day 5: encrypted claimable winnings
+        euint64 pendingPrize; // encrypted winnings, credited in selectBatch (claim: Day 5)
+        ebool won; // encrypted winner flag — contract-only ACL, never user-readable (§15.1)
         bool registered;
     }
 
@@ -49,11 +50,16 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         uint64 start;
         uint64 end;
         EpochPhase phase;
-        // Day 3-5 fields (reserved so the storage layout is final today):
+        // Day 5 (claim/settle) is the last consumer; the ABI freezes then.
         euint64 totalWeight; // Σ frozen twabArea over all participants
         euint64 random; // drawn exactly once per epoch, never rerolled
-        uint32 snapshotCursor; // batch continuation cursor (permissionless)
+        euint64 ticket; // winning ticket = ⌊random·totalWeight/2^64⌋ (P-2), fixed with random
+        euint64 cumulative; // running weight sum carried across selectBatch txs
+        ebool selectedAny; // encrypted "the winner has been crossed" latch
+        uint32 snapshotCursor; // snapshot batch continuation cursor (permissionless)
+        uint32 selectCursor; // selection batch cursor — deliberately separate (§6.5)
         bool drawn;
+        uint64 prizeAmount; // public sponsored prize (P-4); set on Day 5, IMMUTABLE once drawn
     }
 
     // ---------------------------------------------------------------------
@@ -100,6 +106,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///      be branched on, so a refunded (over-cap) deposit also emits this.
     event Deposited(address indexed user, uint256 indexed epochId);
     event Withdrawn(address indexed user, uint256 indexed epochId);
+    /// @dev Draw events carry only public counters — never the randomness, the
+    ///      ticket, an amount, or (crucially) the winner's address.
+    event RandomRequested(uint256 indexed epochId);
+    event SelectProgress(uint256 indexed epochId, uint32 cursor);
+    event DrawCompleted(uint256 indexed epochId);
 
     // ---------------------------------------------------------------------
     // Errors — no amount parameters, plaintext-safe conditions only.
@@ -111,6 +122,9 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     error WrongPhase();
     error InvalidConfig();
     error ZeroAddress();
+    error AlreadyDrawn();
+    error NotDrawn();
+    error SelectionComplete();
 
     // ---------------------------------------------------------------------
     // Constructor
@@ -383,14 +397,156 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         emit SnapshotProgress(currentEpochId, stop);
 
         if (stop == count) {
-            // Cursor deliberately stays == count; Day 4 decides its reuse.
+            // Cursor deliberately stays == count — snapshotProgress keeps its
+            // "x/32 frozen" meaning; the draw scan uses its own selectCursor (§6.5).
             ep.phase = EpochPhase.Drawing;
             emit SnapshotCompleted(currentEpochId);
         }
     }
 
     // ---------------------------------------------------------------------
-    // Pause — deposits only. Withdrawals are never pausable.
+    // Draw — one-shot randomness + weighted winner selection (Day 4).
+    // requestRandom is the ONLY pausable step besides deposits: pause stops
+    // NEW draws from starting but never an in-flight one — selectBatch, like
+    // the snapshot, is deterministic bookkeeping and stays permissionless.
+    // ---------------------------------------------------------------------
+
+    /// @notice Lock the epoch's randomness — exactly once, never rerolled (R5).
+    ///         Anyone may call; the function takes NO parameters, so a keeper
+    ///         can trigger the draw but can never supply a seed, a weight or a
+    ///         winner (rule #7 holds at the signature level).
+    /// @dev    The winning ticket is fixed in the SAME tx (P-2 multiply-high):
+    ///             ticket = ⌊random · totalWeight / 2^64⌋,  random < 2^64
+    ///         so ticket < totalWeight whenever totalWeight > 0 and the scan is
+    ///         guaranteed to cross it. No FHE.div/rem anywhere: the euint128
+    ///         product cannot wrap (both factors < 2^64) and the downcast after
+    ///         shr(64) is exact (quotient < totalWeight < 2^64).
+    ///         totalWeight is always initialized here — beginSnapshot is the
+    ///         only path into Drawing and it writes enc(0) even for an empty pool.
+    function requestRandom() external whenNotPaused {
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Drawing) revert WrongPhase();
+        if (ep.drawn) revert AlreadyDrawn();
+
+        euint64 rnd = FHE.randEuint64(); // state-changing tx only (FHE rule)
+        euint128 product = FHE.mul(FHE.asEuint128(rnd), FHE.asEuint128(ep.totalWeight));
+        euint64 ticket = FHE.asEuint64(FHE.shr(product, 64));
+
+        ep.random = rnd;
+        ep.ticket = ticket;
+        ep.cumulative = FHE.asEuint64(0);
+        ep.selectedAny = FHE.asEbool(false);
+        ep.selectCursor = 0;
+        ep.drawn = true;
+
+        // Contract-only ACL on the whole draw state — no user, keeper,
+        // employer or owner ever decrypts the randomness or the ticket.
+        FHE.allowThis(rnd);
+        FHE.allowThis(ticket);
+        FHE.allowThis(ep.cumulative);
+        FHE.allowThis(ep.selectedAny);
+
+        emit RandomRequested(currentEpochId);
+
+        if (_participants.length == 0) {
+            // Nothing to scan — the draw completes in the same tx (mirrors
+            // beginSnapshot's empty-pool fast path); selectBatch stays
+            // consistently unusable through its cursor gate.
+            emit DrawCompleted(currentEpochId);
+        }
+    }
+
+    /// @notice Scan up to `maxSteps` participants of the drawn epoch, crediting
+    ///         the prize to the (single) winner under encryption. Permissionless
+    ///         and resumable from the stored cursor by any wallet (R4).
+    /// @dev    Cumulative-crossing scan (DRAW_PROTOCOL §6.3): the winner is the
+    ///         first participant whose running weight sum strictly exceeds the
+    ///         ticket. `selectedAny` gates any later crossing out, so at most
+    ///         one `hit` is ever true; ticket < totalWeight (P-2) guarantees at
+    ///         least one when the total is positive. An all-zero-weight epoch
+    ///         (totalWeight == 0 ⇒ ticket == 0) never crosses — no winner, and
+    ///         the prize stays with the epoch (§6.4 rollover, resolved Day 5).
+    ///         Every participant gets the IDENTICAL op sequence — no branch on
+    ///         encrypted values, no encrypted indexing — so the tx shape
+    ///         reveals nothing about who won.
+    ///         prizeAmount is IMMUTABLE from `drawn == true` (Day 5's funding
+    ///         setter must enforce that): the per-tx re-encryption below has to
+    ///         award the same amount no matter which batch crosses the winner.
+    function selectBatch(uint32 maxSteps) external {
+        if (maxSteps == 0) revert InvalidConfig();
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Drawing) revert WrongPhase();
+        if (!ep.drawn) revert NotDrawn();
+
+        uint32 cursor = ep.selectCursor;
+        uint32 count = uint32(_participants.length);
+        if (cursor >= count) revert SelectionComplete();
+        uint256 want = uint256(cursor) + uint256(maxSteps); // no uint32 overflow
+        uint32 stop = want > count ? count : uint32(want);
+
+        euint64 ticket = ep.ticket;
+        euint64 cumulative = ep.cumulative;
+        ebool selectedAny = ep.selectedAny;
+        // Hoisted once per tx — identical trivial encryptions inside the loop
+        // would alias to the same handles anyway (quirk #10).
+        euint64 prizeEnc = FHE.asEuint64(ep.prizeAmount);
+        euint64 zero = FHE.asEuint64(0);
+
+        for (uint32 i = cursor; i < stop; ++i) {
+            (cumulative, selectedAny) = _scanParticipant(
+                _participants[i], ticket, cumulative, selectedAny, prizeEnc, zero
+            );
+        }
+
+        ep.cumulative = cumulative;
+        ep.selectedAny = selectedAny;
+        FHE.allowThis(cumulative);
+        FHE.allowThis(selectedAny);
+        ep.selectCursor = stop;
+        emit SelectProgress(currentEpochId, stop);
+
+        if (stop == count) {
+            // Phase stays Drawing — Settled is Day 5's claim-side transition.
+            emit DrawCompleted(currentEpochId);
+        }
+    }
+
+    /// @dev One participant's slice of the §6.3 scan (extracted from
+    ///      selectBatch's loop). Returns the advanced running sum and latch.
+    ///      IDENTICAL op sequence for every participant — hit or not.
+    function _scanParticipant(
+        address user,
+        euint64 ticket,
+        euint64 cumulative,
+        ebool selectedAny,
+        euint64 prizeEnc,
+        euint64 zero
+    ) private returns (euint64, ebool) {
+        Account storage acc = _accounts[user];
+
+        // twabArea is guaranteed initialized: registration only happens on
+        // deposits strictly before epochEnd, so the snapshot's _checkpoint
+        // accrued at least one interval for every participant.
+        cumulative = FHE.add(cumulative, acc.twabArea);
+        ebool hit = FHE.and(FHE.lt(ticket, cumulative), FHE.not(selectedAny));
+
+        acc.won = hit;
+        FHE.allowThis(hit); // contract-only (§15.1) — pendingPrize is the user channel
+
+        euint64 pending = acc.pendingPrize;
+        if (!FHE.isInitialized(pending)) {
+            pending = zero; // lazy-init: uninitialized handle ≠ encrypted zero
+        }
+        pending = FHE.add(pending, FHE.select(hit, prizeEnc, zero));
+        acc.pendingPrize = pending;
+        FHE.allowThis(pending);
+        FHE.allow(pending, user); // the user-facing reveal channel (§15.1)
+
+        return (cumulative, FHE.or(selectedAny, hit));
+    }
+
+    // ---------------------------------------------------------------------
+    // Pause — deposits and new draws only. Withdrawals are never pausable.
     // ---------------------------------------------------------------------
 
     function pause() external onlyOwner {
@@ -462,5 +618,44 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///         total so far, and the frozen list length ("x/32 processed", R4).
     function snapshotProgress(uint256 epochId) external view returns (uint32 cursor, uint32 total) {
         return (_epochs[epochId].snapshotCursor, uint32(_participants.length));
+    }
+
+    /// @notice Draw progress for `epochId`: whether randomness is locked, and
+    ///         the selection scan position ("x/32 scanned", R4).
+    function drawProgress(uint256 epochId) external view returns (bool drawn, uint32 cursor, uint32 total) {
+        Epoch storage ep = _epochs[epochId];
+        return (ep.drawn, ep.selectCursor, uint32(_participants.length));
+    }
+
+    /// @notice Encrypted winner flag for `user`. Contract-only ACL (§15.1) —
+    ///         NO ONE can decrypt it, not even the user; the user-facing reveal
+    ///         channel is pendingPrizeOf. Zero handle until the user is scanned.
+    function wonOf(address user) external view returns (ebool) {
+        return _accounts[user].won;
+    }
+
+    /// @notice Encrypted winnings for `user` — decryptable only by the user
+    ///         themself (the claim flow lands Day 5).
+    /// @dev    Zero handle (uninitialized) until the user has been scanned in a
+    ///         draw — UIs must render that as "unavailable", never as 0.
+    function pendingPrizeOf(address user) external view returns (euint64) {
+        return _accounts[user].pendingPrize;
+    }
+
+    /// @notice Encrypted draw state for `epochId`: randomness, winning ticket,
+    ///         running cumulative weight and the selected-any latch. Handles
+    ///         are public info; the ACL is contract-only — nobody decrypts them.
+    function drawStateOf(
+        uint256 epochId
+    ) external view returns (euint64 random, euint64 ticket, euint64 cumulative, ebool selectedAny) {
+        Epoch storage ep = _epochs[epochId];
+        return (ep.random, ep.ticket, ep.cumulative, ep.selectedAny);
+    }
+
+    /// @notice Public sponsored prize for `epochId` (P-4: the prize amount is
+    ///         deliberately public; only user balances/weights are secret).
+    ///         Zero until Day 5's funding lands; immutable once the epoch is drawn.
+    function prizeAmountOf(uint256 epochId) external view returns (uint64) {
+        return _epochs[epochId].prizeAmount;
     }
 }
