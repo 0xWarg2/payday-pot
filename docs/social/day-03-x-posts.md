@@ -32,11 +32,11 @@ probability comes out identical.
 
 day 4: the draw — one encrypted random number, used once, no rerolls.
 
-@zama_fhe #ZamaDeveloperProgram
+@zama #ZamaDeveloperProgram
 
 ---
 
-## B. Short variant (265 ký tự kể cả tag — đếm bằng script)
+## B. Short variant (261 ký tự kể cả tag — đếm bằng script)
 
 day 3 of payday pot — your draw ticket is balance × time, all encrypted. same
 deposit, half the time → exactly half the ticket, to the unit. tickets freeze at
@@ -44,7 +44,7 @@ payday; withdraw after, yours survives. 74 tests green.
 
 day 4: the draw.
 
-@zama_fhe #ZamaDeveloperProgram
+@zama #ZamaDeveloperProgram
 
 > Copy: bỏ line-break giữa câu trong cùng đoạn (file wrap cho dễ đọc), giữ dòng trống
 > giữa 3 đoạn. Video attach nên không cần dòng "video:".
@@ -57,7 +57,7 @@ day 4: the draw.
 day 3 of payday pot: the fairness math. your shot at the prize = balance × how long
 you held it — computed entirely on numbers that stay encrypted.
 
-building on @zama_fhe fhevm for the #ZamaDeveloperProgram. how do you prove
+building on @zama fhevm for the #ZamaDeveloperProgram. how do you prove
 time-weighting is fair when you can't see anyone's balance? 👇
 
 **2/4**
@@ -85,7 +85,7 @@ pessimistic. measure, don't model.
 
 74 tests green. day 4: the draw — one encrypted random number, no rerolls.
 
-@zama_fhe #ZamaDeveloperProgram
+@zama #ZamaDeveloperProgram
 
 ---
 
@@ -104,7 +104,7 @@ one account to 99.85% of that ceiling and decrypts the exact expected value.
 if your encrypted contract doesn't have a boundary test like this, you don't know
 it's correct — you only know it hasn't wrapped yet.
 
-@zama_fhe #FHE #ZamaDeveloperProgram
+@zama #FHE #ZamaDeveloperProgram
 
 ---
 
@@ -135,9 +135,12 @@ the readme will say what it is, not wait to be asked.
   half the time → exactly half the ticket" / "withdraw mid-freeze: money out,
   ticket stays".
 
-## Tag (rules từ day-01, không đổi)
+## Tag (ĐỔI từ hôm nay: handle là `@zama`, không còn `@zama_fhe`)
 
-- `@zama_fhe` + `#ZamaDeveloperProgram` dòng cuối, đoạn riêng. Thread: post 1 + post cuối.
+- Zama đã đổi handle X: form submit S4 ghi "tagging @zama", `x.com/zama` là account
+  thật (266K followers, zama.org). Mention `@zama_fhe` không còn trỏ tới account —
+  post day 1–2 nếu đã đăng với tag cũ thì thôi, từ nay dùng `@zama`. Skill x-post đã sửa.
+- `@zama` + `#ZamaDeveloperProgram` dòng cuối, đoạn riêng. Thread: post 1 + post cuối.
 - Hashtag giữ camel-case. Tối đa thêm `#FHE`. Chưa dùng chữ "submission".
 
 ## Ảnh minh hoạ

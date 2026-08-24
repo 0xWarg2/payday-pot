@@ -1,4 +1,4 @@
-# COMPATIBILITY_NOTES — cập nhật Day 2 (20/08/2026)
+# COMPATIBILITY_NOTES — cập nhật Day 4 (24/08/2026)
 
 Nguồn sự thật về version pins, quirks, và Decision D2. Mọi ngày sau đọc file này trước khi cài thêm dependency.
 
@@ -71,6 +71,9 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 | Live Sepolia: EIP-712 user-decrypt trong browser | ✅ 20/08 — user xác nhận "Decrypt my value" trên /spike ra đúng **1000** |
 | PayDayPot deposit/withdraw local (43 tests + property seed 0xda72 + HCU) | ✅ 20/08, `pnpm test` 43 passing |
 | Demo local `pnpm demo:day2` (deposit→ACL→partial→cap refund→pause-proof exit) | ✅ 20/08 |
+| TWAB + snapshot local (26 tests + HCU Day 3) | ✅ 23/08, suite 74 passing |
+| Draw engine local (26 tests + 3 HCU Day 4 + Monte Carlo 64 epochs) | ✅ 24/08, suite 103 passing |
+| Demo local `pnpm demo:day4` (pause-wait→random 1 lần→stranger resume→1 winner→ACL denied) | ✅ 24/08 |
 | Refund-on-ebool-false của wrapper LIVE Sepolia | ◐ local-verified only (OZ 0.5.3) — recheck Day 9 (xem §2) |
 
 ## 6. Checklist chuẩn bị ví (user tự làm, ~10 phút)
@@ -95,3 +98,5 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 14. **Plugin 0.4.2 có sẵn đồ đo**: `fhevm.computeTransactionHCU(receipt)` → `{globalHCU, maxHCUDepth}` (sync) và `fhevm.debugger.decryptEuint(FhevmType, handle)` (mock-only, bypass ACL — chỉ dùng inspect invariant trong test, không bao giờ là product path). HCU đo thật Day 2: deposit ~2.08M/20M global, depth 780k/5M.
 15. **OZ confidential-contracts KHÔNG ship mocks** (`files` trong package.json loại `/mocks/`) → tự viết `TestUSDC` + `TestConfidentialUSDC is ERC7984ERC20Wrapper, ZamaEthereumConfig` (OZ ERC7984 không tự set coprocessor). Funding path test mirror live: mint → approve → wrap.
 16. **`@types/chai-as-promised` phải cài riêng** (pin 7.1.8 khớp @types/chai v4) — runtime `.to.be.rejected` hoạt động từ Day 1 (plugin tự `chai.use`) nhưng `pnpm typecheck` fail nếu thiếu types.
+17. **Mock `FheRand` = `ethers.randomBytes` — crypto-random, KHÔNG seed được** (đọc source `@fhevm/mock-utils` 0.4.2, handler FheRand thay bytes random vào handle, `replace: true`). Hệ quả cho test: (a) Monte Carlo/draw test **không replay được** — phải log R/ticket/winner từng sample để hậu kiểm khi flaky; (b) không có cách pin "random = X" qua pot: test biên max-R × max-T phải đi qua harness test-only (`contracts/mocks/TicketMathHarness.sol`) nhận input tự cấp, chạy y hệt chuỗi op P-2. (c) `fhevm.debugger.decryptEbool(handle)` có sẵn cạnh `decryptEuint` (mock-only) — dùng đọc won/selectedAny flags trong test.
+18. **Giá HCU đo thật các op draw (mock == Sepolia)**: `FheMul` euint128 non-scalar **1,686,000** (op đắt nhất hệ thống — requestRandom tổng 1,747,160); chuỗi scan 7-op/participant (add+lt+not+and+select+add+or, euint64) marginal **≈574k global / ≈162k depth**; `FheRand` + casts + shr chiếm phần còn lại (~61k) của requestRandom. Bảng đầy đủ: DRAW_PROTOCOL §4.

@@ -52,7 +52,7 @@ Nếu một fact chưa verify (vd live decrypt chưa chạy trên Sepolia) → K
 
 
 - **all-lowercase**, kể cả đầu câu và "i". Ngoại lệ: tên riêng/ký hiệu code giữ
-  nguyên case thật (`FHE.shr`, `ConfidentialWrapperV3`, `euint64`, `@zama_fhe`).
+  nguyên case thật (`FHE.shr`, `ConfidentialWrapperV3`, `euint64`, `@zama`).
 - Câu ngắn, xuống dòng nhiều. Dấu gạch đầu dòng `—` hoặc `-`, không bullet dài dòng.
 - Viết như đang kể cho một dev khác trong DM: "spent the whole day killing every
   'i assume this works' in the stack" — không phải "today we made significant
@@ -60,9 +60,12 @@ Nếu một fact chưa verify (vd live decrypt chưa chạy trên Sepolia) → K
 - Được phép: chửi nhẹ vào công cụ ("this one silently wastes a day"), thừa nhận sai,
   nói thẳng cái gì fake/mock.
 - Tối đa 1 emoji cho cả post, thường là 0. Không emoji đầu mỗi bullet.
-- **Tag bắt buộc mỗi post standalone** (verify 19/08 từ trang announcement Season 4):
-  `@zama_fhe` + `#ZamaDeveloperProgram`, đặt ở **dòng cuối**, đoạn riêng, KHÔNG mở đầu
-  post bằng tag. Trong thread: post 1 và post cuối, không phải mọi post.
+- **Tag bắt buộc mỗi post standalone**: `@zama` + `#ZamaDeveloperProgram`, đặt ở
+  **dòng cuối**, đoạn riêng, KHÔNG mở đầu post bằng tag. Trong thread: post 1 và post
+  cuối, không phải mọi post. **Handle là `@zama`, KHÔNG phải `@zama_fhe`** — Zama đã
+  đổi handle (re-verify 23/08: form submit S4 ghi "tagging @zama"; `x.com/zama` =
+  account thật 266K followers, bio Zama Protocol / zama.org). `@zama_fhe` là handle
+  cũ, mention nó không còn trỏ tới account — nếu thấy nó trong draft cũ thì sửa.
   Hashtag giữ camel-case gốc (ngoại lệ duy nhất của rule lowercase). Hashtag thêm tối đa
   1 cái: `#FHE`. Không chùm #web3 #crypto #airdrop.
   Chưa nói "submission" khi chưa submit → "building for the #ZamaDeveloperProgram".
