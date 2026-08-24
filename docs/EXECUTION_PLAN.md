@@ -163,25 +163,35 @@ thời điểm draw · withdraw sống trong snapshot · caps enforced + documen
 
 ---
 
-## Day 4 — 22/08 — FHE random + weighted selection
+## Day 4 — 22/08 — FHE random + weighted selection ✅ (làm 24/08)
 
 **Mục tiêu:** một draw bất biến chọn đúng một encrypted winner.
 
-- [ ] Phases: Open → Snapshotting → RandomReady → Selecting → Finalized
-- [ ] `FHE.randEuint64()` đúng 1 lần sau khi total freeze; cấm reroll
-- [ ] Ticket: promote `euint128`, `mul`, rồi **`FHE.shr(product, 64)`** (P-2)
-- [ ] Cumulative scan: `hit = hasWeight && !selected && ticket < cumulative`;
-      `FHE.select` award; không `if(ebool)`, không encrypted index
-- [ ] Cursor monotonic; batch functions permissionless
-- [ ] Zero-participant / zero-weight → prize rollover, không decrypt total
+- [x] ~~Phases: Open → Snapshotting → RandomReady → Selecting → Finalized~~
+      **OVERRIDE (Day 3 đã chốt 4-phase)**: enum giữ `{Open, Snapshotting,
+      Drawing, Settled}` — RandomReady ⇔ `Drawing && !drawn`, Selecting ⇔
+      `Drawing && drawn && selectCursor < count` (DRAW_PROTOCOL §1, §6.5)
+- [x] `FHE.randEuint64()` đúng 1 lần sau khi total freeze; cấm reroll
+      (`requestRandom()` không tham số, `AlreadyDrawn` + handle equality test)
+- [x] Ticket: promote `euint128`, `mul`, rồi **`FHE.shr(product, 64)`** (P-2)
+      — exact test trên contract path + harness biên max-R × max-T
+- [x] Cumulative scan: `hit = !selected && ticket < cumulative`; `FHE.select`
+      award; không `if(ebool)`, không encrypted index — term `hasWeight` bị
+      loại có chứng minh (zero-weight không tạo crossing mới — DRAW_PROTOCOL §6.3)
+- [x] Cursor monotonic (`selectCursor` mới, không đụng `snapshotCursor`);
+      batch functions permissionless
+- [x] Zero-participant / zero-weight → prize rollover, không decrypt total
 
-Tests: ticket ∈ [0,T) · đúng 1 winner khi T>0 · không winner không mất prize khi
-T=0 · reroll/cursor regression bị reject · Monte Carlo phân phối 1:3:6 ·
-overflow boundary max R × max T · HCU/participant → chốt batch size.
+Tests: ticket ∈ [0,T) ✅ · đúng 1 winner khi T>0 ✅ (exact-replication + carry
+qua biên tx) · không winner không mất prize khi T=0 ✅ · reroll/cursor
+regression bị reject ✅ · Monte Carlo phân phối 1:3:6 ✅ (64 epoch, ±3.5σ) ·
+overflow boundary max R × max T ✅ (harness) · HCU/participant → chốt batch
+size ✅ (marginal 574k/162k → ceiling 22/tx, default 8).
 
-**Exit gate:** không tồn tại `% encryptedTotal` · random 1 lần/epoch · ví lạ
-tiếp tục được draw từ cursor · keeper không cung cấp seed/weight/winner ·
-full capped draw vừa trong bounded tx trên số HCU đã đo.
+**Exit gate:** không tồn tại `% encryptedTotal` ✅ (grep sạch) · random 1
+lần/epoch ✅ · ví lạ tiếp tục được draw từ cursor ✅ · keeper không cung cấp
+seed/weight/winner ✅ (zero-input signature test) · full capped draw vừa trong
+bounded tx trên số HCU đã đo ✅ (pool 32 = 2 tx, test tự fail nếu ceiling < 8).
 
 ---
 
@@ -409,7 +419,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 | 1 | 19/08 | Compatibility proven | ✅ 11 pass | ✅ `pnpm demo` | ✅ | ✅ Full — user xác nhận live user-decrypt trên /spike ra đúng 1000 (20/08) |
 | 2 | 20/08 | Money in/out + invariants | ✅ 43 pass (+property+HCU) | ✅ `pnpm demo:day2` | ✅ | ✅ Local full — deposit callback, withdraw/withdrawAll, conservation, pause-proof exit |
 | 3 | 21/08 | TWAB correct | ✅ 74 pass (26 TWAB exact-equality + 5 HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
-| 4 | 22/08 | Encrypted draw correct | ☐ | ☐ | ☐ | — |
+| 4 | 22/08 | Encrypted draw correct | ✅ 103 pass (26 draw + 3 HCU Day 4 + Monte Carlo 64 epoch) | ✅ `pnpm demo:day4` | ✅ | ✅ Local full 24/08 — random 1 lần (AlreadyDrawn + handle equality), ticket P-2 exact `== (R·T)>>64`, đúng-1-winner structural (exact-replication + 1:3:6 ±3.5σ), stranger resume (R4), scan ceiling 22/tx, ACL 5 lớp (won contract-only §15.1) |
 | 5 | 23/08 | Protocol full cycle | ☐ | ☐ | ☐ | — |
 | 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |
 | 7 | 25/08 | Money UX | ☐ | ☐ | ☐ | — |

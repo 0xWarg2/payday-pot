@@ -2,7 +2,7 @@
 
 Giới hạn **đã biết, có chủ đích hoặc ngoài tầm kiểm soát** của contract/app.
 Đây KHÔNG phải bug list — mỗi mục có lý do và (nếu có) hướng xử lý tương lai.
-Cập nhật: Day 3 (23/08/2026).
+Cập nhật: Day 4 (24/08/2026).
 
 ## 1. Token-layer: deny-list + maxTotalSupply nằm ngoài pot (R3)
 
@@ -55,7 +55,8 @@ principal của mình) để user không bao giờ phải đoán (R2).
 
 `FHE.randEuint64()` trên FHEVM hiện tại (kể cả Sepolia thật) là **PRNG phía
 coprocessor**, chưa phải threshold-VRF production-grade — Zama roadmap ghi rõ
-random sẽ được nâng cấp. Draw của pot (Day 5) dùng đúng API này:
+random sẽ được nâng cấp. Draw của pot (ship Day 4, `requestRandom`) dùng đúng
+API này:
 
 - Đảm bảo hiện có: keeper/employer/admin **không thể biết trước hay chọn**
   random (không ai đưa seed — non-negotiable #7); random chỉ sinh trong
@@ -86,3 +87,17 @@ snapshot/draw/settle. Withdraw không bị ảnh hưởng (chạy ở mọi phas
 Day 5 thu hẹp window này về đúng thời gian resolve epoch; UI Day 7 phải hiển
 thị "entries closed — next round opens soon" thay vì lỗi trần (`epochInfo`
 public, phân biệt được với các WrongPhase khác).
+
+## 7. Pause vô hạn trước khi random được request = epoch treo (D2, có chủ đích)
+
+`requestRandom` là chỗ **duy nhất** ngoài deposit gắn `whenNotPaused`
+(DRAW_PROTOCOL §1, §6.1). Nếu owner pause **và không bao giờ unpause** đúng
+lúc epoch đang ở `Drawing && !drawn`, epoch đó treo vĩnh viễn ở trạng thái
+chờ random — không winner, không settle. Đây là **owner-liveness dependency
+duy nhất** của protocol và là trade-off có chủ đích: pause phải chặn được
+"new draw" (nuốt randomness mới là hành vi cần phanh khẩn cấp), nhưng một khi
+random đã chốt (`drawn == true`) thì scan (`selectBatch`) và mọi withdraw
+**không thể bị chặn** bởi bất kỳ ai. Tiền của user an toàn 100% trong mọi
+kịch bản treo: `withdrawAll` không có gate (non-negotiable #1, test pin
+withdraw khi paused giữa scan). Prize của epoch treo: xem ràng buộc D3 trong
+DAY_04_HANDOFF (Day 5 phải có đường recovery cho epoch không bao giờ drawn).
