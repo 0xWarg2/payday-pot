@@ -7,8 +7,13 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC7984} from "@openzeppelin/confidential-contracts/interfaces/IERC7984.sol";
 import {IERC7984Receiver} from "@openzeppelin/confidential-contracts/interfaces/IERC7984Receiver.sol";
+import {
+    IERC7984ERC20Wrapper
+} from "@openzeppelin/confidential-contracts/interfaces/IERC7984ERC20Wrapper.sol";
 
 /// @title PayDayPot — confidential prize-savings pool (PoolTogether-style) on Zama FHEVM
 /// @notice Users deposit a confidential ERC-7984 token; principal is always
@@ -68,6 +73,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
 
     /// @notice The confidential ERC-7984 token this pool accepts.
     IERC7984 public immutable TOKEN;
+    /// @notice The public ERC-20 backing TOKEN. Employer funding arrives in
+    ///         THIS asset and is wrapped inside fundPrize (decision (i)).
+    IERC20 public immutable UNDERLYING;
+    /// @notice Underlying units per confidential unit (1 for 6-decimals USDC).
+    uint256 public immutable RATE;
     /// @notice Sponsor address funding the prize (no ACL over any user data).
     address public immutable EMPLOYER;
     /// @notice Epoch length in seconds (≤ 30 days, enforced by P-3 budget).
@@ -111,20 +121,39 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     event RandomRequested(uint256 indexed epochId);
     event SelectProgress(uint256 indexed epochId, uint32 cursor);
     event DrawCompleted(uint256 indexed epochId);
+    /// @dev The prize amount is public by design (P-4) but is read through the
+    ///      prizeAmountOf view, never carried in a log — one uniform event rule
+    ///      for the whole contract beats a per-event judgement call.
+    event PrizeFunded(uint256 indexed epochId);
+    event PrizeDefunded(uint256 indexed epochId);
 
     // ---------------------------------------------------------------------
     // Errors — no amount parameters, plaintext-safe conditions only.
     // ---------------------------------------------------------------------
 
     error NotToken(address caller);
+    error NotEmployer(address caller);
     error PoolFull();
     error NotRegistered(address user);
     error WrongPhase();
     error InvalidConfig();
+    error InvalidAmount();
     error ZeroAddress();
     error AlreadyDrawn();
     error NotDrawn();
     error SelectionComplete();
+
+    // ---------------------------------------------------------------------
+    // Modifiers
+    // ---------------------------------------------------------------------
+
+    /// @dev The employer sponsors the prize and NOTHING else: this modifier
+    ///      guards only prize money in/out. It never appears on a function
+    ///      that reads or moves user principal, TWAB or winnings (#3, #4).
+    modifier onlyEmployer() {
+        if (msg.sender != EMPLOYER) revert NotEmployer(msg.sender);
+        _;
+    }
 
     // ---------------------------------------------------------------------
     // Constructor
@@ -147,7 +176,21 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
             revert InvalidConfig();
         }
 
+        // Read the wrapper shape once. This binds the pool to a wrapper-backed
+        // ERC-7984 (a bare ERC7984 has no underlying()/rate() and reverts here,
+        // at deploy time — the loudest possible place). Both are plain view
+        // calls, so quirk #13 (no FHE ops in a constructor) is respected.
+        IERC7984ERC20Wrapper wrapper = IERC7984ERC20Wrapper(address(token_));
+        address underlying_ = wrapper.underlying();
+        uint256 rate_ = wrapper.rate();
+        if (underlying_ == address(0)) revert ZeroAddress();
+        // rate_ == 0 would let fundPrize credit prizeAmount while wrapping zero
+        // tokens — an unbacked prize, i.e. a hole straight through solvency.
+        if (rate_ == 0) revert InvalidConfig();
+
         TOKEN = token_;
+        UNDERLYING = IERC20(underlying_);
+        RATE = rate_;
         EMPLOYER = employer_;
         EPOCH_DURATION = epochDuration_;
         PER_USER_CAP = perUserCap_;
@@ -283,6 +326,79 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         TOKEN.confidentialTransfer(msg.sender, actual);
 
         emit Withdrawn(msg.sender, currentEpochId);
+    }
+
+    // ---------------------------------------------------------------------
+    // Prize funding — employer money in and out (Day 5, decision (i)).
+    //
+    // The prize arrives as PUBLIC underlying ERC-20 and is wrapped by this
+    // contract in the same tx. That choice is the whole answer to R12: a
+    // confidential transfer clamps a short balance to encrypted zero instead
+    // of reverting, so declaring `prizeAmount += amount` off the back of one
+    // could promise a prize no token backs — and the winner's claim would eat
+    // another user's principal (non-negotiable #1). An ERC-20 pull reverts.
+    // Allocation therefore IS the funding IS the actual transfer, and
+    // solvency holds by construction rather than by a check we might forget.
+    // ---------------------------------------------------------------------
+
+    /// @notice Sponsor `amount` confidential units of prize into the current
+    ///         epoch. Two steps for the employer: approve UNDERLYING to this
+    ///         pool, then call this (R13).
+    /// @dev    Gate is `phase == Open`, NOT `!drawn`. The invariant that
+    ///         actually matters is "this epoch's prize has not yet been
+    ///         committed to a draw or rolled into the carry", and commitment
+    ///         happens at requestRandom (drawn) OR at the empty-pool
+    ///         fast path (which lands in Settled with drawn still false).
+    ///         Open is the one phase where neither has happened. It also
+    ///         still allows a top-up after epochEnd but before beginSnapshot.
+    function fundPrize(uint64 amount) external onlyEmployer whenNotPaused nonReentrant {
+        if (amount == 0) revert InvalidAmount();
+        Epoch storage ep = _epochs[currentEpochId];
+        if (ep.phase != EpochPhase.Open) revert WrongPhase();
+
+        uint256 underlyingAmount = uint256(amount) * RATE; // exact: no wrap dust
+        SafeERC20.safeTransferFrom(UNDERLYING, msg.sender, address(this), underlyingAmount);
+        // forceApprove, not approve: a non-standard ERC-20 reverts when a
+        // non-zero allowance is set over a non-zero one. wrap() consumes the
+        // whole allowance every time, but the pool must not depend on that.
+        SafeERC20.forceApprove(UNDERLYING, address(TOKEN), underlyingAmount);
+        IERC7984ERC20Wrapper(address(TOKEN)).wrap(address(this), underlyingAmount);
+
+        ep.prizeAmount += amount; // checked add — an overflow here reverts
+        emit PrizeFunded(currentEpochId);
+    }
+
+    /// @notice Return up to `amount` of the current epoch's un-committed prize
+    ///         to the employer, as confidential tokens.
+    /// @dev    Deliberately NOT `whenNotPaused`. This is the D3 escape hatch:
+    ///         if the owner pauses forever while the epoch sits in Drawing
+    ///         before requestRandom (KNOWN_LIMITATIONS §7), this is the only
+    ///         way the sponsored prize gets out — the mirror image of rule #1
+    ///         for user principal. The employer unwraps on their own time;
+    ///         unwrap is a 2-tx async dance this pool never enters.
+    ///         The token-side clamp cannot fire: prizeAmount was backed 1:1 by
+    ///         a real wrap and nothing else can spend it.
+    function defundPrize(uint64 amount) external onlyEmployer nonReentrant {
+        if (amount == 0) revert InvalidAmount();
+        Epoch storage ep = _epochs[currentEpochId];
+        // Same invariant as fundPrize, stated from the other side: refuse once
+        // the prize is committed. `drawn` covers requestRandom; `Settled`
+        // covers the empty-pool path, where drawn stays false yet the prize
+        // has already been rolled into the encrypted carry. Snapshotting and
+        // Drawing-before-random stay OPEN on purpose — that is the D3 exit.
+        if (ep.drawn || ep.phase == EpochPhase.Settled) revert WrongPhase();
+        if (amount > ep.prizeAmount) revert InvalidAmount();
+
+        ep.prizeAmount -= amount;
+
+        // No FHE.allow for the employer: `amount` is a public parameter, so
+        // there is nothing here they could learn by decrypting it.
+        euint64 value = FHE.asEuint64(amount);
+        FHE.allowThis(value);
+        FHE.allowTransient(value, address(TOKEN));
+        TOKEN.confidentialTransfer(msg.sender, value);
+
+        emit PrizeDefunded(currentEpochId);
     }
 
     // ---------------------------------------------------------------------
@@ -469,9 +585,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///         Every participant gets the IDENTICAL op sequence — no branch on
     ///         encrypted values, no encrypted indexing — so the tx shape
     ///         reveals nothing about who won.
-    ///         prizeAmount is IMMUTABLE from `drawn == true` (Day 5's funding
-    ///         setter must enforce that): the per-tx re-encryption below has to
-    ///         award the same amount no matter which batch crosses the winner.
+    ///         The awarded amount is IMMUTABLE from `drawn == true`: whichever
+    ///         batch crosses the winner must award the same figure. fundPrize
+    ///         and defundPrize enforce that from the money side (B2), and
+    ///         since Day 5 it also holds structurally — the amount is the
+    ///         epoch's prizeCipher handle, frozen once inside requestRandom.
     function selectBatch(uint32 maxSteps) external {
         if (maxSteps == 0) revert InvalidConfig();
         Epoch storage ep = _epochs[currentEpochId];
