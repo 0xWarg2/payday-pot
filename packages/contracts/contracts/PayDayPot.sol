@@ -141,6 +141,10 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///      for the whole contract beats a per-event judgement call.
     event PrizeFunded(uint256 indexed epochId);
     event PrizeDefunded(uint256 indexed epochId);
+    /// @dev Emitted on every claim ATTEMPT, winner or not — the encrypted
+    ///      winnings cannot be branched on, and a log that appeared only for
+    ///      winners would name them outright (§15.1, rule #5).
+    event PrizeClaimed(address indexed user, uint256 indexed epochId);
     /// @dev The epoch is resolved and its prize is final. Emitted for BOTH
     ///      terminal paths (scan complete, and the empty-pool fast path), so a
     ///      UI has one signal to watch and cannot tell them apart by log shape.
@@ -161,6 +165,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     error AlreadyDrawn();
     error NotDrawn();
     error SelectionComplete();
+    /// @dev Only ever raised on a PUBLIC fact: the caller has never been
+    ///      scanned by any draw, so no winnings handle exists yet. It never
+    ///      distinguishes a winner from a loser — both hold an initialized
+    ///      handle after a scan, and both fall through to the transfer.
+    error NothingToClaim();
 
     // ---------------------------------------------------------------------
     // Modifiers
@@ -731,6 +740,120 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         FHE.allow(pending, user); // the user-facing reveal channel (§15.1)
 
         return (cumulative, FHE.or(selectedAny, hit));
+    }
+
+    // ---------------------------------------------------------------------
+    // Claim — NEVER gated by pause or phase (non-negotiable #1, §17.8)
+    // ---------------------------------------------------------------------
+
+    /// @notice Sweep the caller's accumulated winnings to their wallet.
+    ///         Idempotent: a second call transfers encrypted zero rather than
+    ///         reverting. Available in every phase, even while paused.
+    /// @dev    Deliberately UNIFORM for every caller. A `require(won)` would be
+    ///         the natural shape and is exactly wrong here: reverting for
+    ///         losers turns the public revert/success bit into a winner
+    ///         announcement. Everyone runs the same code, emits the same
+    ///         event, and moves an encrypted amount that happens to be zero
+    ///         for all but one of them.
+    ///
+    ///         No phase gate either. Winnings accumulate ACROSS epochs (B3
+    ///         never resets pendingPrize), so "the current epoch is mid-draw"
+    ///         says nothing about whether last epoch's prize is owed.
+    function claim() external nonReentrant {
+        Account storage acc = _accounts[msg.sender];
+        if (!acc.registered) revert NotRegistered(msg.sender);
+
+        euint64 pending = acc.pendingPrize;
+        if (!FHE.isInitialized(pending)) revert NothingToClaim();
+
+        // CEI is inverted here, deliberately: the debit is computed FROM the
+        // transfer's return value, so the interaction has to come first. That
+        // is rule #2's shape (settle on the actual encrypted amount moved,
+        // never the requested one) applied to money going out — if the token
+        // ever clamped, subtracting `pending` would silently burn the
+        // difference the user is still owed. Safe because the callee is the
+        // immutable TOKEN, whose confidentialTransfer makes no callback into
+        // this contract, and nonReentrant closes the door regardless.
+        FHE.allowTransient(pending, address(TOKEN));
+        euint64 transferred = TOKEN.confidentialTransfer(msg.sender, pending);
+
+        // ERC-7984 grants the sender a persistent ACL on `transferred`, so
+        // this subtraction is legal in the same tx.
+        acc.pendingPrize = FHE.sub(pending, transferred);
+        FHE.allowThis(acc.pendingPrize);
+        FHE.allow(acc.pendingPrize, msg.sender);
+
+        // No _checkpoint: winnings are not time-weighted and this touches no
+        // principal, so the TWAB accrual is unaffected either way.
+        emit PrizeClaimed(msg.sender, currentEpochId);
+    }
+
+    // ---------------------------------------------------------------------
+    // Epoch lifecycle
+    // ---------------------------------------------------------------------
+
+    /// @notice Open the next epoch once the current one is Settled. Anyone may
+    ///         call (rule #7) — the pool must never depend on a keeper staying
+    ///         alive to keep saving.
+    /// @dev    Requiring Settled — rather than the raw `drawn && cursor ==
+    ///         count` — is what stops a half-scanned epoch being orphaned with
+    ///         its prize and its half-written winner flags (B3). It also
+    ///         covers the empty-pool path, which settles without ever drawing.
+    ///
+    ///         Not pausable: pausing stops money coming IN (deposits) and new
+    ///         draws starting; it must never be able to strand the pool in a
+    ///         phase it can't leave.
+    ///
+    ///         The new epoch starts NOW, not at the old one's end. Backfilling
+    ///         would hand a long-delayed epoch a window shorter than its own
+    ///         duration — or none at all. The cost is that the gap between
+    ///         epochs accrues no weight for anyone (documented in
+    ///         KNOWN_LIMITATIONS); the benefit is that every epoch is a real,
+    ///         full-length savings window.
+    function startNewEpoch() external {
+        Epoch storage prev = _epochs[currentEpochId];
+        if (prev.phase != EpochPhase.Settled) revert WrongPhase();
+
+        uint64 newStart = uint64(block.timestamp);
+
+        // One shared zero / false handle reused for every participant. Trivial
+        // encryptions alias anyway (quirk #10), and — unlike the carry — that
+        // is harmless here precisely BECAUSE the reset is unconditional: every
+        // participant gets the identical handle regardless of what they held
+        // or whether they won, so the handles say nothing.
+        euint64 zero = FHE.asEuint64(0);
+        ebool notWon = FHE.asEbool(false);
+        FHE.allowThis(zero);
+        FHE.allowThis(notWon);
+
+        // Bounded by PARTICIPANT_CAP (≤32) — one tx, no cursor needed.
+        uint256 count = _participants.length;
+        for (uint256 i = 0; i < count; ++i) {
+            address user = _participants[i];
+            Account storage acc = _accounts[user];
+
+            // Epoch-scoped state only.
+            acc.twabArea = zero;
+            FHE.allow(zero, user); // weight stays user-readable from tick zero (#8)
+            acc.won = notWon; // contract-only ACL, matching the scan (§15.1)
+            acc.lastCheckpoint = newStart;
+
+            // principal is NOT touched: savings roll over, that is the product.
+            // pendingPrize is NOT touched: unclaimed winnings are a liability
+            // that survives every epoch boundary (B3) — resetting it here
+            // would be the single most expensive bug in this contract.
+        }
+
+        currentEpochId += 1;
+        Epoch storage ep = _epochs[currentEpochId];
+        ep.start = newStart;
+        ep.end = newStart + EPOCH_DURATION;
+        ep.phase = EpochPhase.Open;
+        // prizeAmount/prizeCipher stay at their mapping defaults: the new
+        // epoch is unfunded until an employer funds it, and any carry from
+        // this one is folded in at its requestRandom.
+
+        emit EpochStarted(currentEpochId, ep.start, ep.end);
     }
 
     // ---------------------------------------------------------------------
