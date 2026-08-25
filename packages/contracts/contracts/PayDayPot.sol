@@ -64,7 +64,8 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         uint32 snapshotCursor; // snapshot batch continuation cursor (permissionless)
         uint32 selectCursor; // selection batch cursor — deliberately separate (§6.5)
         bool drawn;
-        uint64 prizeAmount; // public sponsored prize (P-4); set on Day 5, IMMUTABLE once drawn
+        uint64 prizeAmount; // public sponsored prize (P-4), IMMUTABLE once drawn
+        euint64 prizeCipher; // prizeAmount + carried-over prize, frozen at requestRandom
     }
 
     // ---------------------------------------------------------------------
@@ -101,6 +102,20 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///      mock-only debugger, and provable indirectly through conservation.
     euint64 private _totalPrincipal;
 
+    /// @dev Prize carried over from epochs that ended with no winner (every
+    ///      participant's frozen weight was zero, so the ticket scan never
+    ///      crossed). Whether that happened is ENCRYPTED — publishing it would
+    ///      reveal that every participant held zero time-weighted balance — so
+    ///      the rollover has to be encrypted too. Contract-only ACL, never
+    ///      publicly decryptable (#6).
+    ///
+    ///      Handle hygiene: this is only ever assigned the output of an FHE op
+    ///      (add/select), never a bare FHE.asEuint64(0). Trivial encryptions
+    ///      alias to one well-known handle (quirk #10), so assigning one in a
+    ///      winner-dependent branch would leak winner-existence by handle
+    ///      comparison alone — precisely what the encryption is hiding.
+    euint64 private _prizeCarry;
+
     // ---------------------------------------------------------------------
     // Events — action/user/epoch only. NEVER an amount, encrypted or not.
     // ---------------------------------------------------------------------
@@ -126,6 +141,10 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     ///      for the whole contract beats a per-event judgement call.
     event PrizeFunded(uint256 indexed epochId);
     event PrizeDefunded(uint256 indexed epochId);
+    /// @dev The epoch is resolved and its prize is final. Emitted for BOTH
+    ///      terminal paths (scan complete, and the empty-pool fast path), so a
+    ///      UI has one signal to watch and cannot tell them apart by log shape.
+    event EpochSettled(uint256 indexed epochId);
 
     // ---------------------------------------------------------------------
     // Errors — no amount parameters, plaintext-safe conditions only.
@@ -460,9 +479,12 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     /// @notice Move the current epoch from Open to Snapshotting once its end
     ///         has passed. Anyone may call — a keeper is a convenience, never
     ///         a privilege (rule #7).
-    /// @dev    With zero participants the snapshot completes in the same tx
-    ///         and the epoch lands in Drawing with an encrypted-zero total —
-    ///         no decrypt needed to detect emptiness.
+    /// @dev    With zero participants the epoch is resolved outright in this
+    ///         tx: Open → Settled, prize rolled into the carry. Nobody can win
+    ///         a pool nobody joined, so making a keeper burn 1.75M HCU on a
+    ///         randEuint64 for it would be pure waste (D9). Emptiness is
+    ///         public state (participantCount), so this shortcut leaks nothing
+    ///         — unlike the scan's outcome, which stays encrypted.
     function beginSnapshot() external {
         Epoch storage ep = _epochs[currentEpochId];
         if (ep.phase != EpochPhase.Open || block.timestamp < ep.end) revert WrongPhase();
@@ -475,9 +497,25 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         emit SnapshotStarted(currentEpochId, uint32(_participants.length));
 
         if (_participants.length == 0) {
-            ep.phase = EpochPhase.Drawing;
+            // Plaintext add: with count == 0 there is no encrypted question to
+            // ask, so no FHE.select and nothing to hide. From here on the
+            // prize is COMMITTED to the carry — defundPrize refuses at
+            // Settled precisely so it cannot be pulled back out from under it.
+            _prizeCarry = FHE.add(_carryOrZero(), FHE.asEuint64(ep.prizeAmount));
+            FHE.allowThis(_prizeCarry);
+
+            ep.phase = EpochPhase.Settled;
             emit SnapshotCompleted(currentEpochId);
+            emit EpochSettled(currentEpochId);
         }
+    }
+
+    /// @dev The carry, lazily zero-initialized. Initialization state is public
+    ///      protocol history (no epoch has settled yet), never a fact about
+    ///      any draw's outcome, so the trivial-encrypt alias is safe here.
+    function _carryOrZero() private returns (euint64) {
+        euint64 carry = _prizeCarry;
+        return FHE.isInitialized(carry) ? carry : FHE.asEuint64(0);
     }
 
     /// @notice Freeze up to `maxSteps` participants' weights at epochEnd and
@@ -555,21 +593,28 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         ep.selectCursor = 0;
         ep.drawn = true;
 
+        // Freeze what this draw pays out: this epoch's sponsored prize plus
+        // anything carried over from earlier epochs that found no winner.
+        // Fixing it here — not per selectBatch tx — is what makes the award
+        // amount structurally immutable across batches (B2).
+        //
+        // FHE.add wraps silently past 2^64 instead of reverting. It cannot get
+        // there: the wrapper's maxTotalSupply is type(uint64).max, so tokens
+        // beyond that cannot exist to be funded, and every unit of both terms
+        // is backed by a real wrap.
+        ep.prizeCipher = FHE.add(FHE.asEuint64(ep.prizeAmount), _carryOrZero());
+
         // Contract-only ACL on the whole draw state — no user, keeper,
-        // employer or owner ever decrypts the randomness or the ticket.
+        // employer or owner ever decrypts the randomness, the ticket, or the
+        // prize pool (the last would reveal whether a carry is riding along,
+        // i.e. whether some earlier epoch had no winner).
         FHE.allowThis(rnd);
         FHE.allowThis(ticket);
         FHE.allowThis(ep.cumulative);
         FHE.allowThis(ep.selectedAny);
+        FHE.allowThis(ep.prizeCipher);
 
         emit RandomRequested(currentEpochId);
-
-        if (_participants.length == 0) {
-            // Nothing to scan — the draw completes in the same tx (mirrors
-            // beginSnapshot's empty-pool fast path); selectBatch stays
-            // consistently unusable through its cursor gate.
-            emit DrawCompleted(currentEpochId);
-        }
     }
 
     /// @notice Scan up to `maxSteps` participants of the drawn epoch, crediting
@@ -593,6 +638,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     function selectBatch(uint32 maxSteps) external {
         if (maxSteps == 0) revert InvalidConfig();
         Epoch storage ep = _epochs[currentEpochId];
+        // Settled ahead of the generic phase check: losing a race to another
+        // keeper is the most common way to land here (R4), and "the scan is
+        // already finished" is a benign outcome a UI should say plainly —
+        // not the same class of error as calling this during Open.
+        if (ep.phase == EpochPhase.Settled) revert SelectionComplete();
         if (ep.phase != EpochPhase.Drawing) revert WrongPhase();
         if (!ep.drawn) revert NotDrawn();
 
@@ -605,9 +655,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         euint64 ticket = ep.ticket;
         euint64 cumulative = ep.cumulative;
         ebool selectedAny = ep.selectedAny;
+        // The pool frozen by requestRandom — read, not re-encrypted, so every
+        // batch awards the identical handle no matter which one crosses.
+        euint64 prizeEnc = ep.prizeCipher;
         // Hoisted once per tx — identical trivial encryptions inside the loop
-        // would alias to the same handles anyway (quirk #10).
-        euint64 prizeEnc = FHE.asEuint64(ep.prizeAmount);
+        // would alias to the same handle anyway (quirk #10).
         euint64 zero = FHE.asEuint64(0);
 
         for (uint32 i = cursor; i < stop; ++i) {
@@ -624,8 +676,26 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         emit SelectProgress(currentEpochId, stop);
 
         if (stop == count) {
-            // Phase stays Drawing — Settled is Day 5's claim-side transition.
+            // Every participant has been scanned, so `selectedAny` now answers
+            // "did this epoch have a winner?" once and for all. The answer is
+            // encrypted and must stay that way — a public branch here would
+            // announce that every participant held a zero time-weighted
+            // balance. So the rollover is an FHE.select: winner ⇒ the carry
+            // empties (the prize is already sitting in their pendingPrize),
+            // no winner ⇒ the whole pool rides forward untouched.
+            //
+            // Overwrite, never accumulate: prizeCipher ALREADY contains the
+            // incoming carry (folded in at requestRandom), so adding here
+            // would double-count it.
+            _prizeCarry = FHE.select(selectedAny, zero, prizeEnc);
+            FHE.allowThis(_prizeCarry);
+
+            // Settled is reached permissionlessly, in the same tx that
+            // finishes the scan (rule #7) — no separate settle() for a keeper
+            // to sit on, and no window where a resolved epoch looks unresolved.
+            ep.phase = EpochPhase.Settled;
             emit DrawCompleted(currentEpochId);
+            emit EpochSettled(currentEpochId);
         }
     }
 
@@ -770,10 +840,34 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         return (ep.random, ep.ticket, ep.cumulative, ep.selectedAny);
     }
 
-    /// @notice Public sponsored prize for `epochId` (P-4: the prize amount is
-    ///         deliberately public; only user balances/weights are secret).
-    ///         Zero until Day 5's funding lands; immutable once the epoch is drawn.
+    /// @notice Public sponsored prize funded INTO `epochId` (P-4: the amount
+    ///         is deliberately public; only user balances/weights are secret).
+    ///         Immutable once the epoch is drawn.
+    /// @dev    This is not the epoch's payout: a draw pays prizeAmount plus
+    ///         any carry from earlier winnerless epochs, and that total is
+    ///         encrypted on purpose (see prizeCipherOf).
     function prizeAmountOf(uint256 epochId) external view returns (uint64) {
         return _epochs[epochId].prizeAmount;
+    }
+
+    /// @notice Encrypted total pool `epochId`'s draw pays out — its own funded
+    ///         prize plus any carry. Frozen at requestRandom; zero handle
+    ///         before that (and for an epoch resolved by the empty-pool path).
+    /// @dev    Handle is public info, ACL is contract-only: nobody decrypts it,
+    ///         because the gap between this and the public prizeAmount is
+    ///         exactly the carry, and a non-zero carry means some earlier
+    ///         epoch had no winner (#6).
+    function prizeCipherOf(uint256 epochId) external view returns (euint64) {
+        return _epochs[epochId].prizeCipher;
+    }
+
+    /// @notice Encrypted prize carried over from winnerless epochs.
+    /// @dev    Same policy as totalPrincipal: the handle is public, the ACL is
+    ///         contract-only, and it is NEVER made publicly decryptable — its
+    ///         value is a direct statement about past draws' outcomes (#6).
+    ///         Exposed so conservation can be reasoned about through the ABI;
+    ///         tests read it with the mock-only debugger.
+    function prizeCarry() external view returns (euint64) {
+        return _prizeCarry;
     }
 }

@@ -212,20 +212,26 @@ describe("PayDayPot — draw engine (Day 4)", function () {
       expect(await phaseOf(1n)).to.eq(PHASE.Drawing); // no new enum value — sub-state only
     });
 
-    it("a zero-participant epoch draws and completes in the same tx — nothing to scan", async function () {
+    it("a zero-participant epoch is SETTLED outright by beginSnapshot — no draw, no 1.75M HCU burned (D9)", async function () {
       await ensureAt(E);
-      await pot.beginSnapshot(); // empty pool: lands directly in Drawing
-      expect(await phaseOf(1n)).to.eq(PHASE.Drawing);
+      // Nobody can win a pool nobody joined, so the epoch resolves in the
+      // snapshot tx rather than making a keeper pay for a randEuint64.
+      const tx = await pot.beginSnapshot();
+      await expect(tx).to.emit(pot, "SnapshotCompleted").withArgs(1n);
+      await expect(tx).to.emit(pot, "EpochSettled").withArgs(1n);
+      expect(await phaseOf(1n)).to.eq(PHASE.Settled);
 
-      const tx = await pot.requestRandom();
-      await expect(tx).to.emit(pot, "RandomRequested").withArgs(1n);
-      await expect(tx).to.emit(pot, "DrawCompleted").withArgs(1n);
-
-      // The cursor gate keeps selectBatch consistently unusable afterwards.
+      // Both draw entry points are consistently closed afterwards.
+      await expect(pot.requestRandom()).to.be.revertedWithCustomError(pot, "WrongPhase");
       await expect(pot.selectBatch(1)).to.be.revertedWithCustomError(pot, "SelectionComplete");
-      // [mock-only] ticket = ⌊R·0/2^64⌋ = 0 — no winner is even representable.
+
+      // No randomness was ever drawn: the whole draw state stays uninitialized.
+      const prog = await pot.drawProgress(1);
+      expect(prog.drawn).to.eq(false);
       const st = await pot.drawStateOf(1);
-      expect(await debugDecrypt(st.ticket)).to.eq(0n);
+      expect(st.random).to.eq(ethers.ZeroHash);
+      expect(st.ticket).to.eq(ethers.ZeroHash);
+      expect(await pot.prizeCipherOf(1)).to.eq(ethers.ZeroHash);
     });
   });
 
@@ -313,8 +319,10 @@ describe("PayDayPot — draw engine (Day 4)", function () {
       expect(prog.total).to.eq(3n);
 
       await expect(pot.selectBatch(1)).to.be.revertedWithCustomError(pot, "SelectionComplete");
-      // Phase stays Drawing — Settled is Day 5's claim-side transition.
-      expect(await phaseOf(1n)).to.eq(PHASE.Drawing);
+      // The scan-completing tx also settles the epoch — no separate settle()
+      // call, so a stalled keeper can never strand a fully-scanned epoch.
+      await expect(tx).to.emit(pot, "EpochSettled").withArgs(1n);
+      expect(await phaseOf(1n)).to.eq(PHASE.Settled);
     });
   });
 
@@ -559,7 +567,9 @@ describe("PayDayPot — draw engine (Day 4)", function () {
         for (const log of potLogs) {
           const parsed = pot.interface.parseLog(log);
           expect(parsed, "unparseable pot event in a draw tx").to.not.eq(null);
-          expect(["RandomRequested", "SelectProgress", "DrawCompleted"]).to.include(parsed!.name);
+          expect(["RandomRequested", "SelectProgress", "DrawCompleted", "EpochSettled"]).to.include(
+            parsed!.name,
+          );
           for (const topic of log.topics.slice(1)) {
             expect(padded).to.not.include(topic.toLowerCase()); // no address, indexed or not
           }
