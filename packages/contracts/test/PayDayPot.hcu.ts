@@ -293,3 +293,203 @@ describe("PayDayPot — HCU budget (Day 4: draw)", function () {
     expect(txsForFullPool).to.be.at.most(4);
   });
 });
+
+/**
+ * Day 5 measurements: the money paths that close the protocol.
+ *
+ * Two things are being watched here, and they are not the same thing:
+ *   - HCU, for fundPrize / claim, which run FHE ops;
+ *   - GAS, for startNewEpoch, which runs almost no FHE but touches storage
+ *     and the ACL for every participant in one unsplittable transaction.
+ *     A pool that cannot start its next epoch inside one block is bricked,
+ *     so this is measured at the full 32-participant cap, not at 8.
+ *
+ * Numbers go verbatim into docs/DRAW_PROTOCOL.md §6 and the Day 5 handoff.
+ */
+describe("PayDayPot — HCU + gas budget (Day 5: prize, claim, lifecycle)", function () {
+  this.timeout(300_000);
+
+  const GLOBAL_LIMIT = 20_000_000;
+  const DEPTH_LIMIT = 5_000_000;
+  const M6 = 1_000_000n;
+  const PER_USER_CAP = 10_000n * M6;
+
+  function report(label: string, hcu: { globalHCU: number; maxHCUDepth: number }, gasUsed?: bigint) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `      HCU ${label}: global=${hcu.globalHCU.toLocaleString("en-US")} depth=${hcu.maxHCUDepth.toLocaleString("en-US")}` +
+        (gasUsed !== undefined ? ` gas=${gasUsed.toLocaleString("en-US")}` : ""),
+    );
+    expect(hcu.globalHCU).to.be.lessThan(GLOBAL_LIMIT);
+    expect(hcu.maxHCUDepth).to.be.lessThan(DEPTH_LIMIT);
+    return hcu;
+  }
+
+  describe("prize funding and claim", function () {
+    let employer: HardhatEthersSigner;
+    let winner: HardhatEthersSigner; // the only participant with positive weight
+    let loser: HardhatEthersSigner; // registered, weight 0 — a refunded deposit
+    let usdc: TestUSDC;
+    let token: TestConfidentialUSDC;
+    let pot: PayDayPot;
+    let tokenAddress: string;
+    let potAddress: string;
+
+    let winnerClaim: { globalHCU: number; maxHCUDepth: number; gas: bigint };
+
+    before(async function () {
+      if (!fhevm.isMock) {
+        this.skip();
+      }
+      const s = await ethers.getSigners();
+      employer = s[4];
+      winner = s[18];
+      loser = s[19];
+      usdc = await (await ethers.getContractFactory("TestUSDC")).deploy();
+      token = await (await ethers.getContractFactory("TestConfidentialUSDC")).deploy(await usdc.getAddress());
+      tokenAddress = await token.getAddress();
+      pot = await (
+        await ethers.getContractFactory("PayDayPot")
+      ).deploy(tokenAddress, employer.address, 7n * 24n * 3600n, PER_USER_CAP, 32);
+      potAddress = await pot.getAddress();
+
+      for (const user of [winner, loser]) {
+        await usdc.mint(user.address, 25_000n * M6);
+        await usdc.connect(user).approve(tokenAddress, 25_000n * M6);
+        await token.connect(user).wrap(user.address, 25_000n * M6);
+      }
+      // Deterministic winner without touching the draw: `winner` registers
+      // first with real weight; `loser` registers with a deposit the cap
+      // refunds in full, so its weight is zero. Since ticket = ⌊R·T/2^64⌋ < T,
+      // the scan always crosses the first positive-weight participant.
+      for (const [user, amount] of [
+        [winner, 4_000n * M6],
+        [loser, PER_USER_CAP + 1n],
+      ] as const) {
+        const enc = await fhevm.createEncryptedInput(tokenAddress, user.address).add64(amount).encrypt();
+        await token
+          .connect(user)
+          ["confidentialTransferAndCall(address,bytes32,bytes,bytes)"](potAddress, enc.handles[0], enc.inputProof, "0x");
+      }
+    });
+
+    it("fundPrize (ERC-20 pull + wrap by the contract) fits the budget", async function () {
+      await usdc.mint(employer.address, 1_000n * M6);
+      await usdc.connect(employer).approve(potAddress, 1_000n * M6);
+      const receipt = (await (await pot.connect(employer).fundPrize(1_000n * M6)).wait())!;
+      report("fundPrize", fhevm.computeTransactionHCU(receipt), receipt.gasUsed);
+    });
+
+    it("defundPrize (trivial encrypt + transfer out) fits the budget", async function () {
+      const receipt = (await (await pot.connect(employer).defundPrize(100n * M6)).wait())!;
+      report("defundPrize", fhevm.computeTransactionHCU(receipt), receipt.gasUsed);
+    });
+
+    it("claim by the winner fits the budget", async function () {
+      await time.increaseTo((await pot.epochInfo(1)).end);
+      await pot.beginSnapshot();
+      await pot.snapshotBatch(32);
+      await pot.requestRandom();
+      await pot.selectBatch(32);
+
+      const receipt = (await (await pot.connect(winner).claim()).wait())!;
+      const hcu = report("claim (winner)", fhevm.computeTransactionHCU(receipt), receipt.gasUsed);
+      winnerClaim = { ...hcu, gas: receipt.gasUsed };
+    });
+
+    it("claim by a non-winner costs EXACTLY the same — the tx shape leaks nothing", async function () {
+      const receipt = (await (await pot.connect(loser).claim()).wait())!;
+      const hcu = report("claim (non-winner)", fhevm.computeTransactionHCU(receipt), receipt.gasUsed);
+
+      // The anti-leak claim, measured rather than argued: claim() runs one
+      // data-independent code path, so an observer watching gas or HCU cannot
+      // tell a payout from a zero transfer. Exact equality, not a tolerance —
+      // any divergence means a branch crept in.
+      expect(hcu.globalHCU, "claim HCU differs between winner and non-winner").to.eq(winnerClaim.globalHCU);
+      expect(hcu.maxHCUDepth, "claim HCU depth differs between winner and non-winner").to.eq(winnerClaim.maxHCUDepth);
+      expect(receipt.gasUsed, "claim gas differs between winner and non-winner").to.eq(winnerClaim.gas);
+    });
+  });
+
+  describe("startNewEpoch at the 32-participant cap — the gas ceiling", function () {
+    const POOL = 32;
+    let employer: HardhatEthersSigner;
+    let participants: HardhatEthersSigner[];
+    let usdc: TestUSDC;
+    let token: TestConfidentialUSDC;
+    let pot: PayDayPot;
+
+    before(async function () {
+      if (!fhevm.isMock) {
+        this.skip();
+      }
+      const s = await ethers.getSigners();
+      employer = s[4];
+      usdc = await (await ethers.getContractFactory("TestUSDC")).deploy();
+      token = await (await ethers.getContractFactory("TestConfidentialUSDC")).deploy(await usdc.getAddress());
+      const tokenAddress = await token.getAddress();
+      pot = await (
+        await ethers.getContractFactory("PayDayPot")
+      ).deploy(tokenAddress, employer.address, 7n * 24n * 3600n, PER_USER_CAP, POOL);
+      const potAddress = await pot.getAddress();
+
+      // Hardhat hands out 20 accounts; the rest are derived deterministically
+      // and funded from the deployer so the fixture is reproducible.
+      participants = [...s.slice(0, POOL)];
+      for (let i = participants.length; i < POOL; i++) {
+        const wallet = new ethers.Wallet(ethers.zeroPadValue(ethers.toBeHex(0xda720000 + i), 32), ethers.provider);
+        await s[0].sendTransaction({ to: wallet.address, value: ethers.parseEther("1") });
+        participants.push(wallet as unknown as HardhatEthersSigner);
+      }
+
+      for (const [i, user] of participants.entries()) {
+        await usdc.mint(user.address, 2_000n * M6);
+        await usdc.connect(user).approve(tokenAddress, 2_000n * M6);
+        await token.connect(user).wrap(user.address, 2_000n * M6);
+        const enc = await fhevm
+          .createEncryptedInput(tokenAddress, user.address)
+          .add64(BigInt(i + 1) * 10n * M6)
+          .encrypt();
+        await token
+          .connect(user)
+          ["confidentialTransferAndCall(address,bytes32,bytes,bytes)"](potAddress, enc.handles[0], enc.inputProof, "0x");
+      }
+      expect(await pot.participantCount()).to.eq(BigInt(POOL));
+
+      // Run the epoch to Settled so startNewEpoch is measured on the real
+      // post-draw state: every twabArea and won flag holds a live handle.
+      //
+      // Batches of 16, not 32: a full-pool sweep blows the 5M sequential-depth
+      // limit outright (the measured ceilings above are 21 for snapshot and 22
+      // for scan). That is exactly why both are cursor-driven — this fixture is
+      // the keeper's real 2-tx-per-stage shape, not a shortcut around it.
+      await time.increaseTo((await pot.epochInfo(1)).end);
+      await pot.beginSnapshot();
+      await pot.snapshotBatch(16);
+      await pot.snapshotBatch(16);
+      await pot.requestRandom();
+      await pot.selectBatch(16);
+      await pot.selectBatch(16);
+      expect((await pot.epochInfo(1)).phase, "the fixture epoch did not settle").to.eq(3n);
+    });
+
+    it(`startNewEpoch resets all ${POOL} participants in ONE tx, well under a block`, async function () {
+      const receipt = (await (await pot.startNewEpoch()).wait())!;
+      const hcu = report(`startNewEpoch(${POOL})`, fhevm.computeTransactionHCU(receipt), receipt.gasUsed);
+
+      const perParticipant = Number(receipt.gasUsed) / POOL;
+      // eslint-disable-next-line no-console
+      console.log(
+        `      gas/participant ≈ ${Math.round(perParticipant).toLocaleString("en-US")}` +
+          ` — a 30M-gas block fits a pool of ${Math.floor((0.8 * 30_000_000) / perParticipant)} at 80% headroom`,
+      );
+
+      // Exit gate: the reset is one unsplittable tx, so it must sit far below
+      // a block. 10M leaves 3× headroom against Sepolia's 36M limit and holds
+      // even if a client is configured with a 30M ceiling.
+      expect(receipt.gasUsed, "startNewEpoch approaches the block gas limit").to.be.lessThan(10_000_000n);
+      // Almost no FHE here: two shared handles, reused for every participant.
+      expect(hcu.globalHCU).to.be.lessThan(1_000_000);
+    });
+  });
+});

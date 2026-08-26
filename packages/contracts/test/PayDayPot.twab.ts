@@ -329,12 +329,15 @@ describe("PayDayPot — encrypted TWAB (Day 3)", function () {
       await expect(pot.beginSnapshot()).to.be.revertedWithCustomError(pot, "WrongPhase");
     });
 
-    it("an epoch with zero participants completes its snapshot in the same tx and lands in Drawing", async function () {
+    it("an epoch with zero participants snapshots AND settles in the same tx — no draw needed (D9)", async function () {
       await ensureAt(E);
       const tx = await pot.beginSnapshot();
       await expect(tx).to.emit(pot, "SnapshotStarted").withArgs(1n, 0n);
       await expect(tx).to.emit(pot, "SnapshotCompleted").withArgs(1n);
-      expect(await phaseOf(1n)).to.eq(PHASE.Drawing);
+      // Nobody can win a pool nobody joined, so the epoch skips Drawing
+      // entirely rather than charging a keeper 1.75M HCU for a dead draw.
+      await expect(tx).to.emit(pot, "EpochSettled").withArgs(1n);
+      expect(await phaseOf(1n)).to.eq(PHASE.Settled);
 
       await expect(pot.snapshotBatch(1)).to.be.revertedWithCustomError(pot, "WrongPhase");
     });

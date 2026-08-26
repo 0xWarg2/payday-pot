@@ -199,15 +199,15 @@ bounded tx trên số HCU đã đo ✅ (pool 32 = 2 tx, test tự fail nếu cei
 
 **Mục tiêu:** local full cycle xanh; prize và principal bảo toàn độc lập.
 
-- [ ] Employer funding; allocated prize là **public uint64** (P-4); không allocate quá backing
-- [ ] Credit encrypted `pendingPrize` trong winner scan + ACL cho từng user
-- [ ] `claim()` idempotent; giảm liability bằng actual transfer; KHÔNG làm `claimFor`
-- [ ] Finalize/reset epoch không đụng principal
-- [ ] Script integration Jimmer/Warg/Carol: weights khác nhau → fund → draw →
-      từng người decrypt kết quả riêng → winner claim → tất cả withdrawAll
-- [ ] Negative ACL: employer/keeper/user khác đều bị từ chối
-- [ ] Draft `PRIVACY.md`, `THREAT_MODEL.md`, `KNOWN_LIMITATIONS.md` từ behavior thật
-- [ ] Freeze ABI (chỉ sửa khi blocker)
+- [x] Employer funding; allocated prize là **public uint64** (P-4); không allocate quá backing — `fundPrize` pull ERC-20 rồi tự `wrap`, nên allocation ≡ transfer thật; thiếu tiền ⇒ revert plaintext (R12)
+- [x] Credit encrypted `pendingPrize` trong winner scan + ACL cho từng user — grant **đồng loạt mọi participant** (winner thấy số dương, người khác thấy enc(0))
+- [x] `claim()` idempotent; giảm liability bằng actual transfer; KHÔNG làm `claimFor` — claim lần 2 chuyển 0 không revert; non-winner claim **thành công** chuyển 0 (chống leak)
+- [x] Finalize/reset epoch không đụng principal — `startNewEpoch` chỉ reset twabArea/won/lastCheckpoint; **không bao giờ** đụng pendingPrize (B3, test cross-epoch)
+- [x] Script integration Jimmer/Warg/Carol: weights khác nhau → fund → draw →
+      từng người decrypt kết quả riêng → winner claim → tất cả withdrawAll — `demo/demo-day5.ts`, 12 beat, sentinel `BUG:`/`PRIVACY BREACH:`
+- [x] Negative ACL: employer/keeper/user khác đều bị từ chối — thêm `prizeCipherOf`/`prizeCarry` contract-only; grep `makePubliclyDecryptable` = 0
+- [x] Draft `PRIVACY.md`, `THREAT_MODEL.md`, `KNOWN_LIMITATIONS.md` từ behavior thật — viết từ code đã ship (số dòng ACL thật), không phải từ spec
+- [x] Freeze ABI (chỉ sửa khi blocker) — ghi trong `docs/handoffs/DAY_05_HANDOFF.md`
 
 **Exit gate (Protocol Complete):** full local flow từ fresh state · đúng 1 user
 decrypt prize dương, còn lại zero · claim chuyển đúng 1 lần · prize không đổi
@@ -420,7 +420,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 | 2 | 20/08 | Money in/out + invariants | ✅ 43 pass (+property+HCU) | ✅ `pnpm demo:day2` | ✅ | ✅ Local full — deposit callback, withdraw/withdrawAll, conservation, pause-proof exit |
 | 3 | 21/08 | TWAB correct | ✅ 74 pass (26 TWAB exact-equality + 5 HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
 | 4 | 22/08 | Encrypted draw correct | ✅ 103 pass (26 draw + 3 HCU Day 4 + Monte Carlo 64 epoch) | ✅ `pnpm demo:day4` | ✅ | ✅ Local full 24/08 — random 1 lần (AlreadyDrawn + handle equality), ticket P-2 exact `== (R·T)>>64`, đúng-1-winner structural (exact-replication + 1:3:6 ±3.5σ), stranger resume (R4), scan ceiling 22/tx, ACL 5 lớp (won contract-only §15.1) |
-| 5 | 23/08 | Protocol full cycle | ☐ | ☐ | ☐ | — |
+| 5 | 23/08 | Protocol full cycle | ✅ 150 pass (38 prize/claim/lifecycle + 5 HCU Day 5 + solvency property mở rộng) | ✅ `pnpm demo:day5` | ✅ | ✅ Local full 25/08 — employer fund bằng USDC công khai + pot tự `wrap` (R12 revert plaintext thật), carry roll encrypted (B4: 1,000 → winner epoch sau nhận 1,500), settle tự động trong `selectBatch` cuối + empty-pool Open→Settled (D9), `claim()` uniform **bằng nhau tuyệt đối** winner/non-winner (748,032 HCU / 396,250 gas — R9), `startNewEpoch` permissionless không đụng principal/pendingPrize (B3), ceiling scan giữ 22/tx, PRIVACY.md + THREAT_MODEL.md. **Red-team pass trên code đã ship: 0 P0**, siết 3 chỗ (rug window `defundPrize` sau khi weight freeze · `snapshotProgress`/`drawProgress` trả `total` của list hiện tại thay vì của chính epoch · `renounceOwnership` khi paused = pause vĩnh viễn) — ABI **không đổi**, chi tiết `docs/handoffs/DAY_05_HANDOFF.md` |
 | 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |
 | 7 | 25/08 | Money UX | ☐ | ☐ | ☐ | — |
 | 8 | 26/08 | Browser E2E | ☐ | ☐ | ☐ | — |
