@@ -26,6 +26,14 @@ export interface ContractDeployment {
   abiHash: string;
   /** source đã verify trên explorer chưa (bắt buộc `true` cho `rc`) */
   verified: boolean;
+  /** wrapper token pot bị khoá vào (constructor đọc underlying()/rate() từ đây) */
+  token?: `0x${string}`;
+  /**
+   * Implementation của wrapper tại thời điểm deploy. Wrapper là proxy UUPS của
+   * Zama và **đã** bị upgrade một lần giữa Day 1 và Day 6 — ghi lại impl để sau
+   * này còn so được, thay vì đoán (KNOWN_LIMITATIONS §10).
+   */
+  tokenImpl?: `0x${string}`;
   note?: string;
 }
 

@@ -52,6 +52,12 @@ if (pot) {
   if (!txh.test(pot.deployTx)) fail(`PayDayPot.deployTx is not a tx hash`);
   if (pot.kind !== "dev" && pot.kind !== "rc") fail(`PayDayPot.kind must be "dev" or "rc", got ${pot.kind}`);
   if (pot.kind === "rc" && pot.verified !== true) fail(`an "rc" deployment must have verified source (Day 9 exit gate)`);
+  for (const f of ["token", "tokenImpl"]) {
+    if (pot[f] !== undefined && !addr.test(pot[f])) fail(`PayDayPot.${f} is not an address: ${pot[f]}`);
+  }
+  // Day 9 phải biết pot được deploy chống lại bản wrapper nào — wrapper là proxy
+  // của bên khác và đã upgrade một lần (KNOWN_LIMITATIONS §10).
+  if (pot.kind === "rc" && !pot.tokenImpl) fail(`an "rc" deployment must record tokenImpl (the wrapper implementation it was deployed against)`);
   try {
     const abi = JSON.parse(readFileSync(ARTIFACT, "utf8")).abi;
     const hash = createHash("sha256").update(JSON.stringify(abi)).digest("hex");

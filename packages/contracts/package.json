@@ -54,6 +54,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "deploy:localhost": "hardhat deploy --network localhost",
     "deploy:sepolia": "hardhat deploy --network sepolia",
+    "deploy:sepolia:dev": "cross-env PAYDAY_POT_DEV_DEPLOY=1 hardhat deploy --network sepolia --tags PayDayPot",
     "verify:sepolia": "hardhat verify --network sepolia",
     "chain": "hardhat node --network hardhat --no-deploy",
     "demo": "hardhat test demo/demo-day1.ts",

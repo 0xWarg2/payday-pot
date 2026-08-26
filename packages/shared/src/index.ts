@@ -31,8 +31,9 @@ const manifest: DeploymentManifest = SEPOLIA_MANIFEST;
 export class NotDeployedError extends Error {
   constructor() {
     super(
-      "PayDayPot is not in deployments/sepolia.json yet. Deploy it " +
-        "(`pnpm --filter @payday-pot/contracts deploy:sepolia:dev`), then run `pnpm manifest:sync`.",
+      "PayDayPot is not in deployments/sepolia.json yet. Deploy it with " +
+        "`pnpm --filter @payday-pot/contracts deploy:sepolia:dev` — that writes the " +
+        "manifest and regenerates this module in the same run.",
     );
     this.name = "NotDeployedError";
   }

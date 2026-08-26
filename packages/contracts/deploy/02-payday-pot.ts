@@ -89,7 +89,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     throw new Error(`cUSDCMock.underlying() = ${underlying}, expected ${underlyingUSDCMock}`);
   }
   if (Number(decimals) !== 6) throw new Error(`cUSDCMock.decimals() = ${decimals}, expected 6 (euint64 budget assumes 6)`);
-  console.log(`  ✓ registry + wrapper validated — rate=${rate} decimals=${decimals}`);
+  // Wrapper là proxy UUPS của bên khác và ĐÃ bị upgrade một lần giữa Day 1 và
+  // Day 6 (KNOWN_LIMITATIONS §10). Ghi lại impl mà pot được deploy chống lại —
+  // sau này wrapper đổi thì còn có mốc để so, thay vì đoán.
+  const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+  const implSlot = await hre.ethers.provider.getStorage(cUSDCMock, IMPL_SLOT);
+  const wrapperImpl = hre.ethers.getAddress("0x" + implSlot.slice(-40));
+  console.log(`  ✓ registry + wrapper validated — rate=${rate} decimals=${decimals} impl=${wrapperImpl}`);
 
   const balance = await hre.ethers.provider.getBalance(deployer);
   if (balance < hre.ethers.parseEther("0.02")) {
@@ -119,6 +125,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     commit,
     abiHash,
     verified: false,
+    token: cUSDCMock,
+    tokenImpl: wrapperImpl,
     note: `dev deploy for UI work — epoch ${cfg.epochDuration}s, perUserCap ${cfg.perUserCap}, participantCap ${cfg.participantCap}`,
   };
   manifest.updatedAt = new Date().toISOString();
