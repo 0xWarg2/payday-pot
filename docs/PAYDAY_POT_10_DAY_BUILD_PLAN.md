@@ -741,7 +741,12 @@ Sprint 10 ngày kết thúc ở **release candidate**, chưa phải submission c
 
 ## 6. Daily scorecard
 
-Update this table at EOD:
+> **Bảng này đã bị thay thế — đừng đọc nó như trạng thái thật.** Lịch của
+> `EXECUTION_PLAN.md` override lịch ở đây (CLAUDE.md), nên số Day ở hai bên
+> **không khớp**: "Day 6 — Protocol full cycle" dưới đây là Day 5 của plan thật.
+> Scorecard sống là chính các checkbox + dòng `Tests:` + `**Exit gate:**` trong
+> `EXECUTION_PLAN.md`, cập nhật mỗi EOD ở đúng ngày tương ứng. Giữ bảng này lại
+> chỉ để tham chiếu tiêu chí gate, không phải để tick.
 
 | Day | Core gate | Tests green | EOD demo | Docs updated | Status |
 |---:|---|---|---|---|---|
