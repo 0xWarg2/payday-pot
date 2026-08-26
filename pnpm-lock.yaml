@@ -135,6 +135,9 @@ importers:
       '@payday-pot/shared':
         specifier: workspace:*
         version: link:../shared
+      ethers:
+        specifier: 6.15.0
+        version: 6.15.0
     devDependencies:
       typescript:
         specifier: 5.9.2
