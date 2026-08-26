@@ -1,7 +1,8 @@
 # PRIVACY — PayDay Pot
 
 Cái gì bí mật, cái gì không, và **ai** đọc được cái gì. Viết từ code đã ship
-(`PayDayPot.sol`, Day 5 — 25/08/2026), không phải từ spec.
+(`PayDayPot.sol`, Day 5 — 25/08/2026) và từ probe live cUSDC (Day 6 — 26/08/2026),
+không phải từ spec.
 
 > **Một câu framing, dùng nguyên văn trong README/UI/video:** PayDay Pot bảo mật
 > **số tiền** — balance, deposit, weight, tiền thắng. Nó **không** ẩn địa chỉ ví
@@ -74,15 +75,33 @@ không log. (Non-negotiable #5 — thực thi ở Day 6/7, pin bằng test E2E D
 
 ## 2. Cái gì công khai mà người dùng dễ tưởng là riêng tư
 
-Ba thứ này **lộ theo thiết kế**, phải nói thẳng trong onboarding chứ không giấu:
+Bốn thứ này **lộ theo thiết kế**, phải nói thẳng trong onboarding chứ không giấu:
 
 1. **Địa chỉ ví + thời điểm.** Ai deposit, ai withdraw, ai claim, lúc nào —
    công khai hoàn toàn. Chỉ *số tiền* là ẩn.
-2. **Wrap/unwrap amount.** Bước ERC-20 → ERC-7984 là plaintext cuối cùng trước
-   khi vào vùng mã hoá. Ai wrap 10,000 USDC rồi deposit ngay sau đó thì
-   observer đoán được deposit ~10,000. Đây là giới hạn của tầng token, không
-   phải của pot — mitigation duy nhất là wrap trước, deposit sau, số lẻ.
-3. **`prizeAmountOf` của epoch đang mở.** Employer fund 1,000 thì cả thế giới
+2. **Wrap amount.** Bước ERC-20 → ERC-7984 là plaintext cuối cùng trước khi vào
+   vùng mã hoá. Ai wrap 10,000 USDC rồi deposit ngay sau đó thì observer đoán
+   được deposit ~10,000. Đây là giới hạn của tầng token, không phải của pot —
+   mitigation duy nhất là wrap trước, deposit sau, số lẻ.
+
+3. **Unwrap amount — công khai TUYỆT ĐỐI, không chỉ suy đoán.** Đây là chỗ dễ
+   hiểu nhầm nhất trong toàn bộ file này, nên nói thẳng: `_unwrap` của wrapper
+   gọi `FHE.makePubliclyDecryptable` trên số sắp rút, và `unwrapRequestId`
+   *chính là* ciphertext handle của số đó. Ai cũng decrypt được. Cộng thêm
+   `unwrapAmount(bytes32)` là một view mở, nên không cần index event cũng đọc ra.
+
+   Nghĩa là: **rút tiền khỏi vùng mã hoá thì số tiền rút ra là public.** Pot
+   không vi phạm non-negotiable #6 — luật đó nói về state của *pot*, và grep
+   `makePubliclyDecryptable` trong `PayDayPot.sol` vẫn = 0 — nhưng người dùng
+   không quan tâm ranh giới contract nào, họ quan tâm số của họ. UI phải cảnh
+   báo **trước khi ký unwrap**, không phải sau.
+
+   Hệ quả nặng nhất là với winner: unwrap tiền thắng ngay sau khi claim thì cặp
+   (địa chỉ, số tiền) hiện ra công khai và ghép được với epoch vừa rồi. Đây
+   không còn là "residual correlation" mềm như §4 mô tả — nó là một con số đọc
+   thẳng được. Mitigation thật sự chỉ có: giữ tiền ở dạng confidential, hoặc
+   unwrap trễ và tách nhỏ.
+4. **`prizeAmountOf` của epoch đang mở.** Employer fund 1,000 thì cả thế giới
    thấy 1,000. Cố ý — đó là tiền của employer, và R12 cần nó.
 
 ## 3. Ba lập luận cấu trúc giữ cho privacy không rò
@@ -110,7 +129,12 @@ Chi tiết và mitigation ở `THREAT_MODEL.md`; tóm tắt:
   cú claim *không chứng minh* được gì, nhưng ai không bao giờ claim thì gần như
   chắc chắn không thắng. Đây là leak hành vi, không phải leak mật mã.
 - **Unshield correlation.** Winner unwrap tiền thắng ra USDC công khai thì số đó
-  hiện ra ở tầng token.
+  hiện ra ở tầng token — và hiện ra *chính xác*, không phải suy đoán (§2 mục 3).
+- **Wrapper là contract của bên khác, và bên đó upgrade được.** cUSDC là proxy
+  UUPS do Zama sở hữu; nó **đã bị upgrade giữa Day 1 và Day 6**. Owner có
+  `blockUser`/`unblockUser`. Pot không bị ảnh hưởng về privacy, nhưng mọi khẳng
+  định "wrapper hành xử như thế này" đều có hạn sử dụng
+  (COMPATIBILITY_NOTES quirk #20).
 - **Pool nhỏ.** Cap 32. Nếu chỉ có 2 participant thì "một trong hai" đã là thông
   tin đáng kể. Privacy tỉ lệ thuận với anonymity set.
 - **RNG.** `FHE.randEuint64()` hiện là PRNG coprocessor, chưa phải threshold-VRF

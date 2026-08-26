@@ -2,12 +2,15 @@
 
 Giới hạn **đã biết, có chủ đích hoặc ngoài tầm kiểm soát** của contract/app.
 Đây KHÔNG phải bug list — mỗi mục có lý do và (nếu có) hướng xử lý tương lai.
-Cập nhật: Day 5 (25/08/2026).
+Cập nhật: Day 6 (26/08/2026) — §1 và §9 đổi từ giả thuyết sang **đã probe live**;
+thêm §10 (wrapper upgradeable) và §11 (unwrap làm amount public).
 
 ## 1. Token-layer: deny-list + maxTotalSupply nằm ngoài pot (R3)
 
-Wrapper cUSDC live trên Sepolia (ConfidentialWrapperV3) có thể có
-`isBlocked`/`blockUser` (deny-list) và `maxTotalSupply`. Pot **không kiểm soát
+Wrapper cUSDC live trên Sepolia **có thật** `isBlocked`/`blockUser`/`unblockUser`
+(deny-list) và `maxTotalSupply` — probe bytecode 26/08, không còn là "có thể có".
+`maxTotalSupply()` hiện = 2^64−1 (trần kiểu, không phải trần chính sách), owner
+deny-list là `0x08e8a84c3c8c7cba165B1adcf67Ae4639eF84f52`. Pot **không kiểm soát
 và không thấy trước** các gate này:
 
 - User bị token block → deposit/withdraw fail **ở tầng token**, không phải lỗi pot.
@@ -169,10 +172,63 @@ transfer sẽ phá solvency âm thầm). Hai hệ quả:
   (deploy lên token thuần sẽ revert ngay). Có chủ đích, nhưng phải kiểm hai
   selector đó trên `ConfidentialWrapperV3` live trước khi deploy Sepolia.
 
-**Chưa probe trên live**: `ConfidentialWrapperV3` có deny-list và
-`maxTotalSupply` riêng (§1). `wrap` **do một contract gọi** (pot, không phải
-EOA) chưa từng chạy trên Sepolia — local dùng OZ `ERC7984ERC20Wrapper` thật nên
-đường đi giống, nhưng V3 là bản khác. Nếu V3 chặn contract caller hoặc chạm
-`maxTotalSupply` thì `fundPrize` revert ở tầng token, prize không vào được pot
-(user deposit/withdraw không ảnh hưởng). Day 9 checklist: probe
-`underlying()`, `rate()`, và một `wrap` thật từ contract trước khi deploy.
+**Trạng thái probe (26/08).** Đã xác nhận live: `underlying()` =
+`0x9b5Cd13b…dFfF`, `rate()` = 1, `decimals()` = 6, `maxTotalSupply()` = 2^64−1,
+`isBlocked(addr)` = false, và selector `wrap` tồn tại. Nghĩa là **constructor
+của pot đọc được đủ hai immutable nó cần** — rủi ro deploy Day 9 đã đóng.
+
+**Còn lại một giả định chưa chứng minh**: `wrap` **do một contract gọi** (pot,
+không phải EOA) chưa từng chạy trên Sepolia. Không probe bằng `eth_call` được
+vì cần state thật; nó sẽ tự chứng minh ở **`fundPrize` đầu tiên trên Sepolia
+(Day 7)**. Nếu wrapper chặn contract caller thì `fundPrize` revert ở tầng token
+— prize không vào được pot, nhưng deposit/withdraw/claim của user **không ảnh
+hưởng**, và fallback (employer wrap trước rồi pot pull) đã có sẵn trong
+DAY_05 plan.
+
+## 10. Pot phụ thuộc vào một contract mà bên thứ ba upgrade được
+
+Đây là mục quan trọng nhất được thêm ở Day 6, vì nó phủ bóng lên **mọi** dòng
+"đã probe" trong repo này.
+
+cUSDC `0x7c5BF43B…3639` là **proxy UUPS**, owner
+`0x08e8a84c3c8c7cba165B1adcf67Ae4639eF84f52` (Zama), và nó **đã bị upgrade giữa
+Day 1 và Day 6**: implementation đổi từ `0x390aa02f…d0ee` sang
+`0xAe37b998d453E1FaBE85DD46cf04295ca4A3af04`. Không có thông báo, mình phát
+hiện bằng cách đọc lại ERC-1967 slot.
+
+Hệ quả cụ thể, không phải lo xa:
+
+- `PayDayPot` **non-upgradeable** và đọc `underlying()`/`rate()` **một lần trong
+  constructor** rồi giữ làm immutable. Nếu wrapper đổi `rate` sau khi pot deploy,
+  pot vẫn dùng số cũ → `fundPrize` tính sai lượng underlying phải pull. Đây là
+  rủi ro **runtime**, không chỉ rủi ro lúc deploy.
+- Deny-list nằm trong tay owner đó: `blockUser` một địa chỉ là chặn được
+  deposit/withdraw của địa chỉ đó ở tầng token, pot không làm gì được.
+- Mọi kết luận kiểu "wrapper hành xử thế này" trong COMPATIBILITY_NOTES đều có
+  **hạn sử dụng**. Cụ thể: bản live hôm nay **không** phải OZ
+  `ERC7984ERC20Wrapper` chuẩn — nó thiếu overload `unwrap(address,address,uint64)`
+  và có thêm `unblockUser` (quirk #22).
+
+**Xử lý:** không thể fix trong scope này (upgrade quyền của Zama, và mock token
+là thứ duy nhất có trên testnet). Ràng buộc cứng: **Day 9 phải re-probe ngay
+trước RC deploy** — impl address, `rate`, `underlying`, `isBlocked` — và ghi
+lại impl address vào `deployments/sepolia.json` để về sau còn biết pot được
+deploy chống lại bản nào. Trên mainnet, đối tác cUSDC phải là một token
+non-upgradeable hoặc có timelock.
+
+## 11. Rút khỏi vùng mã hoá thì số tiền là công khai
+
+`unwrap` của wrapper gọi `FHE.makePubliclyDecryptable` trên số sắp rút, và
+`unwrapRequestId` chính là handle của số đó — nên **ai cũng decrypt được số
+user rút**. Không phải suy đoán từ timing như wrap, mà là một con số đọc thẳng.
+
+Pot không vi phạm non-negotiable #6 (grep `makePubliclyDecryptable` trong
+`PayDayPot.sol` = 0, và luật đó nói về state của pot), nhưng người dùng không
+quan tâm ranh giới contract. Ghi ở đây để không ai đọc README rồi tưởng "tiền
+ra khỏi pot vẫn kín".
+
+Đổi lại, chính tính public đó là thứ làm **R1 recovery** khả thi:
+`unwrapAmount(id)` đọc được nên bất kỳ ví nào cũng finalize hộ được một unwrap
+treo, không cần chữ ký của chủ. Một trade-off, không phải thuần mất mát.
+
+Chi tiết và mitigation: `PRIVACY.md` §2 mục 3.

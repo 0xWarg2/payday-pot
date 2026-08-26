@@ -217,6 +217,24 @@ principal liability · mọi người rút đủ principal.
 
 ## Day 6 — 24/08 — Shell + Landing/Onboarding + Dashboard
 
+> **Prep đã xong trước khi mở ngày (26/08)** — chi tiết đầy đủ ở
+> `docs/handoffs/DAY_06_KICKOFF.md`. Mục đích: Day 6 là ngày dựng màn hình, không
+> phải ngày dựng tooling.
+>
+> - [x] ABI + manifest plumbing: `packages/shared` xuất `PAYDAY_POT_ABI`,
+>       `PAYDAY_POT_ERRORS`, ABI hash; `pnpm manifest:sync` (`bd0791a`)
+> - [x] Deploy script un-gate + registry probe (`5d1d865`) — **deploy Sepolia là
+>       việc của người, xem "Cần anh làm" trong kickoff**
+> - [x] SDK: error taxonomy 31 code ánh xạ thẳng vào R1–R15 + read model
+>       trả handle (không trả số) (`966b148`)
+> - [x] Web tooling: Tailwind v4 + design tokens §14.2, Vitest+RTL (70 test),
+>       Playwright pin COOP/COEP trên **production build** (`c365055`)
+> - [x] Probe live cUSDC: đóng blocker Day 9, phát hiện wrapper đã bị upgrade
+>       (KNOWN_LIMITATIONS §10) và faucet mở (R14 thành nút in-app)
+>
+> Ba việc **chưa** làm và cố ý chưa làm: chưa deploy Sepolia (cần ví của anh),
+> chưa viết màn hình sản phẩm nào, chưa đụng contract (ABI freeze từ Day 5).
+
 - [ ] Design tokens, responsive shell, light theme + dark Draw Room boundary
 - [ ] Wallet/network/role guards; transaction center; client-only FHE provider;
       reveal store in-memory TTL 5 phút
@@ -421,7 +439,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 | 3 | 21/08 | TWAB correct | ✅ 74 pass (26 TWAB exact-equality + 5 HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
 | 4 | 22/08 | Encrypted draw correct | ✅ 103 pass (26 draw + 3 HCU Day 4 + Monte Carlo 64 epoch) | ✅ `pnpm demo:day4` | ✅ | ✅ Local full 24/08 — random 1 lần (AlreadyDrawn + handle equality), ticket P-2 exact `== (R·T)>>64`, đúng-1-winner structural (exact-replication + 1:3:6 ±3.5σ), stranger resume (R4), scan ceiling 22/tx, ACL 5 lớp (won contract-only §15.1) |
 | 5 | 23/08 | Protocol full cycle | ✅ 150 pass (38 prize/claim/lifecycle + 5 HCU Day 5 + solvency property mở rộng) | ✅ `pnpm demo:day5` | ✅ | ✅ Local full 25/08 — employer fund bằng USDC công khai + pot tự `wrap` (R12 revert plaintext thật), carry roll encrypted (B4: 1,000 → winner epoch sau nhận 1,500), settle tự động trong `selectBatch` cuối + empty-pool Open→Settled (D9), `claim()` uniform **bằng nhau tuyệt đối** winner/non-winner (748,032 HCU / 396,250 gas — R9), `startNewEpoch` permissionless không đụng principal/pendingPrize (B3), ceiling scan giữ 22/tx, PRIVACY.md + THREAT_MODEL.md. **Red-team pass trên code đã ship: 0 P0**, siết 3 chỗ (rug window `defundPrize` sau khi weight freeze · `snapshotProgress`/`drawProgress` trả `total` của list hiện tại thay vì của chính epoch · `renounceOwnership` khi paused = pause vĩnh viễn) — ABI **không đổi**, chi tiết `docs/handoffs/DAY_05_HANDOFF.md` |
-| 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |
+| 6 | 24/08 | Entry/dashboard | ◐ 70 web unit + 1 e2e (COOP/COEP) | ☐ | ◐ | ◐ **Prep xong 26/08** — shared ABI/manifest, SDK error taxonomy (31 code → R1–R15) + read model handle-only, Tailwind v4 tokens §14.2, Vitest+RTL+Playwright xanh, probe live cUSDC (đóng blocker Day 9; phát hiện wrapper **upgradeable và đã upgrade** → KNOWN_LIMITATIONS §10, faucet mở → R14 in-app, unwrap public amount → PRIVACY §2.3, R1 detect bằng 1 view call). **Chặn:** dev deploy Sepolia cần ví của anh |
 | 7 | 25/08 | Money UX | ☐ | ☐ | ☐ | — |
 | 8 | 26/08 | Browser E2E | ☐ | ☐ | ☐ | — |
 | 9 | 27/08 | Sepolia RC live | ☐ | ☐ | ☐ | — |

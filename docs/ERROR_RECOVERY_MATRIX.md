@@ -6,9 +6,15 @@
 > recovery khi `finalizeUnwrap` bị treo** — user đã sign unwrap, token đã burn onchain,
 > signature finalize bị cancel → tiền kẹt trong contract, không có cách lấy lại.
 >
-> PayDay Pot đi qua đúng cái wrapper đó (`ConfidentialWrapperV3` có
-> `wrap`/`unwrap`/`finalizeUnwrap` — COMPATIBILITY_NOTES §2), nên failure mode này nằm
-> sẵn trên đường của mình. Xử lý được nó là điểm tách khỏi submission trước.
+> PayDay Pot đi qua đúng cái wrapper đó, nên failure mode này nằm sẵn trên đường của
+> mình. Xử lý được nó là điểm tách khỏi submission trước.
+>
+> **Probe live 26/08 (COMPATIBILITY_NOTES quirk #22) làm R1 từ "lo ngại" thành "thiết kế
+> được":** cUSDC live có `unwrapRequester(bytes32)` và `unwrapAmount(bytes32)` là **view
+> mở** — nghĩa là UI phát hiện unwrap treo bằng **một view call**, không cần index event,
+> không cần backend. Và `finalizeUnwrap(bytes32,uint64,bytes)` **permissionless** — ví
+> nào bấm cũng được, không nhất thiết ví đã ký unwrap. Đó là hai fact biến R1 từ
+> "banner xin lỗi" thành nút bấm thật.
 >
 > Rule: mỗi dòng trong bảng phải có **3 thứ** mới được tick — (1) user thấy gì trong UI,
 > (2) hành động recovery bấm được, (3) test cover. Chỉ có test mà UI không nói gì =
@@ -18,9 +24,9 @@
 
 | # | Failure mode | User thấy gì | Recovery action | Test | Ngày | ☐ |
 |---|---|---|---|---|---|---|
-| R1 | **Unwrap pending / `finalizeUnwrap` chưa chạy** (user cancel signature, tab đóng, RPC lỗi) | Banner bền vững "bạn có 1 unwrap chưa hoàn tất", nói rõ tiền đang nằm ở token contract, KHÔNG hiện balance = 0 | Nút **Resume finalize**, idempotent, gọi lại được nhiều lần | E2E: kill tab giữa unwrap → reload → resume thành công | 6 (onboarding) + 8 (E2E) | ☐ |
+| R1 | **Unwrap pending / `finalizeUnwrap` chưa chạy** (user cancel signature, tab đóng, RPC lỗi) | Banner bền vững "bạn có 1 unwrap chưa hoàn tất", nói rõ tiền đang nằm ở token contract, KHÔNG hiện balance = 0 | Nút **Resume finalize**, idempotent, gọi lại được nhiều lần | E2E: kill tab giữa unwrap → reload → resume thành công | 6 (onboarding) + 8 (E2E) | ◐ **thiết kế chốt 26/08** — detect: đọc `UnwrapRequested` (hoặc lưu requestId lúc ký) rồi `unwrapRequester(id) != address(0)` ⇒ còn treo; `== address(0)` ⇒ đã finalize. Một view call, không backend, sống qua reload/đổi máy. Recovery: `finalizeUnwrap(id, amount, proof)` **permissionless** — banner nói "ví nào cũng bấm được", đúng tinh thần R4. Idempotent kiểu **revert-not-corrupt**: bấm lần 2 thì requester đã là 0 → revert sạch, không mất tiền; UI bắt revert đó và chuyển banner sang "đã hoàn tất" thay vì hiện lỗi đỏ. Amount cho finalize lấy từ `unwrapAmount(id)` — public-decryptable theo thiết kế của wrapper (PRIVACY §2 mục 3), nên không cần chữ ký user thứ hai. Code Day 6 (onboarding) + E2E Day 8 |
 | R2 | **Deposit bị token từ chối** (cap vượt → ebool false → refund all-or-nothing) | "Không có gì bị trừ khỏi ví bạn" + lý do ở mức cap (không leak amount) | Sửa số rồi thử lại; state không dính | Contract: deposit > cap → principal không đổi, không revert-leak. UI: hiện đúng thông điệp | 2 (contract) + 7 (UI) | ◐ contract ✅ 20/08 (tests: exact cap, cap+1 refund, 5k→6k crossing refund — all-or-nothing, tx success, principal không đổi). UI Day 7 |
-| R3 | **User nằm trong deny list của wrapper** (`isBlocked`) hoặc chạm `maxTotalSupply` | Báo đúng nguyên nhân "token contract từ chối địa chỉ này", KHÔNG hiện "transaction failed" | Link tới KNOWN_LIMITATIONS; không có retry vô nghĩa | Mock blocked user → deposit fail đúng thông điệp | 2 + 7 | ☐ |
+| R3 | **User nằm trong deny list của wrapper** (`isBlocked`) hoặc chạm `maxTotalSupply` | Báo đúng nguyên nhân "token contract từ chối địa chỉ này", KHÔNG hiện "transaction failed" | Link tới KNOWN_LIMITATIONS; không có retry vô nghĩa | Mock blocked user → deposit fail đúng thông điệp | 2 + 7 | ◐ **xác nhận live 26/08** — không còn là giả thuyết: cUSDC có `isBlocked(address)` (view, precheck được **trước khi ký**), `blockUser`/`unblockUser` do owner `0x08e8…4f52` gọi. `maxTotalSupply()` = 2^64−1 nên nhánh supply thực tế không chạm được trên testnet — vẫn giữ dòng vì đó là điều kiện của wrapper chứ không phải của pot. Code taxonomy `not-token`/`blocked` Day 7 |
 | R4 | **Draw batch dừng giữa cursor** (keeper chết/hết gas) | Draw Room hiện cursor đang ở đâu (`x/32 processed`), trạng thái "resumable", ai cũng làm được | Nút **Continue draw** permissionless từ bất kỳ ví | Kill keeper giữa batch → ví khác continue → kết quả không đổi | 4 (contract) + 8 (E2E) | ◐ contract ✅ 24/08, siết 25/08 (tests: keeper dừng sau `selectBatch(1)` → ví lạ `selectBatch(32)` hoàn tất, winner y hệt dự đoán; cursor monotonic qua `SelectProgress`; view `drawProgress(epochId)` cấp `(drawn, cursor, total)` cho UI "x/32"; demo:day4 diễn live stranger-resume). **UI phải tự chia batch**: trần đo được là **21 participant/tx cho `snapshotBatch`, 22 cho `selectBatch`** (HCU 20M global / 5M sequential) — `snapshotBatch(32)`/`selectBatch(32)` trên pool đầy 32 người **revert**, nên pool đầy = 2 tx mỗi stage. Nút "Continue" gửi `maxSteps` an toàn (≤16) chứ không gửi 32. **`total` là `frozenCount` của chính epoch đó** (sửa 25/08) — trước đó view trả độ dài list hiện tại, nên một ví vào epoch sau làm epoch cũ hiện "1/3 resumable" dù đã settle xong; test pin epoch 1 giữ `total = 2` sau khi pool lên 3. UI Day 7/8 |
 | R5 | **Random đã sinh nhưng tx select fail** | Trạng thái "seed đã chốt cho epoch này", nói rõ không reroll | Continue, không có nút re-draw | Contract: gọi lại draw trigger trong cùng epoch → revert; seed không đổi | 4 | ◐ contract ✅ 24/08 (tests: `requestRandom` lần 2 → `AlreadyDrawn`, handle random/ticket **không đổi** — equality pin; pause chặn requestRandom rồi unpause chạy tiếp — epoch không mất gì; scan tiếp tục bằng `selectBatch` từ đúng cursor). UI message "seed đã chốt, không reroll" Day 7/8 |
 | R6 | **EIP-712 decrypt bị reject / hết hạn / sai chain** | "Chưa mở khoá" — **không bao giờ hiện `0`** (non-negotiable #8) | Nút reveal lại; nếu sai chain thì nút switch network | Unit: reject signature → state hidden, không phải zero. Sai chain → prompt switch | 6 + 7 | ☐ |
@@ -31,7 +37,7 @@
 | R11 | **Reload giữa mọi pending state** (approval, deposit, draw cursor, claim) | Khôi phục đúng trạng thái, không mất tiền, không double-submit | Resume đúng chỗ | E2E reload tại 4 điểm (đã có trong Day 8) | 8 | ☐ |
 | R12 | **Employer prize không đủ backing** | Trạng thái solvency công khai (allocated prize là public uint64 — P-4) | Employer thấy cần fund thêm bao nhiêu | Contract: allocate > backing → revert với lý do plaintext hợp lệ | 5 | ◐ contract ✅ 25/08 — **đóng bằng thiết kế, không bằng check**: `fundPrize` pull ERC-20 công khai rồi tự `wrap`, nên allocation ≡ funding ≡ transfer thật; thiếu tiền/allowance thì **revert plaintext** ở tầng ERC-20 (`ERC20InsufficientBalance`/`ERC20InsufficientAllowance`), `prizeAmount` và balance pot không đổi (test pin cả hai). Nhận confidential transfer sẽ **không** làm được điều này — clamp ERC-7984 all-or-nothing chuyển enc(0) âm thầm (DRAW_PROTOCOL §6.6). `prizeAmountOf(epochId)` là plaintext uint64 công khai để employer đọc thẳng số cần bù; demo:day5 beat 2 diễn live revert. UI Day 7: employer panel + step 1/2 (xem R13) |
 | R13 | **Thiếu ERC-20 approval** trước khi wrap/deposit (brief nêu tên tường minh) | Bước approval hiện rõ là bước 1/2, không để user tưởng đã deposit | Nút approve riêng, retry được, không mất số đã nhập | E2E: deposit khi chưa approve → prompt approve → tiếp tục đúng chỗ | 6 + 7 | ☐ |
-| R14 | **Insufficient balance** (ERC-20 gốc hoặc cUSDC không đủ) | Nói rõ thiếu ở tầng nào (USDC gốc vs cUSDC đã wrap), gợi ý faucet | Link faucet/onboarding; không submit tx chắc chắn fail | UI: balance < requested → block trước khi ký | 6 + 7 | ☐ |
+| R14 | **Insufficient balance** (ERC-20 gốc hoặc cUSDC không đủ) | Nói rõ thiếu ở tầng nào (USDC gốc vs cUSDC đã wrap), gợi ý faucet | **Nút in-app, không phải link ra ngoài** | UI: balance < requested → block trước khi ký | 6 + 7 | ◐ **nâng cấp 26/08** — `USDCMock.mint(address,uint256)` là **faucet mở**, ai gọi cũng được (underlying không có `owner()`, không có role gate — quirk #21). Nên recovery action là **"Get test USDC" ngay trong app**, một tx, không rời trang, không captcha, không rate-limit của bên thứ ba. Đây là khác biệt UX thật so với "link tới faucet" mà spec ban đầu dự tính. Code Day 6 |
 | R15 | **Unsupported token / sai token** (brief nêu tên tường minh) | "Token này không phải token của pool", nói token đúng là gì | Chuyển sang token đúng bằng 1 nút | Contract: deposit token khác → revert; UI chặn trước | 2 + 7 | ◐ contract ✅ 20/08 (tests: wrapper thứ 2 → `NotToken`, EOA gọi thẳng callback → `NotToken`; selector bubble qua token — quirk #12). UI Day 7 |
 
 ## Nguyên văn tiêu chí chấm (đọc từ trang challenge S4, 20/08)
@@ -69,4 +75,10 @@ nói thẳng câu đó trong voiceover.
 - Judging criteria S3 bounty track + thread khiếu nại winner S3 trên
   `community.zama.org` (Aug 2026) — 3 winner thiếu recovery cho `finalizeUnwrap` treo.
 - `docs/COMPATIBILITY_NOTES.md` §2 (deny list, maxTotalSupply, refund-khi-ebool-false
-  chưa verify live) và §4 quirk #7 (CALL_EXCEPTION khi SDK đọc chain từ ví).
+  chưa verify live) · §4 quirk #7 (CALL_EXCEPTION khi SDK đọc chain từ ví) ·
+  **§8 quirk #20–#23** (probe live 26/08: wrapper đã bị upgrade; faucet mở; `unwrap`
+  plaintext không tồn tại; unwrap làm amount public-decryptable).
+- `packages/sdk/src/errors.ts` — taxonomy code hoá bảng này: mỗi `PotError` mang
+  `row: MatrixRow`, nên một dòng ở đây không có code tương ứng là compile-time
+  visible. `FOREIGN_ERROR_ABI` decode revert của token (R12/R13/R14) chứ không chỉ
+  revert của pot.
