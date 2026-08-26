@@ -2,13 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@payday-pot/web", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
       "name": "web-prod",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "apps/web",
-        "start"
-      ],
+      "runtimeArgs": ["--dir", "apps/web", "start"],
       "port": 3000,
       "autoPort": true
     }

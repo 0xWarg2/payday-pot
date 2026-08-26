@@ -188,7 +188,8 @@ export default function SpikePage() {
   }, [account, contractAddr, say]);
 
   return (
-    <main style={{ maxWidth: 640, margin: "40px auto", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: "#0b0e14", color: "#e6e6e6", fontFamily: "ui-monospace, monospace" }}>
+    <main style={{ maxWidth: 640, margin: "0 auto", padding: "40px 16px" }}>
       <h1 style={{ fontSize: 20 }}>🧪 PayDay Pot — Day 1 Compatibility Spike</h1>
       <p style={{ color: "#9aa4b2", fontSize: 13 }}>
         Throwaway page: prove SDK init → encrypt → tx → EIP-712 user-decrypt in a production build.
@@ -223,5 +224,6 @@ export default function SpikePage() {
         {log.length === 0 ? "— log —" : log.join("\n")}
       </div>
     </main>
+    </div>
   );
 }

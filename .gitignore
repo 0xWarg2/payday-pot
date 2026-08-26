@@ -31,3 +31,9 @@ apps/web/public/relayer-sdk-js.umd.js
 apps/web/public/workerHelpers.js
 apps/web/public/tfhe_bg.wasm
 apps/web/public/kms_lib_bg.wasm
+
+# playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/.playwright/

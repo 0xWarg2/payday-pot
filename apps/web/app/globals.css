@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — nguồn duy nhất là IMPLEMENTATION_PLAN §14.2/§14.3/§14.4.
+ * Component KHÔNG BAO GIỜ hardcode màu brand; luôn đi qua token semantic ở đây.
+ *
+ * Hai palette, cố ý tách rời:
+ *   - shell mặc định  : quiet-luxury light
+ *   - Draw Room       : dark, chỉ ở /draw
+ * Draw Room không phải "dark mode" của app — nó là một bối cảnh riêng, nên
+ * token của nó có tiền tố `draw-` chứ không phải một biến thể của token shell.
+ */
+@theme {
+  /* --- surfaces --- */
+  --color-canvas: #f5f2ea;
+  --color-surface: #ffffff;
+  --color-subtle: #f0eee6;
+  --color-fg: #121514;
+  --color-fg-muted: #66706c;
+  --color-border-default: #ddd9cf;
+
+  /* --- action: chartreuse = primary action, KHÔNG dùng làm trang trí --- */
+  --color-action: #c8f24a;
+  --color-action-hover: #b7e33a;
+  --color-action-active: #a5cf2d;
+  --color-on-action: #10120b;
+
+  /* --- semantic ---
+   * privacy (cyan) = "đang mã hoá / là dữ liệu mã hoá". KHÔNG đồng nghĩa success.
+   * Nhầm hai cái này là cách nhanh nhất để user tưởng một giá trị đã mở khoá.
+   */
+  --color-privacy: #31d8ff;
+  --color-privacy-subtle: #eafbff;
+  --color-success: #2f7d32;
+  --color-warning: #a86812;
+  --color-danger: #c93d3d;
+
+  /* --- Draw Room --- */
+  --color-draw-canvas: #06111e;
+  --color-draw-surface: #0b1a2a;
+  --color-draw-border: #193047;
+  --color-draw-violet: #8b5cf6;
+
+  /* --- type --- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* --- radius: control 12 · card 20 · sheet 24 (§14.4) --- */
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-sheet: 24px;
+
+  /* --- motion (§14.5) --- */
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  --duration-hover: 150ms;
+  --duration-panel: 260ms;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    /* §14.3: body tối thiểu 16px trong form — đặt sàn ở đây thay vì nhắc từng chỗ. */
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* §14.3: monetary + countdown dùng tabular numerals, nếu không thì con số
+     nhảy ngang mỗi tick và đọc như đang loading. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* §14.4: hit target tối thiểu 44×44. */
+  button,
+  [role="button"],
+  a[data-cta] {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  /* §14.5: reduced-motion bỏ loop/parallax, GIỮ state transition tức thời —
+     không được biến nó thành "không có phản hồi". */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
