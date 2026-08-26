@@ -1,0 +1,127 @@
+"use client";
+
+import { createExternalStore } from "../store/external-store";
+import { STORAGE_KEYS, readJson, registerValidator, writeJson } from "../storage";
+
+/**
+ * Transaction center.
+ *
+ * HÌNH DẠNG PERSIST LÀ MỘT HỢP ĐỒNG, không phải tiện tay: đúng năm field dưới
+ * đây và không thêm gì nữa.
+ *
+ *  - KHÔNG amount. Kể cả amount "public" như số USDC đem đi wrap — nó suy ra
+ *    được vị thế, và localStorage sống lâu hơn tab.
+ *  - KHÔNG `unwrapRequestId`. Trên bản cUSDC live, requestId CHÍNH LÀ ciphertext
+ *    handle của số đã burn (COMPATIBILITY_NOTES quirk #23). Ghi nó xuống đĩa là
+ *    ghi một handle nhạy cảm xuống đĩa. Muốn resume một unwrap thì parse lại
+ *    receipt từ `txHash` — chậm hơn vài trăm ms, đổi lại không có gì để rò.
+ *  - `status` cũng KHÔNG persist: nó suy ra được từ receipt, nên giữ trong bộ
+ *    nhớ tab và tính lại sau reload.
+ */
+export type TxAction =
+  | "faucet-mint"
+  | "approve"
+  | "wrap"
+  | "deposit"
+  | "unwrap"
+  | "finalize-unwrap"
+  | "claim"
+  | "withdraw"
+  | "fund-prize"
+  | "begin-snapshot"
+  | "snapshot"
+  | "request-random"
+  | "select"
+  | "start-new-epoch";
+
+export interface TxRecord {
+  chainId: number;
+  action: TxAction;
+  txHash: string;
+  /** epoch là dữ liệu công khai; bigint serialize thành chuỗi thập phân. */
+  epochId?: string;
+  createdAt: number;
+}
+
+export type TxStatus = "pending" | "success" | "reverted" | "unknown";
+
+export interface TxSnapshot {
+  records: readonly TxRecord[];
+  /** Chỉ sống trong bộ nhớ tab. */
+  status: ReadonlyMap<string, TxStatus>;
+}
+
+const TX_ACTIONS: readonly string[] = [
+  "faucet-mint",
+  "approve",
+  "wrap",
+  "deposit",
+  "unwrap",
+  "finalize-unwrap",
+  "claim",
+  "withdraw",
+  "fund-prize",
+  "begin-snapshot",
+  "snapshot",
+  "request-random",
+  "select",
+  "start-new-epoch",
+];
+
+const MAX_RECORDS = 25;
+
+export const TX_SERVER_SNAPSHOT: TxSnapshot = Object.freeze({
+  records: Object.freeze([]),
+  status: new Map<string, TxStatus>(),
+});
+
+export const txStore = createExternalStore<TxSnapshot>(TX_SERVER_SNAPSHOT, TX_SERVER_SNAPSHOT);
+
+/** Đúng 5 key, không hơn — đây là chỗ hợp đồng persist được thực thi. */
+export function isTxRecord(value: unknown): value is TxRecord {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as Record<string, unknown>;
+  const keys = Object.keys(r);
+  if (keys.some((k) => !["chainId", "action", "txHash", "epochId", "createdAt"].includes(k))) return false;
+  if (typeof r["chainId"] !== "number") return false;
+  if (typeof r["action"] !== "string" || !TX_ACTIONS.includes(r["action"])) return false;
+  if (typeof r["txHash"] !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(r["txHash"])) return false;
+  if (r["epochId"] !== undefined && !(typeof r["epochId"] === "string" && /^\d+$/.test(r["epochId"]))) return false;
+  if (typeof r["createdAt"] !== "number") return false;
+  return true;
+}
+
+function isTxRecordArray(value: unknown): value is TxRecord[] {
+  return Array.isArray(value) && value.every(isTxRecord);
+}
+
+registerValidator(STORAGE_KEYS.tx, isTxRecordArray);
+
+export function loadTxRecords(): void {
+  const records = readJson(STORAGE_KEYS.tx, isTxRecordArray) ?? [];
+  txStore.set({ records, status: new Map() });
+}
+
+export function recordTx(record: TxRecord): void {
+  if (!isTxRecord(record)) throw new TypeError("Refused to record a transaction with an unexpected shape");
+  txStore.set((prev) => {
+    const records = [record, ...prev.records.filter((r) => r.txHash !== record.txHash)].slice(0, MAX_RECORDS);
+    writeJson(STORAGE_KEYS.tx, records);
+    const status = new Map(prev.status);
+    status.set(record.txHash, "pending");
+    return { records, status };
+  });
+}
+
+export function setTxStatus(txHash: string, next: TxStatus): void {
+  txStore.set((prev) => {
+    if (prev.status.get(txHash) === next) return prev;
+    const status = new Map(prev.status);
+    status.set(txHash, next);
+    return { ...prev, status };
+  });
+}
+
+export function txRecordsFor(snapshot: TxSnapshot, chainId: number | null, action?: TxAction): readonly TxRecord[] {
+  return snapshot.records.filter((r) => (chainId === null || r.chainId === chainId) && (!action || r.action === action));
+}

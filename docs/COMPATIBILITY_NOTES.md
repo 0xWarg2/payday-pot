@@ -1,4 +1,4 @@
-# COMPATIBILITY_NOTES — cập nhật Day 5 (25/08/2026)
+# COMPATIBILITY_NOTES — cập nhật Day 6 (26/08/2026)
 
 Nguồn sự thật về version pins, quirks, và Decision D2. Mọi ngày sau đọc file này trước khi cài thêm dependency.
 
@@ -77,7 +77,10 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 | Prize/claim/lifecycle local (38 tests + 5 HCU Day 5 + solvency property) | ✅ 25/08, suite 150 passing |
 | Demo local `pnpm demo:day5` (fund→draw→1 winner decrypt→claim uniform→withdrawAll→epoch mới) | ✅ 25/08 |
 | `wrap` gọi bởi CONTRACT (spike C0 — nền của `fundPrize`) | ✅ 25/08 local (OZ `ERC7984ERC20Wrapper`) — xem quirk #19 |
-| `underlying()` / `rate()` / `wrap`-by-contract trên `ConfidentialWrapperV3` LIVE | ☐ chưa probe — **blocker Day 9** (quirk #19) |
+| `underlying()` / `rate()` / `decimals()` / `maxTotalSupply()` / `isBlocked()` trên cUSDC LIVE | ✅ 26/08 — probe qua `eth_call` thật, xem quirk #20 |
+| `wrap`-by-contract trên cUSDC LIVE (tx thật, không phải `eth_call`) | ☐ chưa chạy — sẽ tự chứng minh ở lần `fundPrize` đầu tiên trên dev deploy (Day 7) |
+| Underlying `USDCMock.mint` là faucet mở | ✅ 26/08 — quirk #21 |
+| Web tooling: Tailwind v4 + Vitest + Playwright, COOP/COEP pinned bằng e2e | ✅ 26/08 — 70 unit + 1 e2e xanh |
 | Refund-on-ebool-false của wrapper LIVE Sepolia | ◐ local-verified only (OZ 0.5.3) — recheck Day 9 (xem §2) |
 
 ## 6. Checklist chuẩn bị ví (user tự làm, ~10 phút)
@@ -105,3 +108,107 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
 17. **Mock `FheRand` = `ethers.randomBytes` — crypto-random, KHÔNG seed được** (đọc source `@fhevm/mock-utils` 0.4.2, handler FheRand thay bytes random vào handle, `replace: true`). Hệ quả cho test: (a) Monte Carlo/draw test **không replay được** — phải log R/ticket/winner từng sample để hậu kiểm khi flaky; (b) không có cách pin "random = X" qua pot: test biên max-R × max-T phải đi qua harness test-only (`contracts/mocks/TicketMathHarness.sol`) nhận input tự cấp, chạy y hệt chuỗi op P-2. (c) `fhevm.debugger.decryptEbool(handle)` có sẵn cạnh `decryptEuint` (mock-only) — dùng đọc won/selectedAny flags trong test.
 18. **Giá HCU đo thật các op draw (mock == Sepolia)**: `FheMul` euint128 non-scalar **1,686,000** (op đắt nhất hệ thống — requestRandom tổng 1,747,160); chuỗi scan 7-op/participant (add+lt+not+and+select+add+or, euint64) marginal **≈574k global / ≈162k depth**; `FheRand` + casts + shr chiếm phần còn lại (~61k) của requestRandom. Bảng đầy đủ: DRAW_PROTOCOL §4.
 19. **`wrap` GỌI BỞI CONTRACT hoạt động đúng — spike trước khi viết `fundPrize`** (Day 5, `CompatSpike.ts` §"wrap BY CONTRACT"). Mọi `wrap` trước đó trong repo là EOA wrap cho chính nó; pot tự wrap là hình dạng mới, nên phải chứng minh trước khi xây. Kết quả: (a) contract gọi `wrap(address(this), amount)` thì **confidential balance rơi vào CONTRACT**, không phải caller (`confidentialBalanceOf(caller) == ZeroHash`) — 217,128 HCU / 316,789 gas; (b) sponsor thiếu tiền ⇒ **revert `ERC20InsufficientBalance`** — đây chính là plaintext backing check mà clamp all-or-nothing của ERC-7984 không thể cho (confidential transfer sẽ chuyển enc(0) âm thầm, R12); (b') thiếu approval cũng revert (R13 — employer fund là **2 tx**: `approve` rồi `fundPrize`); (c) wrap nhiều lần cộng dồn, `forceApprove` không để sót allowance, và contract chuyển ra được cái nó đã wrap (đường `defundPrize`). **Chưa probe trên live**: cUSDC Sepolia là `ConfidentialWrapperV3` (bản khác OZ `ERC7984ERC20Wrapper` dùng ở local), có deny-list + `maxTotalSupply` riêng. Day 9 checklist: probe `underlying()`, `rate()`, và một `wrap` thật **từ contract** trước khi deploy — constructor của pot đọc 2 selector đó và giữ làm immutable, nên pot chỉ deploy được lên wrapper, không phải ERC-7984 thuần.
+
+## 8. Quirks live Sepolia (Day 6 — probe 26/08/2026)
+
+20. **cUSDC là proxy UPGRADEABLE và ĐÃ BỊ UPGRADE giữa Day 1 và Day 6.** Slot
+    ERC-1967 impl của `0x7c5B…3639` đọc ra `0xAe37b998d453E1FaBE85DD46cf04295ca4A3af04`
+    (22,183 bytes) — **không phải** `0x390aa02f…d0ee` mà §2 ghi hôm 19/08 (Sourcify
+    exact-match `ConfidentialWrapperV3`). Admin slot = 0, có `upgradeToAndCall` +
+    `owner()` ⇒ UUPS + Ownable, owner `0x08e8a84c3c8c7cba165B1adcf67Ae4639eF84f52`.
+
+    Hệ quả thật, không phải lý thuyết:
+    - Kết quả probe của Day 1 **là dữ liệu hết hạn**. Bất kỳ khẳng định nào về
+      cUSDC phải kèm ngày probe.
+    - Pot đọc `underlying()`/`rate()` **một lần trong constructor** rồi giữ làm
+      immutable. Nếu Zama upgrade và đổi `rate()`, pot giữ số cũ và `fundPrize`
+      sẽ wrap sai lượng. Đây là **rủi ro sống chứ không phải rủi ro deploy** —
+      Day 9 phải re-probe ngay trước RC deploy, và KNOWN_LIMITATIONS phải nói
+      thẳng là pot phụ thuộc vào một contract mà bên khác upgrade được.
+    - `blockUser`/`unblockUser` tồn tại và owner gọi được ⇒ R3 (deny list) là
+      đường thật, không phải giả định.
+
+    Giá trị đọc được ngày 26/08 (`eth_call` qua public RPC):
+
+    | Selector | Giá trị |
+    |---|---|
+    | `name()` / `symbol()` | `Confidential USDC (Mock)` / `cUSDCMock` |
+    | `decimals()` | `6` — khớp underlying, khớp giả định euint64 (P-3) |
+    | `underlying()` | `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF` |
+    | `rate()` | `1` ⇒ 1 underlying = 1 confidential unit |
+    | `maxTotalSupply()` | `18446744073709551615` = `2^64 − 1` — trần bằng chính trần của euint64, nên `ERC7984TotalSupplyOverflow` là case lý thuyết, không phải case demo |
+    | `isBlocked(deployer)` | `false` |
+
+21. **`USDCMock.mint(address,uint256)` là FAUCET MỞ — không owner, không role.**
+    `eth_call` từ một địa chỉ tuỳ ý (`0x…dEaD`) thành công; underlying **không có
+    selector `owner()`** nào cả. Nghĩa là onboarding Day 6 tự cấp được test asset
+    bằng **một tx trong app**, không cần faucet ngoài, không cần user rời trang.
+    Đây là khác biệt UX lớn cho R14 (insufficient balance): "Get test USDC" là một
+    nút, không phải một link ra ngoài.
+
+22. **Overload `unwrap` PLAINTEXT KHÔNG TỒN TẠI trên bản live.** Có
+    `unwrap(address,address,bytes32)` (euint64 handle) và
+    `unwrap(address,address,bytes32,bytes)` (externalEuint64 + proof);
+    **`unwrap(address,address,uint64)` thì KHÔNG** — nên bản live *không phải*
+    OZ `ERC7984ERC20Wrapper` thuần (nó cũng có thêm `unblockUser` mà OZ không có).
+    Đừng suy ra hành vi live từ source OZ đã pin; local test dùng OZ, live dùng
+    bản của Zama, và hai bản đã lệch nhau ở mặt API.
+
+    Đường unwrap live, đã xác nhận có đủ selector:
+    `unwrap(...)` → burn + `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, euint64 amount)`
+    → oracle callback → `finalizeUnwrap(bytes32,uint64,bytes)`.
+    `unwrapRequester(bytes32)` và `unwrapAmount(bytes32)` là view đọc được ⇒ R1
+    detect được pending state **mà không cần index event**, chỉ cần một view call.
+
+23. **`unwrapRequestId` CHÍNH LÀ ciphertext handle của số đã burn**, và `_unwrap`
+    gọi `FHE.makePubliclyDecryptable(unwrapAmount_)` trên nó. Tức là **unwrap công
+    khai số tiền** — đây là biên privacy cuối cùng, và nó nằm ở tầng token chứ
+    không phải pot (non-negotiable #6 nói về state của *pot*, không bị vi phạm).
+    PRIVACY §2 phải nói thẳng điều này thay vì chỉ nói về wrap.
+
+## 9. Quirks deploy + web E2E (Day 6 — 26/08/2026)
+
+24. **`fhevm.initializeCLIApi()` là bắt buộc dưới `hardhat run`, nhưng KHÔNG dưới
+    `hardhat test`.** Test runner tự init plugin; script chạy bằng `hardhat run`
+    thì không, và triệu chứng là một lỗi rất xa nguyên nhân (`createInstance`
+    không tìm thấy config). Mọi script deploy/seed đụng FHE phải gọi nó ở dòng
+    đầu tiên.
+
+25. **Sinh input proof từ Node (không qua trình duyệt) chạy được trên relayer
+    thật** — đây là đường Day 6 stage 8 chưa proven và đã proven xong bằng
+    `packages/contracts/scripts/seed-deposit.ts`. Số đo thật trên Sepolia:
+    `encrypt()` **9752 ms**, `confidentialTransferAndCall` **1,318,372 gas**.
+    Nghĩa là seed state cho demo không cần drive MetaMask bằng tay; nhưng ~10s
+    cho một lần encrypt là con số phải nhớ khi thiết kế UI deposit (Day 7) —
+    nó dài hơn ngưỡng người dùng cho là "treo".
+
+26. **`_checkpoint` lazy-init để `twabArea` chưa khởi tạo sau deposit ĐẦU TIÊN.**
+    Deposit đầu chỉ set `lastCheckpoint`; `twabArea` chỉ sinh handle ở mutation
+    kế tiếp (hoặc khi thời gian trôi qua rồi checkpoint lại). Nên một ví vừa
+    deposit xong đọc ra `principal` = handle thật nhưng `twabArea` =
+    `HIDDEN_HANDLE`. Đây chính là lý do reveal phải **lọc handle rồi mới gửi**
+    ("up to 2 pairs", không phải luôn 2) — gửi `HIDDEN_HANDLE` kèm theo thì
+    relayer từ chối **cả batch**, và triệu chứng trông như "reveal hỏng".
+
+27. **Playwright `getByRole("alert")` bắt trúng route announcer của Next.**
+    Next render sẵn một `<div id="__next-route-announcer__" role="alert">` rỗng
+    trong mọi trang, nên locator theo role trả về 2 phần tử và strict mode nổ —
+    hoặc tệ hơn, `toContainText` fail trên phần tử rỗng và trông như UI không
+    hiện lỗi. `ErrorPanel` giữ `role="alert"` (đúng về accessibility) nhưng test
+    định vị bằng `data-testid="error-panel"`.
+
+28. **Property `code` của lỗi KHÔNG sống sót qua `page.exposeFunction`.** Chỉ
+    `message` đi qua được cầu Node↔page. Mà `code === 4001` lại là thứ **duy
+    nhất** phân biệt "người dùng bấm Cancel" (R6) với "ví hỏng" (lỗi chung) trong
+    `classifyError`. Hệ quả: ví stub muốn diễn user-rejected thì phải ném **trong
+    page context**, không phải trong Node — ném ở Node thì test vẫn xanh nhưng
+    đang kiểm nhánh lỗi sai.
+
+29. **`data-state="hidden"` không phải bằng chứng "đã đọc xong".** `hidden` cũng
+    là mặc định của lúc chưa biết gì, nên assert nó ở frame đầu tiên luôn xanh và
+    không chứng minh điều gì; rồi cú click ngay sau đó rơi vào khoảng trống giữa
+    "trang đã mount" và "read đã về". Tín hiệu readiness trung thực duy nhất là
+    **nút Reveal có tồn tại hay không** — nó chỉ được render khi đã có handle
+    thật. Cùng một nhầm lẫn ở tầng sản phẩm là bug đã sửa ở Day 6 (xem
+    EXECUTION_PLAN Day 6): *chưa đọc* là trạng thái thứ tư, không được mượn UI
+    của ba trạng thái kia.

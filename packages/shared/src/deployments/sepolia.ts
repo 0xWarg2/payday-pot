@@ -1,0 +1,37 @@
+// GENERATED FILE — do not edit by hand.
+// Source:     deployments/sepolia.json
+// Regenerate: pnpm --filter @payday-pot/contracts manifest:sync
+// Drift gate: pnpm --filter @payday-pot/contracts manifest:check
+
+import type { DeploymentManifest } from "../manifest.js";
+
+export const SEPOLIA_MANIFEST = {
+  "chainId": 11155111,
+  "network": "sepolia",
+  "contracts": {
+    "CompatSpike": {
+      "address": "0xceEee18891D4d53699E2Ab28C402fA0C5D721603",
+      "deployBlock": 11522269,
+      "deployTx": "0x57de19501d680781c7791f0008e6035231cd0ed5791dea253739d93c434c3cbc",
+      "note": "Day-1 throwaway spike — sẽ thay bằng PayDayPot"
+    },
+    "PayDayPot": {
+      "address": "0xFF8c126d12715b4fe069728A3f8a24142726ec25",
+      "deployBlock": 11570655,
+      "deployTx": "0xe9988ce80b6c9bb834236638275fae595574efccf61ff39477c817f914845d3b",
+      "kind": "dev",
+      "commit": "c761d20df3d7e764657e5c2f7ef03ec4cf0f4424",
+      "abiHash": "1043e9dc3870da6762b138f093bcb0857e1e59be3a821eaf6ebd3ed7d4f2732b",
+      "verified": false,
+      "token": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+      "tokenImpl": "0xAe37b998d453E1FaBE85DD46cf04295ca4A3af04",
+      "note": "dev deploy for UI work — epoch 172800s, perUserCap 10000000000, participantCap 32"
+    }
+  },
+  "official": {
+    "confidentialWrapperRegistry": "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
+    "cUSDCMock": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+    "underlyingUSDCMock": "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF"
+  },
+  "updatedAt": "2026-08-26T11:42:28.404Z"
+} as const satisfies DeploymentManifest;

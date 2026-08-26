@@ -217,21 +217,68 @@ principal liability · mọi người rút đủ principal.
 
 ## Day 6 — 24/08 — Shell + Landing/Onboarding + Dashboard
 
-- [ ] Design tokens, responsive shell, light theme + dark Draw Room boundary
-- [ ] Wallet/network/role guards; transaction center; client-only FHE provider;
-      reveal store in-memory TTL 5 phút
-- [ ] Landing: hero, how-it-works, privacy comparison, no-loss promise
+> **Prep đã xong trước khi mở ngày (26/08)** — chi tiết đầy đủ ở
+> `docs/handoffs/DAY_06_KICKOFF.md`. Mục đích: Day 6 là ngày dựng màn hình, không
+> phải ngày dựng tooling.
+>
+> - [x] ABI + manifest plumbing: `packages/shared` xuất `PAYDAY_POT_ABI`,
+>       `PAYDAY_POT_ERRORS`, ABI hash; `pnpm manifest:sync` (`bd0791a`)
+> - [x] Deploy script un-gate + registry probe (`5d1d865`) — **deploy Sepolia là
+>       việc của người, xem "Cần anh làm" trong kickoff**
+> - [x] SDK: error taxonomy 31 code ánh xạ thẳng vào R1–R15 + read model
+>       trả handle (không trả số) (`966b148`)
+> - [x] Web tooling: Tailwind v4 + design tokens §14.2, Vitest+RTL (70 test),
+>       Playwright pin COOP/COEP trên **production build** (`c365055`)
+> - [x] Probe live cUSDC: đóng blocker Day 9, phát hiện wrapper đã bị upgrade
+>       (KNOWN_LIMITATIONS §10) và faucet mở (R14 thành nút in-app)
+>
+> Ba việc **chưa** làm và cố ý chưa làm: chưa deploy Sepolia (cần ví của anh),
+> chưa viết màn hình sản phẩm nào, chưa đụng contract (ABI freeze từ Day 5).
+
+- [x] Design tokens, responsive shell, light theme + dark Draw Room boundary —
+      shell ở route group `app/(shell)`, landing **nằm ngoài** nên nó vẫn là
+      server tree thuần (SSR privacy test không phải chứng minh gì cả)
+- [x] Wallet/network/role guards; transaction center; client-only FHE provider;
+      reveal store in-memory TTL 5 phút — `createExternalStore` +
+      `useSyncExternalStore`, mỗi store có `SERVER_SNAPSHOT` masked cứng; FHE là
+      module singleton `ensureFheInstance()`, không phải React provider
+- [x] Landing: hero, how-it-works, privacy comparison, no-loss promise
       (+ section faucet/learn — không route riêng)
-- [ ] Onboarding: role → connect → switch Sepolia → test assets/shield warning → enroll
-- [ ] Dashboard: masked principal/TWAB card, EIP-712 reveal/hide/TTL, public next
-      draw + employer boost, quick actions
-- [ ] Copy đúng bảng corrections §2 spec (không "Payroll connected", không "TWAB score 87")
+- [x] Onboarding: role → connect → switch Sepolia → test assets/shield warning → enroll
+      — 8 bước, step hiện tại **dẫn xuất** từ reducer chứ không persist; R14 là
+      nút in-app `USDCMock.mint` (faucet mở, quirk #21), R13 approve gắn nhãn
+      "step 1/2"; `ShieldWarning` đứng **trước** nút ký
+- [x] Dashboard: masked principal/TWAB card, EIP-712 reveal/hide/TTL, public next
+      draw + employer boost, quick actions — principal + TWAB gộp vào **một** chữ
+      ký, lọc `HIDDEN_HANDLE` trước khi gửi (relayer từ chối cả batch vì nó)
+- [x] Copy đúng bảng corrections §2 spec (không "Payroll connected", không "TWAB score 87")
+      — mọi câu lỗi lấy thẳng từ taxonomy; `revealHandles` không còn tự viết copy
+      riêng cho nhánh user-rejected (bản đó **không bao giờ được render**, tức là
+      nó sẽ lệch khỏi ERROR_RECOVERY_MATRIX mà không test nào đỏ)
+- [x] Live drill 2 persona trên contract thật `0xFF8c…ec25` — ví stub EIP-1193
+      ký **thật** bằng `ethers.Wallet` trong tiến trình Node (`window.__pdpSign`
+      qua `exposeFunction`), nên `userDecrypt` đi qua relayer thật; private key
+      không bao giờ vào page context, trace hay screenshot
+- [x] **Bug thật do drill tìm ra:** ví đã kết nối bấm Reveal sớm một nhịp thì bị
+      bảo "Connect your wallet first". Nguyên nhân là trạng thái **thứ tư** —
+      *chưa đọc xong* — bị gộp vào `hidden`, nên nút Reveal sáng với `targets`
+      rỗng. Sửa ở cấu trúc: `PrivatePositionCard` có nhánh riêng cho
+      `account === null`, và `reads.error` giờ hiện ra kèm `Try again` thay vì
+      spinner vĩnh viễn (chính cái ngõ cụt exit gate cấm)
 
-Tests: reveal cache clear khi TTL/reload/account/chain change · không plaintext
-trong SSR/storage/DOM khi masked · 320px + desktop + keyboard.
+Tests: reveal cache clear khi TTL/reload/account/chain change ✅ · không plaintext
+trong SSR/storage/DOM khi masked ✅ (đọc thẳng response SSR, không đọc DOM: câu
+hỏi là server **gửi đi** cái gì) · 320px + desktop + keyboard ✅ (project
+`mobile-320`).
+**150 contract · 204 web unit (9 file) · 36 Playwright** — `tsc --noEmit` sạch.
 
-**Exit gate:** incognito user đi hết onboarding → masked dashboard → reveal/hide
-own position · wrong-network/rejected recover được.
+**Exit gate ✅:** incognito user đi hết onboarding → masked dashboard → reveal/hide
+own position · wrong-network/rejected recover được. Cả hai persona chạy trên
+Sepolia thật, tự động, không có bước tay: ví trắng → `unavailable` + "Nothing is
+stored for this wallet yet" (không phải `0`, không phải spinner); ví đã seed →
+reveal → Hide → đổi account → đổi chain → reload, mỗi lần đều quay về masked;
+huỷ chữ ký → panel R6 "Nothing was sent and nothing changed" + nút quay lại còn
+bấm được.
 
 **Cut:** bỏ section trang trí + orb animation; giữ privacy boundary + reveal.
 
@@ -421,7 +468,7 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 | 3 | 21/08 | TWAB correct | ✅ 74 pass (26 TWAB exact-equality + 5 HCU đo thật) | ✅ `pnpm demo:day3` | ✅ | ✅ Local full 23/08 — 2:1 exact, freeze tại `epochEnd`, snapshot batch permissionless, DRAW_PROTOCOL.md + batch ceiling 21/tx |
 | 4 | 22/08 | Encrypted draw correct | ✅ 103 pass (26 draw + 3 HCU Day 4 + Monte Carlo 64 epoch) | ✅ `pnpm demo:day4` | ✅ | ✅ Local full 24/08 — random 1 lần (AlreadyDrawn + handle equality), ticket P-2 exact `== (R·T)>>64`, đúng-1-winner structural (exact-replication + 1:3:6 ±3.5σ), stranger resume (R4), scan ceiling 22/tx, ACL 5 lớp (won contract-only §15.1) |
 | 5 | 23/08 | Protocol full cycle | ✅ 150 pass (38 prize/claim/lifecycle + 5 HCU Day 5 + solvency property mở rộng) | ✅ `pnpm demo:day5` | ✅ | ✅ Local full 25/08 — employer fund bằng USDC công khai + pot tự `wrap` (R12 revert plaintext thật), carry roll encrypted (B4: 1,000 → winner epoch sau nhận 1,500), settle tự động trong `selectBatch` cuối + empty-pool Open→Settled (D9), `claim()` uniform **bằng nhau tuyệt đối** winner/non-winner (748,032 HCU / 396,250 gas — R9), `startNewEpoch` permissionless không đụng principal/pendingPrize (B3), ceiling scan giữ 22/tx, PRIVACY.md + THREAT_MODEL.md. **Red-team pass trên code đã ship: 0 P0**, siết 3 chỗ (rug window `defundPrize` sau khi weight freeze · `snapshotProgress`/`drawProgress` trả `total` của list hiện tại thay vì của chính epoch · `renounceOwnership` khi paused = pause vĩnh viễn) — ABI **không đổi**, chi tiết `docs/handoffs/DAY_05_HANDOFF.md` |
-| 6 | 24/08 | Entry/dashboard | ☐ | ☐ | ☐ | — |
+| 6 | 24/08 | Entry/dashboard | ◐ 70 web unit + 1 e2e (COOP/COEP) | ☐ | ◐ | ◐ **Prep xong 26/08** — shared ABI/manifest, SDK error taxonomy (31 code → R1–R15) + read model handle-only, Tailwind v4 tokens §14.2, Vitest+RTL+Playwright xanh, probe live cUSDC (đóng blocker Day 9; phát hiện wrapper **upgradeable và đã upgrade** → KNOWN_LIMITATIONS §10, faucet mở → R14 in-app, unwrap public amount → PRIVACY §2.3, R1 detect bằng 1 view call). **Chặn:** dev deploy Sepolia cần ví của anh |
 | 7 | 25/08 | Money UX | ☐ | ☐ | ☐ | — |
 | 8 | 26/08 | Browser E2E | ☐ | ☐ | ☐ | — |
 | 9 | 27/08 | Sepolia RC live | ☐ | ☐ | ☐ | — |

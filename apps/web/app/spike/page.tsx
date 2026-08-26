@@ -51,12 +51,9 @@ type RelayerSDK = {
   SepoliaConfig: Record<string, unknown>;
 };
 
-declare global {
-  interface Window {
-    ethereum?: Eip1193Provider & { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> };
-    relayerSDK?: RelayerSDK;
-  }
-}
+// `window.ethereum` / `window.relayerSDK` khai báo ở `types/global.d.ts` — TS gộp
+// mọi `declare global` trong cùng program, nên hai bản khai báo lệch nhau sẽ làm
+// gãy cả build.
 
 const box: React.CSSProperties = { border: "1px solid #2a2f3a", borderRadius: 8, padding: 16, marginBottom: 12 };
 const btn: React.CSSProperties = { background: "#f5c542", color: "#111", border: 0, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontWeight: 700 };
@@ -188,7 +185,8 @@ export default function SpikePage() {
   }, [account, contractAddr, say]);
 
   return (
-    <main style={{ maxWidth: 640, margin: "40px auto", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: "#0b0e14", color: "#e6e6e6", fontFamily: "ui-monospace, monospace" }}>
+    <main style={{ maxWidth: 640, margin: "0 auto", padding: "40px 16px" }}>
       <h1 style={{ fontSize: 20 }}>🧪 PayDay Pot — Day 1 Compatibility Spike</h1>
       <p style={{ color: "#9aa4b2", fontSize: 13 }}>
         Throwaway page: prove SDK init → encrypt → tx → EIP-712 user-decrypt in a production build.
@@ -223,5 +221,6 @@ export default function SpikePage() {
         {log.length === 0 ? "— log —" : log.join("\n")}
       </div>
     </main>
+    </div>
   );
 }
