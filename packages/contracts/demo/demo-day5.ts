@@ -115,16 +115,25 @@ describe("PayDay Pot — Day 5 Protocol Complete Demo", () => {
       if ((e as Error).message.includes("BUG")) throw e;
       no("The employer tries to top up after payday → WrongPhase. The pool is what it was at the bell.");
     }
-    info("Withdrawing it is still allowed here — that stays open until the random lands (the pause escape hatch).");
+    try {
+      await pot.connect(employer).defundPrize(1n * M);
+      throw new Error("BUG: the employer pulled the prize after the weights froze!");
+    } catch (e) {
+      if ((e as Error).message.includes("BUG")) throw e;
+      no("…and tries to pull it back OUT → WrongPhase too. The exit shuts when the entry shuts.");
+    }
+    info("Savers committed a whole epoch against that number; nobody can withdraw their way out now, so neither can the sponsor.");
 
     await (await pot.connect(keeper).requestRandom()).wait();
+    await (await pot.connect(deployer).pause()).wait();
     try {
       await pot.connect(employer).defundPrize(1n * M);
       throw new Error("BUG: the employer clawed back a committed prize!");
     } catch (e) {
       if ((e as Error).message.includes("BUG")) throw e;
-      no("Random drawn → the employer tries to claw the prize back → WrongPhase. Committed is committed.");
+      no("Random drawn → even the paused escape hatch is shut → WrongPhase. Committed is committed.");
     }
+    await (await pot.connect(deployer).unpause()).wait();
 
     // 6. The scan finishes and the epoch settles itself — same tx
     const scanTx = await pot.connect(signers[9]).selectBatch(32);

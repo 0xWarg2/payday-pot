@@ -336,6 +336,49 @@ describe("PayDayPot — prize funding, claim & epoch lifecycle (Day 5)", functio
       expect(await potBalance()).to.eq(4_000n * M);
     });
 
+    it("defunding closes with the ENTRY window — no pulling the prize once weights are frozen", async function () {
+      // The rug the "not committed yet" gate allowed: savers lock money in for
+      // a whole epoch against a published prize, deposits close at ep.end, and
+      // only THEN does the sponsor take the prize back. Nobody can opt out at
+      // that point — the weights that decide the draw are already frozen, and
+      // withdrawing no longer un-does them. So the exit now tracks the deposit
+      // window instead: the employer may change the prize exactly as long as a
+      // saver can change their deposit.
+      await soleWinnerSetup();
+      await fund(5_000n * M);
+
+      // Still Open, but past ep.end — entries are refused here, so is the exit.
+      await ensureAt(E);
+      expect(await phaseOf(1n)).to.eq(PHASE.Open);
+      await expect(pot.connect(signers.employer).defundPrize(5_000n * M)).to.be.revertedWithCustomError(
+        pot,
+        "WrongPhase",
+      );
+
+      // Snapshotting: permissionless AND un-pausable, so an epoch can never
+      // wedge here — there is no stall to escape, only a rug to prevent.
+      await pot.beginSnapshot();
+      expect(await phaseOf(1n)).to.eq(PHASE.Snapshotting);
+      await expect(pot.connect(signers.employer).defundPrize(5_000n * M)).to.be.revertedWithCustomError(
+        pot,
+        "WrongPhase",
+      );
+
+      // Drawing while UNPAUSED: anyone may request the randomness (rule #7),
+      // so this is not a stall either. Only the paused variant is (next test).
+      await pot.snapshotBatch(32);
+      expect(await phaseOf(1n)).to.eq(PHASE.Drawing);
+      await expect(pot.connect(signers.employer).defundPrize(5_000n * M)).to.be.revertedWithCustomError(
+        pot,
+        "WrongPhase",
+      );
+
+      // The prize the sponsor could no longer touch is the prize that pays out.
+      expect(await pot.prizeAmountOf(1)).to.eq(5_000n * M);
+      await runDraw();
+      expect(await pendingOf(signers.jimmer)).to.eq(5_000n * M);
+    });
+
     it("funding closes at beginSnapshot — a late top-up belongs to the next epoch, not this one", async function () {
       await soleWinnerSetup();
       await fund(1_000n * M);
@@ -623,6 +666,79 @@ describe("PayDayPot — prize funding, claim & epoch lifecycle (Day 5)", functio
 
       await pot.connect(signers.keeper).selectBatch(32);
       await expect(pot.startNewEpoch()).to.emit(pot, "EpochStarted");
+    });
+
+    it("renouncing ownership is blocked while paused — no one-tx path to a permanently stalled draw", async function () {
+      // requestRandom is the only pausable lifecycle step. Pause + renounce
+      // leaves an epoch stuck at Drawing-before-random with nobody left who
+      // can unpause: no winner, ever, and the encrypted carry locked with it.
+      // User principal still walks out (rule #1) and the sponsor still has the
+      // paused escape hatch, but the trap itself should not be one tx away.
+      await soleWinnerSetup();
+      await fund(1_000n * M);
+      await finishSnapshot();
+      await pot.connect(signers.deployer).pause();
+
+      await expect(pot.connect(signers.deployer).renounceOwnership()).to.be.revertedWithCustomError(
+        pot,
+        "EnforcedPause",
+      );
+
+      // Unpause first and the same end state is reachable — minus the trap.
+      await pot.connect(signers.deployer).unpause();
+      await pot.connect(signers.deployer).renounceOwnership();
+      expect(await pot.owner()).to.eq(ethers.ZeroAddress);
+
+      // And the epoch an ownerless pot is left holding still resolves: every
+      // remaining step is permissionless.
+      await runDraw();
+      expect(await phaseOf(1n)).to.eq(PHASE.Settled);
+      expect(await pendingOf(signers.jimmer)).to.eq(1_000n * M);
+    });
+
+    it("progress views stay pinned to their own epoch after the participant list grows (R4/R5)", async function () {
+      // _participants is never reset — a wallet that joins in epoch 2 is still
+      // in the list when someone reads epoch 1's progress. If the views take
+      // the denominator from the LIVE list, a finished draw starts reporting
+      // itself as half-scanned, and "resumable" is exactly the signal R4/R5
+      // ask the UI to render. Every epoch answers with the count frozen at its
+      // own beginSnapshot instead.
+      await soleWinnerSetup(); // 2 participants in epoch 1
+      await fund(1_000n * M);
+      await finishSnapshot();
+      await runDraw();
+
+      const snapAfter = await pot.snapshotProgress(1);
+      const drawAfter = await pot.drawProgress(1);
+      expect(snapAfter.total).to.eq(2n);
+      expect(snapAfter.cursor).to.eq(2n); // complete
+      expect(drawAfter.drawn).to.eq(true);
+      expect(drawAfter.cursor).to.eq(2n);
+      expect(drawAfter.total).to.eq(2n);
+
+      await pot.startNewEpoch();
+      await depositAt(signers.carol, 1_000n * M, BigInt(await time.latest()) + 60n); // 3rd participant
+
+      // Epoch 1 is unchanged by a stranger joining later.
+      const snapLater = await pot.snapshotProgress(1);
+      const drawLater = await pot.drawProgress(1);
+      expect(snapLater.total).to.eq(2n);
+      expect(drawLater.total).to.eq(2n);
+      expect(drawLater.cursor).to.eq(2n);
+      expect(drawLater.drawn).to.eq(true);
+
+      // The OPEN epoch still answers with the live list — that is the count
+      // its own snapshot is about to freeze.
+      expect((await pot.snapshotProgress(2)).total).to.eq(3n);
+      expect((await pot.drawProgress(2)).total).to.eq(3n);
+      expect((await pot.drawProgress(2)).drawn).to.eq(false);
+
+      // …and once epoch 2 freezes, it keeps its own, larger number.
+      const e2 = await pot.epochInfo(2);
+      await ensureAt(e2.end);
+      await pot.beginSnapshot();
+      expect((await pot.snapshotProgress(2)).total).to.eq(3n);
+      expect((await pot.snapshotProgress(1)).total).to.eq(2n);
     });
 
     it("resets weight and checkpoint, and touches NEITHER principal NOR unclaimed winnings (B3)", async function () {

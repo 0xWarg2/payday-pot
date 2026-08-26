@@ -63,6 +63,7 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         ebool selectedAny; // encrypted "the winner has been crossed" latch
         uint32 snapshotCursor; // snapshot batch continuation cursor (permissionless)
         uint32 selectCursor; // selection batch cursor — deliberately separate (§6.5)
+        uint32 frozenCount; // participants at beginSnapshot — the denominator both cursors run against
         bool drawn;
         uint64 prizeAmount; // public sponsored prize (P-4), IMMUTABLE once drawn
         euint64 prizeCipher; // prizeAmount + carried-over prize, frozen at requestRandom
@@ -396,8 +397,9 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         emit PrizeFunded(currentEpochId);
     }
 
-    /// @notice Return up to `amount` of the current epoch's un-committed prize
-    ///         to the employer, as confidential tokens.
+    /// @notice Return up to `amount` of the current epoch's prize to the
+    ///         employer, as confidential tokens. Open only while entries are
+    ///         still open, plus the paused-before-random escape hatch.
     /// @dev    Deliberately NOT `whenNotPaused`. This is the D3 escape hatch:
     ///         if the owner pauses forever while the epoch sits in Drawing
     ///         before requestRandom (KNOWN_LIMITATIONS §7), this is the only
@@ -409,12 +411,25 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     function defundPrize(uint64 amount) external onlyEmployer nonReentrant {
         if (amount == 0) revert InvalidAmount();
         Epoch storage ep = _epochs[currentEpochId];
-        // Same invariant as fundPrize, stated from the other side: refuse once
-        // the prize is committed. `drawn` covers requestRandom; `Settled`
-        // covers the empty-pool path, where drawn stays false yet the prize
-        // has already been rolled into the encrypted carry. Snapshotting and
-        // Drawing-before-random stay OPEN on purpose — that is the D3 exit.
-        if (ep.drawn || ep.phase == EpochPhase.Settled) revert WrongPhase();
+        // The sponsor may take the prize back exactly as long as the savers
+        // could still respond to it — the same window in which deposits are
+        // accepted. Past ep.end the weights are effectively frozen and nobody
+        // can opt out of a pool whose prize just vanished, so the plain
+        // "not committed yet" test (!drawn && !Settled) was too generous: it
+        // left Snapshotting and Drawing-before-random open, and defunding
+        // there is a rug, not an exit.
+        //
+        // The one carve-out is the D3 escape hatch. `requestRandom` is the
+        // only lifecycle step that is pausable, so `Drawing && !drawn` while
+        // paused is the single state an owner can strand forever
+        // (KNOWN_LIMITATIONS §7) — there, and only there, the prize must
+        // still be able to leave, mirroring rule #1 for user principal. Every
+        // other stalled state resolves permissionlessly without an owner.
+        // `!ep.drawn` inside it keeps B2 intact; Drawing is never Settled, so
+        // the empty-pool carry commit (F1) stays out of reach.
+        bool openWindow = ep.phase == EpochPhase.Open && block.timestamp < ep.end;
+        bool stalledByPause = ep.phase == EpochPhase.Drawing && !ep.drawn && paused();
+        if (!openWindow && !stalledByPause) revert WrongPhase();
         if (amount > ep.prizeAmount) revert InvalidAmount();
 
         ep.prizeAmount -= amount;
@@ -503,7 +518,13 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         FHE.allowThis(ep.totalWeight);
         ep.phase = EpochPhase.Snapshotting;
         ep.snapshotCursor = 0;
-        emit SnapshotStarted(currentEpochId, uint32(_participants.length));
+        // The list is frozen from here (registration is refused past ep.end),
+        // so this is the denominator every later "x / y" answer must use.
+        // _participants itself is never reset, so a settled epoch read months
+        // later must NOT be measured against however long the list has since
+        // grown — that would report a finished draw as half-scanned.
+        ep.frozenCount = uint32(_participants.length);
+        emit SnapshotStarted(currentEpochId, ep.frozenCount);
 
         if (_participants.length == 0) {
             // Plaintext add: with count == 0 there is no encrypted question to
@@ -868,6 +889,18 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
         _unpause();
     }
 
+    /// @dev Renouncing while paused would make the pause permanent: nobody
+    ///      could ever unpause, so `requestRandom` — the one pausable
+    ///      lifecycle step — would revert forever and the encrypted carry
+    ///      would be locked with it. User principal still leaves via
+    ///      withdrawAll either way (rule #1), but that is no reason to leave
+    ///      a one-tx path to a permanently frozen draw lying around.
+    ///      Unpause first, then renounce; the end state is identical minus
+    ///      the trap.
+    function renounceOwnership() public override onlyOwner whenNotPaused {
+        super.renounceOwnership();
+    }
+
     // ---------------------------------------------------------------------
     // Views
     // ---------------------------------------------------------------------
@@ -928,14 +961,26 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     /// @notice Snapshot progress for `epochId`: participants folded into the
     ///         total so far, and the frozen list length ("x/32 processed", R4).
     function snapshotProgress(uint256 epochId) external view returns (uint32 cursor, uint32 total) {
-        return (_epochs[epochId].snapshotCursor, uint32(_participants.length));
+        Epoch storage ep = _epochs[epochId];
+        return (ep.snapshotCursor, _totalFor(ep));
     }
 
     /// @notice Draw progress for `epochId`: whether randomness is locked, and
     ///         the selection scan position ("x/32 scanned", R4).
     function drawProgress(uint256 epochId) external view returns (bool drawn, uint32 cursor, uint32 total) {
         Epoch storage ep = _epochs[epochId];
-        return (ep.drawn, ep.selectCursor, uint32(_participants.length));
+        return (ep.drawn, ep.selectCursor, _totalFor(ep));
+    }
+
+    /// @dev The denominator for both progress views. An epoch that has begun
+    ///      its snapshot answers with the count frozen at that moment; one
+    ///      still Open (including a future epochId, which reads as Open by
+    ///      mapping default) answers with the live list, because that is what
+    ///      its snapshot will freeze. Reading `_participants.length` for a
+    ///      past epoch instead is how "1 / 3 scanned" gets reported for a draw
+    ///      that finished — the exact signal R4/R5 resumability rests on.
+    function _totalFor(Epoch storage ep) private view returns (uint32) {
+        return ep.phase == EpochPhase.Open ? uint32(_participants.length) : ep.frozenCount;
     }
 
     /// @notice Encrypted winner flag for `user`. Contract-only ACL (§15.1) —
@@ -969,6 +1014,11 @@ contract PayDayPot is IERC7984Receiver, ZamaEthereumConfig, Ownable2Step, Pausab
     /// @dev    This is not the epoch's payout: a draw pays prizeAmount plus
     ///         any carry from earlier winnerless epochs, and that total is
     ///         encrypted on purpose (see prizeCipherOf).
+    ///         It is also NOT zeroed at settlement. Once committed the number
+    ///         stops being a liability — nothing reads it again, the payout
+    ///         lives in prizeCipher — and it stays as the public record of
+    ///         what a sponsor put into a given round (the Day 7 employer
+    ///         panel's history). Do not read it as "prize still held".
     function prizeAmountOf(uint256 epochId) external view returns (uint64) {
         return _epochs[epochId].prizeAmount;
     }
