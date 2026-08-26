@@ -165,3 +165,50 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     khai số tiền** — đây là biên privacy cuối cùng, và nó nằm ở tầng token chứ
     không phải pot (non-negotiable #6 nói về state của *pot*, không bị vi phạm).
     PRIVACY §2 phải nói thẳng điều này thay vì chỉ nói về wrap.
+
+## 9. Quirks deploy + web E2E (Day 6 — 26/08/2026)
+
+24. **`fhevm.initializeCLIApi()` là bắt buộc dưới `hardhat run`, nhưng KHÔNG dưới
+    `hardhat test`.** Test runner tự init plugin; script chạy bằng `hardhat run`
+    thì không, và triệu chứng là một lỗi rất xa nguyên nhân (`createInstance`
+    không tìm thấy config). Mọi script deploy/seed đụng FHE phải gọi nó ở dòng
+    đầu tiên.
+
+25. **Sinh input proof từ Node (không qua trình duyệt) chạy được trên relayer
+    thật** — đây là đường Day 6 stage 8 chưa proven và đã proven xong bằng
+    `packages/contracts/scripts/seed-deposit.ts`. Số đo thật trên Sepolia:
+    `encrypt()` **9752 ms**, `confidentialTransferAndCall` **1,318,372 gas**.
+    Nghĩa là seed state cho demo không cần drive MetaMask bằng tay; nhưng ~10s
+    cho một lần encrypt là con số phải nhớ khi thiết kế UI deposit (Day 7) —
+    nó dài hơn ngưỡng người dùng cho là "treo".
+
+26. **`_checkpoint` lazy-init để `twabArea` chưa khởi tạo sau deposit ĐẦU TIÊN.**
+    Deposit đầu chỉ set `lastCheckpoint`; `twabArea` chỉ sinh handle ở mutation
+    kế tiếp (hoặc khi thời gian trôi qua rồi checkpoint lại). Nên một ví vừa
+    deposit xong đọc ra `principal` = handle thật nhưng `twabArea` =
+    `HIDDEN_HANDLE`. Đây chính là lý do reveal phải **lọc handle rồi mới gửi**
+    ("up to 2 pairs", không phải luôn 2) — gửi `HIDDEN_HANDLE` kèm theo thì
+    relayer từ chối **cả batch**, và triệu chứng trông như "reveal hỏng".
+
+27. **Playwright `getByRole("alert")` bắt trúng route announcer của Next.**
+    Next render sẵn một `<div id="__next-route-announcer__" role="alert">` rỗng
+    trong mọi trang, nên locator theo role trả về 2 phần tử và strict mode nổ —
+    hoặc tệ hơn, `toContainText` fail trên phần tử rỗng và trông như UI không
+    hiện lỗi. `ErrorPanel` giữ `role="alert"` (đúng về accessibility) nhưng test
+    định vị bằng `data-testid="error-panel"`.
+
+28. **Property `code` của lỗi KHÔNG sống sót qua `page.exposeFunction`.** Chỉ
+    `message` đi qua được cầu Node↔page. Mà `code === 4001` lại là thứ **duy
+    nhất** phân biệt "người dùng bấm Cancel" (R6) với "ví hỏng" (lỗi chung) trong
+    `classifyError`. Hệ quả: ví stub muốn diễn user-rejected thì phải ném **trong
+    page context**, không phải trong Node — ném ở Node thì test vẫn xanh nhưng
+    đang kiểm nhánh lỗi sai.
+
+29. **`data-state="hidden"` không phải bằng chứng "đã đọc xong".** `hidden` cũng
+    là mặc định của lúc chưa biết gì, nên assert nó ở frame đầu tiên luôn xanh và
+    không chứng minh điều gì; rồi cú click ngay sau đó rơi vào khoảng trống giữa
+    "trang đã mount" và "read đã về". Tín hiệu readiness trung thực duy nhất là
+    **nút Reveal có tồn tại hay không** — nó chỉ được render khi đã có handle
+    thật. Cùng một nhầm lẫn ở tầng sản phẩm là bug đã sửa ở Day 6 (xem
+    EXECUTION_PLAN Day 6): *chưa đọc* là trạng thái thứ tư, không được mượn UI
+    của ba trạng thái kia.

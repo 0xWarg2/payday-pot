@@ -62,6 +62,7 @@
     "demo:day3": "hardhat test demo/demo-day3.ts",
     "demo:day4": "hardhat test demo/demo-day4.ts",
     "demo:day5": "hardhat test demo/demo-day5.ts",
-    "validate:registry": "hardhat run scripts/validate-registry.ts"
+    "validate:registry": "hardhat run scripts/validate-registry.ts",
+    "seed:sepolia": "hardhat run scripts/seed-deposit.ts --network sepolia"
   }
 }

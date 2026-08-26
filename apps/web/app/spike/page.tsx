@@ -51,12 +51,9 @@ type RelayerSDK = {
   SepoliaConfig: Record<string, unknown>;
 };
 
-declare global {
-  interface Window {
-    ethereum?: Eip1193Provider & { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> };
-    relayerSDK?: RelayerSDK;
-  }
-}
+// `window.ethereum` / `window.relayerSDK` khai báo ở `types/global.d.ts` — TS gộp
+// mọi `declare global` trong cùng program, nên hai bản khai báo lệch nhau sẽ làm
+// gãy cả build.
 
 const box: React.CSSProperties = { border: "1px solid #2a2f3a", borderRadius: 8, padding: 16, marginBottom: 12 };
 const btn: React.CSSProperties = { background: "#f5c542", color: "#111", border: 0, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontWeight: 700 };

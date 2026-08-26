@@ -16,6 +16,7 @@ packages/contracts/fhevmTemp/
 
 # next.js
 apps/web/.next/
+apps/web/.next-e2e/
 apps/web/out/
 apps/web/next-env.d.ts
 

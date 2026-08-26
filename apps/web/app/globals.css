@@ -41,8 +41,18 @@
   --color-draw-border: #193047;
   --color-draw-violet: #8b5cf6;
 
-  /* --- type --- */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+  /* --- type ---
+   * §14.3 gọi tên "Geist Sans hoặc Inter fallback". Ở đây KHÔNG tải webfont:
+   * `next/font` sẽ thêm một lần fetch lúc build, và một build hỏng vì mạng vào
+   * đúng ngày freeze là cái giá quá đắt cho một khác biệt hình chữ. Stack dưới
+   * đây dùng Geist/Inter nếu máy người xem có sẵn, còn không thì rơi về font hệ
+   * thống — vốn là thứ giao diện quiet-luxury này trông vẫn đúng.
+   *
+   * Lưu ý lịch sử: bản trước trỏ vào `var(--font-geist-sans)` chưa từng được
+   * định nghĩa, khiến cả khai báo `font-family` invalid at computed-value time
+   * và body render bằng font mặc định của trình duyệt.
+   */
+  --font-sans: Geist, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   /* --- radius: control 12 · card 20 · sheet 24 (§14.4) --- */

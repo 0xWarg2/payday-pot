@@ -235,21 +235,50 @@ principal liability · mọi người rút đủ principal.
 > Ba việc **chưa** làm và cố ý chưa làm: chưa deploy Sepolia (cần ví của anh),
 > chưa viết màn hình sản phẩm nào, chưa đụng contract (ABI freeze từ Day 5).
 
-- [ ] Design tokens, responsive shell, light theme + dark Draw Room boundary
-- [ ] Wallet/network/role guards; transaction center; client-only FHE provider;
-      reveal store in-memory TTL 5 phút
-- [ ] Landing: hero, how-it-works, privacy comparison, no-loss promise
+- [x] Design tokens, responsive shell, light theme + dark Draw Room boundary —
+      shell ở route group `app/(shell)`, landing **nằm ngoài** nên nó vẫn là
+      server tree thuần (SSR privacy test không phải chứng minh gì cả)
+- [x] Wallet/network/role guards; transaction center; client-only FHE provider;
+      reveal store in-memory TTL 5 phút — `createExternalStore` +
+      `useSyncExternalStore`, mỗi store có `SERVER_SNAPSHOT` masked cứng; FHE là
+      module singleton `ensureFheInstance()`, không phải React provider
+- [x] Landing: hero, how-it-works, privacy comparison, no-loss promise
       (+ section faucet/learn — không route riêng)
-- [ ] Onboarding: role → connect → switch Sepolia → test assets/shield warning → enroll
-- [ ] Dashboard: masked principal/TWAB card, EIP-712 reveal/hide/TTL, public next
-      draw + employer boost, quick actions
-- [ ] Copy đúng bảng corrections §2 spec (không "Payroll connected", không "TWAB score 87")
+- [x] Onboarding: role → connect → switch Sepolia → test assets/shield warning → enroll
+      — 8 bước, step hiện tại **dẫn xuất** từ reducer chứ không persist; R14 là
+      nút in-app `USDCMock.mint` (faucet mở, quirk #21), R13 approve gắn nhãn
+      "step 1/2"; `ShieldWarning` đứng **trước** nút ký
+- [x] Dashboard: masked principal/TWAB card, EIP-712 reveal/hide/TTL, public next
+      draw + employer boost, quick actions — principal + TWAB gộp vào **một** chữ
+      ký, lọc `HIDDEN_HANDLE` trước khi gửi (relayer từ chối cả batch vì nó)
+- [x] Copy đúng bảng corrections §2 spec (không "Payroll connected", không "TWAB score 87")
+      — mọi câu lỗi lấy thẳng từ taxonomy; `revealHandles` không còn tự viết copy
+      riêng cho nhánh user-rejected (bản đó **không bao giờ được render**, tức là
+      nó sẽ lệch khỏi ERROR_RECOVERY_MATRIX mà không test nào đỏ)
+- [x] Live drill 2 persona trên contract thật `0xFF8c…ec25` — ví stub EIP-1193
+      ký **thật** bằng `ethers.Wallet` trong tiến trình Node (`window.__pdpSign`
+      qua `exposeFunction`), nên `userDecrypt` đi qua relayer thật; private key
+      không bao giờ vào page context, trace hay screenshot
+- [x] **Bug thật do drill tìm ra:** ví đã kết nối bấm Reveal sớm một nhịp thì bị
+      bảo "Connect your wallet first". Nguyên nhân là trạng thái **thứ tư** —
+      *chưa đọc xong* — bị gộp vào `hidden`, nên nút Reveal sáng với `targets`
+      rỗng. Sửa ở cấu trúc: `PrivatePositionCard` có nhánh riêng cho
+      `account === null`, và `reads.error` giờ hiện ra kèm `Try again` thay vì
+      spinner vĩnh viễn (chính cái ngõ cụt exit gate cấm)
 
-Tests: reveal cache clear khi TTL/reload/account/chain change · không plaintext
-trong SSR/storage/DOM khi masked · 320px + desktop + keyboard.
+Tests: reveal cache clear khi TTL/reload/account/chain change ✅ · không plaintext
+trong SSR/storage/DOM khi masked ✅ (đọc thẳng response SSR, không đọc DOM: câu
+hỏi là server **gửi đi** cái gì) · 320px + desktop + keyboard ✅ (project
+`mobile-320`).
+**150 contract · 204 web unit (9 file) · 36 Playwright** — `tsc --noEmit` sạch.
 
-**Exit gate:** incognito user đi hết onboarding → masked dashboard → reveal/hide
-own position · wrong-network/rejected recover được.
+**Exit gate ✅:** incognito user đi hết onboarding → masked dashboard → reveal/hide
+own position · wrong-network/rejected recover được. Cả hai persona chạy trên
+Sepolia thật, tự động, không có bước tay: ví trắng → `unavailable` + "Nothing is
+stored for this wallet yet" (không phải `0`, không phải spinner); ví đã seed →
+reveal → Hide → đổi account → đổi chain → reload, mỗi lần đều quay về masked;
+huỷ chữ ký → panel R6 "Nothing was sent and nothing changed" + nút quay lại còn
+bấm được.
 
 **Cut:** bỏ section trang trí + orb animation; giữ privacy boundary + reveal.
 
