@@ -56,7 +56,7 @@ function signerFromEnv(fresh: boolean): { signer: Wallet | HDNodeWallet; funded:
  */
 export async function installWallet(
   page: Page,
-  opts: { chainId?: string; fresh?: boolean; rejectSignatures?: boolean } = {},
+  opts: { chainId?: string; fresh?: boolean; rejectSignatures?: boolean; preauthorized?: boolean } = {},
 ): Promise<StubWallet> {
   const { signer, funded } = signerFromEnv(opts.fresh ?? false);
   const address = await signer.getAddress();
@@ -86,16 +86,28 @@ export async function installWallet(
       chainId,
       rpcUrl,
       rejectSignatures,
+      preauthorized,
     }: {
       address: string;
       chainId: string;
       rpcUrl: string;
       rejectSignatures: boolean;
+      preauthorized: boolean;
     }) => {
       type Handler = (payload: unknown) => void;
       const listeners = new Map<string, Set<Handler>>();
       let currentChain = chainId;
       let currentAccounts = [address];
+      /**
+       * Trang đã được cấp quyền hay chưa — hai câu trả lời rất khác nhau.
+       *
+       * Ví thật trả `eth_accounts: []` cho một trang chưa từng được duyệt, và
+       * chỉ mở ra sau `eth_requestAccounts`. Stub mặc định `true` để giữ nguyên
+       * hành vi của các test hiện có (chúng cần vào thẳng dashboard), nhưng mặc
+       * định ấy có giá: bước "Connect wallet" bị nhảy qua, nên không test nào
+       * từng bấm vào nó. `preauthorized: false` diễn được đúng trình duyệt sạch.
+       */
+      let authorized = preauthorized;
 
       const emit = (event: string, payload: unknown): void => {
         for (const handler of listeners.get(event) ?? []) handler(payload);
@@ -117,8 +129,10 @@ export async function installWallet(
         async request({ method, params = [] }: { method: string; params?: unknown[] }): Promise<unknown> {
           switch (method) {
             case "eth_requestAccounts":
-            case "eth_accounts":
+              authorized = true;
               return currentAccounts;
+            case "eth_accounts":
+              return authorized ? currentAccounts : [];
             case "eth_chainId":
               return currentChain;
             case "wallet_switchEthereumChain": {
@@ -178,6 +192,7 @@ export async function installWallet(
       chainId: opts.chainId ?? SEPOLIA_HEX,
       rpcUrl: RPC_URL,
       rejectSignatures: opts.rejectSignatures ?? false,
+      preauthorized: opts.preauthorized ?? true,
     },
   );
 

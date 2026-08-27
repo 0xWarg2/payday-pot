@@ -266,6 +266,11 @@ principal liability · mọi người rút đủ principal.
       `account === null`, và `reads.error` giờ hiện ra kèm `Try again` thay vì
       spinner vĩnh viễn (chính cái ngõ cụt exit gate cấm)
 
+- [x] **Demo EOD** `pnpm demo:day6` (trong `apps/web`) — 10 beat có lời dẫn,
+      **~55s** headless / ~2 phút headed, tự quay video vào `demo-results/`.
+      Nằm ngoài `e2e/` nên không chạy cùng suite, cùng quy ước với
+      `packages/contracts/demo/`
+
 Tests: reveal cache clear khi TTL/reload/account/chain change ✅ · không plaintext
 trong SSR/storage/DOM khi masked ✅ (đọc thẳng response SSR, không đọc DOM: câu
 hỏi là server **gửi đi** cái gì) · 320px + desktop + keyboard ✅ (project

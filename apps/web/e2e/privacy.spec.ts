@@ -166,7 +166,11 @@ test.describe("reveal session", () => {
     // Giá trị đã mở của ví CŨ không được nằm lại trên màn hình của ví MỚI, dù
     // chỉ một frame. Đây là rò rỉ giữa hai người dùng trên cùng một máy.
     await expect(value).not.toHaveAttribute("data-state", "revealed");
-    await expect(page.locator("body")).not.toContainText("Visible in this tab only");
+    // Trước đây dòng này so chuỗi "Visible in this tab only" — mà strip viết
+    // "Values are visible in this tab only", chữ v thường. Chuỗi ấy KHÔNG BAO
+    // GIỜ có mặt, kể cả khi strip đang hiện, nên assertion xanh mà không kiểm
+    // gì cả — đúng ở chỗ nguy hiểm nhất: rò rỉ giữa hai ví trên cùng một máy.
+    await expect(page.getByTestId("reveal-session-strip")).toBeHidden();
   });
 
   test("switching chain closes the session and says so", async ({ page }) => {

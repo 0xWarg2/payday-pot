@@ -35,6 +35,7 @@ apps/web/public/kms_lib_bg.wasm
 
 # playwright
 apps/web/test-results/
+apps/web/demo-results/
 apps/web/playwright-report/
 apps/web/blob-report/
 apps/web/.playwright/
