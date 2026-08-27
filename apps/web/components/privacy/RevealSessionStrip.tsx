@@ -22,7 +22,13 @@ export function RevealSessionStrip() {
   const secondsLeft = Math.max(0, Math.ceil((expiresAt - now) / 1000));
 
   return (
-    <div className="border-privacy/30 bg-privacy-subtle rounded-card flex flex-wrap items-center justify-between gap-3 border px-4 py-3">
+    <div
+      // Test bám vào testid chứ không bám vào câu chữ: điều cần chứng minh là
+      // "phiên đã đóng", không phải "câu này biến mất". Một assertion theo copy
+      // vừa xanh giả vì lệch hoa/thường, vừa đỏ giả khi sửa câu.
+      data-testid="reveal-session-strip"
+      className="border-privacy/30 bg-privacy-subtle rounded-card flex flex-wrap items-center justify-between gap-3 border px-4 py-3"
+    >
       <p className="text-[13px]">
         <span className="font-medium">Values are visible in this tab only.</span>{" "}
         <span className="text-fg-muted">
