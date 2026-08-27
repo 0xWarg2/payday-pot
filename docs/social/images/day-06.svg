@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahk" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#1c1c1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; }
+    .cy-t  { fill:none; stroke:#0FB9D6; stroke-width:2.2; stroke-linecap:round; }
+    .lime  { fill:#C6F04B; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
+
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
+
+  <!-- ===== title ===== -->
+  <g filter="url(#marker)">
+    <path d="M86 108 L556 96 L560 142 L88 152 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="92" y="140" class="title" font-size="66" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="96" y="186" class="hand" font-size="30" fill="#3d3d39">day 6 — the app exists, and it starts covered</text>
+  <text x="96" y="222" class="note" font-size="22">one command: pnpm demo:day6</text>
+  <g filter="url(#rough2)">
+    <path d="M88 240 C 240 236, 400 244, 560 238" class="ink-t" opacity="0.5"/>
+  </g>
+
+  <!-- ===== test tally ===== -->
+  <g filter="url(#rough2)">
+    <path d="M1146 48 L1552 44 L1554 244 L1148 248 Z" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="1170" y="88" class="hand" font-size="25">390 tests green</text>
+  <g class="note" font-size="19">
+    <text x="1170" y="124">150 — the contract, frozen since day 5</text>
+    <text x="1170" y="152">204 — the web app, 9 files</text>
+    <text x="1170" y="180">36 — a real browser, production build</text>
+    <text x="1170" y="208">+ 10 narrated demo beats, ~55s</text>
+  </g>
+
+  <!-- ===== four states, four screens ===== -->
+  <g filter="url(#rough)">
+    <rect x="120" y="300" width="250" height="198" class="ink"/>
+    <rect x="400" y="300" width="250" height="198" class="ink"/>
+    <rect x="680" y="300" width="250" height="198" class="ink"/>
+  </g>
+  <g filter="url(#rough2)">
+    <rect x="960" y="300" width="250" height="198" class="ink-t" stroke-dasharray="9 8" opacity="0.75"/>
+  </g>
+
+  <g class="hand" font-size="23" text-anchor="middle">
+    <text x="245" y="338">nothing yet</text>
+    <text x="525" y="338">yours, locked</text>
+    <text x="805" y="338">really zero</text>
+    <text x="1085" y="338" fill="#5a5a54">not read yet</text>
+  </g>
+  <g filter="url(#rough2)">
+    <path d="M142 352 C 220 349, 300 355, 348 351" class="ink-t" opacity="0.4"/>
+    <path d="M422 352 C 500 349, 580 355, 628 351" class="ink-t" opacity="0.4"/>
+    <path d="M702 352 C 780 349, 860 355, 908 351" class="ink-t" opacity="0.4"/>
+  </g>
+
+  <g class="note" font-size="20" text-anchor="middle">
+    <text x="245" y="404">“nothing is stored</text>
+    <text x="245" y="432">for this wallet yet”</text>
+    <text x="245" y="478" fill="#8a2f2f">not “you have 0”</text>
+  </g>
+
+  <g fill="#0FB9D6">
+    <circle cx="472" cy="404" r="9"/><circle cx="502" cy="404" r="9"/>
+    <circle cx="532" cy="404" r="9"/><circle cx="562" cy="404" r="9"/>
+  </g>
+  <g filter="url(#rough2)">
+    <rect x="512" y="424" width="26" height="20" class="ink-t"/>
+    <path d="M518 424 C 517 412, 533 412, 532 424" class="ink-t"/>
+  </g>
+  <text x="525" y="478" class="note" font-size="20" text-anchor="middle">reveal my position</text>
+
+  <g filter="url(#marker)">
+    <path d="M778 380 L836 377 L838 414 L780 418 Z" class="lime" opacity="0.6"/>
+  </g>
+  <text x="805" y="412" class="title" font-size="36" text-anchor="middle">0</text>
+  <text x="805" y="478" class="note" font-size="20" text-anchor="middle">opened, and it is zero</text>
+
+  <text x="1085" y="410" class="title" font-size="34" text-anchor="middle" fill="#5a5a54">· · ·</text>
+  <g class="note" font-size="19" text-anchor="middle" fill="#5a5a54">
+    <text x="1085" y="452">the fourth one — i had</text>
+    <text x="1085" y="478">folded it into “locked”</text>
+  </g>
+
+  <text x="120" y="542" class="hand" font-size="26">four sentences, four screens. a 0 in the first box breaks day 1's rule.</text>
+  <g class="hand" font-size="24" fill="#3d3d39">
+    <text x="120" y="588">found by driving the real app: wallet already connected, reveal clicked one</text>
+    <text x="120" y="620">beat early — and it told me to connect my wallet. the reads had not come back.</text>
+  </g>
+  <path d="M1078 506 C 1092 552, 1058 600, 986 618" class="cy" marker-end="url(#ah)"/>
+
+  <!-- ===== two tests that were not testing ===== -->
+  <g class="note" font-size="19">
+    <text x="1250" y="300">two of my own tests were</text>
+    <text x="1250" y="326">green while checking</text>
+    <text x="1250" y="352">nothing: one compared a</text>
+    <text x="1250" y="378">sentence the app never says</text>
+    <text x="1250" y="404">(one capital letter off), the</text>
+    <text x="1250" y="430">other assumed every visitor</text>
+    <text x="1250" y="456">was already connected — so</text>
+    <text x="1250" y="482">nothing ever clicked connect</text>
+  </g>
+
+  <!-- ===== one signature, and every exit ===== -->
+  <text x="120" y="678" class="hand" font-size="26">one signature opens principal and time-weight together</text>
+  <g filter="url(#rough)">
+    <circle cx="152" cy="736" r="27" class="ink-t"/>
+  </g>
+  <path d="M152 736 L152 719" class="ink-t"/>
+  <path d="M152 736 L167 742" class="ink-t"/>
+  <text x="196" y="730" class="note" font-size="21">a five minute clock at the top of the screen says when it goes away</text>
+  <text x="196" y="762" class="note" font-size="21">hide · other account · other network · reload · hidden tab</text>
+  <path d="M196 776 C 300 784, 560 782, 700 772" class="cy" marker-end="url(#ah)"/>
+  <text x="150" y="810" class="hand" font-size="24">each of those closes it — nothing kept, so nothing comes back</text>
+
+  <!-- ===== storage panel ===== -->
+  <g filter="url(#rough2)">
+    <path d="M886 646 L1552 642 L1554 806 L888 810 Z" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="910" y="684" class="hand" font-size="24">then i reloaded and opened storage:</text>
+  <g class="note" font-size="20">
+    <text x="910" y="722">sessionStorage — empty</text>
+    <text x="910" y="750">localStorage — pdp.role, pdp.onboarding, pdp.tx</text>
+    <text x="910" y="784">no amount, no handle, no winner — an allowlist, not trust</text>
+  </g>
+
+  <!-- ===== bottom line ===== -->
+  <g filter="url(#marker)">
+    <path d="M112 830 L622 824 L624 862 L114 868 Z" class="lime" opacity="0.55"/>
+  </g>
+  <text x="120" y="856" class="hand" font-size="25">wrong network → a warning, not a wall</text>
+  <g class="note" font-size="19">
+    <text x="656" y="844">reads keep working through a fixed sepolia connection · a dev deploy, not verified yet</text>
+    <text x="656" y="872">the relayer only runs on testnet, so there was no local shortcut to hide behind</text>
+  </g>
+
+  <text x="1428" y="888" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1544" y="888" class="title" font-size="26" text-anchor="end" opacity="0.85" letter-spacing="2">ZAMA</text>
+</svg>

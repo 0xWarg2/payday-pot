@@ -2,12 +2,18 @@
   "name": "payday-pot",
   "version": "0.1.0",
   "private": true,
-  "description": "Confidential prize-savings pool on Zama FHEVM \u2014 Season 4",
+  "description": "Confidential prize-savings pool on Zama FHEVM — Season 4",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "demo:day1": "pnpm --filter @payday-pot/contracts demo",
+    "demo:day2": "pnpm --filter @payday-pot/contracts demo:day2",
+    "demo:day3": "pnpm --filter @payday-pot/contracts demo:day3",
+    "demo:day4": "pnpm --filter @payday-pot/contracts demo:day4",
+    "demo:day5": "pnpm --filter @payday-pot/contracts demo:day5",
+    "demo:day6": "E2E_MNEMONIC=\"$(cd packages/contracts && npx hardhat vars get MNEMONIC 2>/dev/null)\" pnpm --filter @payday-pot/web demo:day6"
   },
   "engines": {
     "node": ">=22"

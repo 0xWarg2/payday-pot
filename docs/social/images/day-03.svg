@@ -1,86 +1,176 @@
-<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
-  <!-- Day 3 — your ticket = money × time. 1 ý chính: cùng tiền, gấp đôi thời gian → ticket đúng 2×.
-       Style: docs/PAYDAY_POT_VISUAL_STYLE.md — giấy #F7F3E7, nét wobble, lime saving, cyan encrypted.
-       Encrypted values = dot mask, KHÔNG BAO GIỜ số plaintext. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
   <defs>
-    <filter id="wobble" x="-8%" y="-8%" width="116%" height="116%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
-      <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <filter id="grain">
-      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
     </filter>
-    <pattern id="inkdots" width="13" height="13" patternUnits="userSpaceOnUse">
-      <circle cx="4" cy="4" r="2.1" fill="#1f1b16" opacity="0.75"/>
-      <circle cx="10" cy="10" r="2.1" fill="#1f1b16" opacity="0.75"/>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="cydots" width="17" height="17" patternUnits="userSpaceOnUse">
+      <circle cx="5" cy="5" r="3.4" fill="#0FB9D6"/>
     </pattern>
-    <pattern id="cyandots" width="15" height="15" patternUnits="userSpaceOnUse">
-      <circle cx="4" cy="4" r="2.8" fill="#0FB9D6"/>
-      <circle cx="11" cy="11" r="2.8" fill="#0FB9D6"/>
+    <pattern id="limedots" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="2.2" fill="#2f4d00" opacity="0.55"/>
     </pattern>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahk" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#1c1c1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
   </defs>
 
-  <rect x="0" y="0" width="1600" height="900" fill="#F7F3E7"/>
-  <rect x="0" y="0" width="1600" height="900" filter="url(#grain)"/>
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
 
-  <!-- title -->
-  <text x="60" y="92" font-family="Marker Felt, Comic Sans MS, cursive" font-size="60" fill="#1f1b16">PAYDAY POT</text>
-  <text x="60" y="142" font-family="Bradley Hand, Segoe Print, cursive" font-size="34" fill="#1f1b16">day 3 — your ticket = money × time</text>
-  <text x="60" y="184" font-family="Noteworthy, Segoe Print, cursive" font-size="26" fill="#1f1b16" opacity="0.85">74 tests green</text>
+  <!-- paper -->
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
 
-  <!-- payday line + clock -->
-  <g filter="url(#wobble)">
-    <line x1="1120" y1="248" x2="1120" y2="580" stroke="#1f1b16" stroke-width="3" stroke-dasharray="10 8"/>
-    <circle cx="1120" cy="208" r="26" fill="#F7F3E7" stroke="#1f1b16" stroke-width="4"/>
-    <line x1="1120" y1="208" x2="1120" y2="190" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="1120" y1="208" x2="1133" y2="216" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- ================= header ================= -->
+  <g filter="url(#marker)">
+    <path d="M82 104 L512 94 L516 138 L84 148 Z" fill="#C6F04B" opacity="0.62"/>
   </g>
-  <text x="1158" y="218" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">payday</text>
-
-  <!-- row 1: in at the start, held all week -->
-  <text x="350" y="303" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">in at the start — held all week</text>
-  <g filter="url(#wobble)">
-    <rect x="350" y="330" width="770" height="46" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
-    <circle cx="300" cy="353" r="34" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
-    <circle cx="300" cy="353" r="34" fill="url(#inkdots)"/>
-  </g>
-
-  <!-- row 2: same money, in at halftime (first half = dashed empty) -->
-  <g filter="url(#wobble)">
-    <rect x="350" y="470" width="316" height="46" fill="none" stroke="#1f1b16" stroke-width="2.5" stroke-dasharray="9 8" opacity="0.55"/>
-    <rect x="735" y="470" width="385" height="46" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
-    <circle cx="700" cy="493" r="34" fill="#C6F04B" stroke="#1f1b16" stroke-width="4"/>
-    <circle cx="700" cy="493" r="34" fill="url(#inkdots)"/>
-  </g>
-  <text x="735" y="562" font-family="Bradley Hand, Segoe Print, cursive" font-size="27" fill="#1f1b16">same money, in at halftime</text>
-
-  <!-- encrypted weights: cyan dot blobs, area 2:1 -->
-  <text x="1330" y="248" font-family="Bradley Hand, Segoe Print, cursive" font-size="26" fill="#1f1b16" text-anchor="middle">twice the time</text>
-  <text x="1330" y="281" font-family="Bradley Hand, Segoe Print, cursive" font-size="26" fill="#1f1b16" text-anchor="middle">→ exactly 2× the ticket</text>
-  <g filter="url(#wobble)">
-    <ellipse cx="1330" cy="353" rx="92" ry="57" fill="url(#cyandots)" stroke="#1f1b16" stroke-width="3.5"/>
-    <ellipse cx="1330" cy="493" rx="65" ry="40" fill="url(#cyandots)" stroke="#1f1b16" stroke-width="3.5"/>
+  <text x="88" y="136" class="title" font-size="60" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="92" y="182" class="hand" font-size="30" fill="#3d3d39">day 3 — your ticket = money × time</text>
+  <text x="94" y="216" class="note" font-size="22">one command: pnpm demo:day3</text>
+  <g filter="url(#rough2)">
+    <path d="M86 236 C 240 232, 420 240, 600 234" class="ink-t" opacity="0.5"/>
   </g>
 
-  <!-- stamp: frozen at payday -->
-  <g transform="rotate(-5 1120 660)" opacity="0.9">
-    <g filter="url(#wobble)">
-      <rect x="932" y="622" width="376" height="76" fill="none" stroke="#1f1b16" stroke-width="5"/>
-      <rect x="941" y="631" width="358" height="58" fill="none" stroke="#1f1b16" stroke-width="2"/>
+  <!-- ================= test tally ================= -->
+  <g filter="url(#rough)">
+    <path d="M668 50 L1126 46 L1122 244 L672 248 Z" class="ink-t"/>
+  </g>
+  <g filter="url(#marker)">
+    <path d="M692 72 L898 66 L900 102 L694 108 Z" fill="#C6F04B" opacity="0.55"/>
+  </g>
+  <text x="698" y="98" class="hand" font-size="29">74 tests green</text>
+  <text x="696" y="134" class="note" font-size="19">8 — day-1 stack spike</text>
+  <text x="696" y="160" class="note" font-size="19">30 — money in / money out, every path</text>
+  <text x="696" y="186" class="note" font-size="19">1 — 30 random ops, replayed to the unit</text>
+  <text x="696" y="212" class="note" font-size="19">9 — compute budget per tx</text>
+  <text x="696" y="238" class="note" font-size="19">26 — time-weight: ratios, freeze, acl, overflow</text>
+
+  <!-- ================= no division onchain ================= -->
+  <g filter="url(#rough)">
+    <circle cx="1204" cy="116" r="26" class="ink-t"/>
+    <path d="M1194 116 L1214 116" class="ink"/>
+    <circle cx="1204" cy="106" r="2.6" fill="#1c1c1a"/>
+    <circle cx="1204" cy="126" r="2.6" fill="#1c1c1a"/>
+    <path d="M1181 140 L1229 92" stroke="#0FB9D6" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+  <text x="1248" y="108" class="hand" font-size="26">no division onchain —</text>
+  <text x="1248" y="142" class="note" font-size="20">weight stays money × seconds, raw</text>
+  <text x="1248" y="170" class="note" font-size="20">odds come out identical</text>
+
+  <!-- ================= payday line ================= -->
+  <g filter="url(#rough2)">
+    <path d="M1150 292 L1152 648" stroke="#1c1c1a" stroke-width="2.4" stroke-dasharray="12 10" fill="none"/>
+    <circle cx="1150" cy="266" r="25" class="ink"/>
+    <path d="M1150 266 L1150 250 M1150 266 L1162 274" class="ink-t"/>
+  </g>
+  <text x="1118" y="276" class="hand" font-size="28" text-anchor="end">payday</text>
+
+  <!-- ================= bar 1 : held all week ================= -->
+  <text x="308" y="326" class="hand" font-size="29">in at the start — held all week</text>
+  <g filter="url(#rough)">
+    <rect x="300" y="344" width="850" height="58" fill="#C6F04B" fill-opacity="0.9" stroke="#1c1c1a" stroke-width="2.8"/>
+    <circle cx="270" cy="373" r="31" fill="#C6F04B" stroke="#1c1c1a" stroke-width="2.6"/>
+  </g>
+  <circle cx="270" cy="373" r="27" fill="url(#limedots)"/>
+
+  <!-- ================= bar 2 : in at halftime ================= -->
+  <g filter="url(#rough)">
+    <rect x="320" y="502" width="402" height="58" fill="none" stroke="#8f8a76" stroke-width="2" stroke-dasharray="14 11"/>
+    <rect x="722" y="502" width="428" height="58" fill="#C6F04B" fill-opacity="0.9" stroke="#1c1c1a" stroke-width="2.8"/>
+    <circle cx="694" cy="531" r="31" fill="#C6F04B" stroke="#1c1c1a" stroke-width="2.6"/>
+  </g>
+  <circle cx="694" cy="531" r="27" fill="url(#limedots)"/>
+  <text x="726" y="600" class="hand" font-size="29">same money, in at halftime</text>
+  <text x="348" y="480" class="note" font-size="22" opacity="0.8">not in the pool yet</text>
+
+  <!-- ================= weights (encrypted, area exactly 2:1) ================= -->
+  <text x="1212" y="304" class="hand" font-size="29">twice the time →</text>
+  <text x="1212" y="340" class="hand" font-size="29">exactly 2× the ticket</text>
+  <g filter="url(#rough)">
+    <ellipse cx="1378" cy="428" rx="130" ry="78" fill="#F7F3E7" stroke="#1c1c1a" stroke-width="2.8"/>
+    <ellipse cx="1334" cy="580" rx="92" ry="55" fill="#F7F3E7" stroke="#1c1c1a" stroke-width="2.8"/>
+  </g>
+  <ellipse cx="1378" cy="428" rx="124" ry="72" fill="url(#cydots)"/>
+  <ellipse cx="1334" cy="580" rx="86" ry="49" fill="url(#cydots)"/>
+  <g filter="url(#rough2)">
+    <path d="M1156 400 C 1190 394, 1216 402, 1246 414" class="cy" marker-end="url(#ah)"/>
+    <path d="M1156 556 C 1186 552, 1212 560, 1240 572" class="cy" marker-end="url(#ah)"/>
+  </g>
+
+  <!-- ================= frozen stamp ================= -->
+  <g transform="rotate(-6 1119 690)">
+    <g filter="url(#rough)">
+      <rect x="990" y="660" width="258" height="60" class="ink"/>
+      <rect x="999" y="669" width="240" height="42" class="ink-t" opacity="0.55"/>
     </g>
-    <text x="1120" y="674" font-family="Marker Felt, Comic Sans MS, cursive" font-size="38" fill="#1f1b16" text-anchor="middle">FROZEN AT PAYDAY</text>
+    <text x="1119" y="702" class="title" font-size="29" text-anchor="middle" fill="#2a2a26">FROZEN AT PAYDAY</text>
   </g>
 
-  <!-- bottom note: no-loss -->
-  <text x="60" y="806" font-family="Noteworthy, Segoe Print, cursive" font-size="30" fill="#1f1b16">withdraw anytime — the ticket you earned stays in the draw</text>
-  <g filter="url(#wobble)">
-    <circle cx="1010" cy="796" r="20" fill="#C6F04B" stroke="#1f1b16" stroke-width="3.5"/>
-    <line x1="1046" y1="796" x2="1102" y2="796" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="1102" y1="796" x2="1088" y2="786" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="1102" y1="796" x2="1088" y2="806" stroke="#1f1b16" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- ================= withdraw mid-freeze ================= -->
+  <g filter="url(#rough)">
+    <path d="M312 406 C 286 486, 278 570, 288 642" class="cy" marker-end="url(#ah)"/>
+    <path d="M150 640 L272 636 L274 714 L152 718 Z" class="ink"/>
+    <path d="M156 662 L270 658" class="ink-t" opacity="0.7"/>
   </g>
+  <text x="212" y="700" class="note" font-size="20" text-anchor="middle" opacity="0.85">wallet</text>
+  <text x="128" y="768" class="hand" font-size="28">withdraw mid-freeze:</text>
+  <text x="128" y="802" class="note" font-size="22">money out in full, ticket stays</text>
 
-  <!-- built with -->
-  <text x="1540" y="864" font-family="Bradley Hand, Segoe Print, cursive" font-size="24" fill="#1f1b16" opacity="0.7" text-anchor="end">built with ZAMA</text>
+  <!-- ================= the public crank ================= -->
+  <text x="470" y="672" class="hand" font-size="28">the freeze is a public crank —</text>
+  <text x="470" y="706" class="note" font-size="22">anyone may push it, nobody gets a peek</text>
+  <g filter="url(#rough2)">
+    <g fill="#C6F04B" fill-opacity="0.9" stroke="#1c1c1a" stroke-width="1.6">
+      <rect x="474" y="742" width="13" height="26"/><rect x="490" y="742" width="13" height="26"/>
+      <rect x="506" y="742" width="13" height="26"/><rect x="522" y="742" width="13" height="26"/>
+      <rect x="538" y="742" width="13" height="26"/><rect x="554" y="742" width="13" height="26"/>
+      <rect x="570" y="742" width="13" height="26"/><rect x="586" y="742" width="13" height="26"/>
+      <rect x="602" y="742" width="13" height="26"/><rect x="618" y="742" width="13" height="26"/>
+      <rect x="634" y="742" width="13" height="26"/><rect x="650" y="742" width="13" height="26"/>
+      <rect x="666" y="742" width="13" height="26"/><rect x="682" y="742" width="13" height="26"/>
+      <rect x="698" y="742" width="13" height="26"/><rect x="714" y="742" width="13" height="26"/>
+      <rect x="730" y="742" width="13" height="26"/><rect x="746" y="742" width="13" height="26"/>
+      <rect x="762" y="742" width="13" height="26"/><rect x="778" y="742" width="13" height="26"/>
+      <rect x="794" y="742" width="13" height="26"/>
+    </g>
+    <g fill="none" stroke="#8f8a76" stroke-width="1.6">
+      <rect x="810" y="742" width="13" height="26"/><rect x="826" y="742" width="13" height="26"/>
+      <rect x="842" y="742" width="13" height="26"/><rect x="858" y="742" width="13" height="26"/>
+      <rect x="874" y="742" width="13" height="26"/><rect x="890" y="742" width="13" height="26"/>
+      <rect x="906" y="742" width="13" height="26"/><rect x="922" y="742" width="13" height="26"/>
+      <rect x="938" y="742" width="13" height="26"/><rect x="954" y="742" width="13" height="26"/>
+      <rect x="970" y="742" width="13" height="26"/>
+    </g>
+    <path d="M808 812 L808 780" class="ink-t" marker-end="url(#ahk)"/>
+  </g>
+  <text x="470" y="800" class="note" font-size="21">32 savers</text>
+  <text x="822" y="820" class="note" font-size="21">21 per tx (measured) → 2 tx for the whole pool</text>
+
+  <!-- ================= built with zama ================= -->
+  <text x="1420" y="868" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1538" y="868" class="title" font-size="26" text-anchor="end" opacity="0.85" letter-spacing="2">ZAMA</text>
 </svg>

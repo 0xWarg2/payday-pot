@@ -13,7 +13,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    // e2e/ thuộc Playwright — để Vitest gom vào thì nó sẽ cố chạy và fail khó hiểu.
-    exclude: ["node_modules/**", ".next/**", "e2e/**"],
+    // e2e/ và demo/ thuộc Playwright — để Vitest gom vào thì nó sẽ cố chạy và
+    // fail khó hiểu (`test.describe.configure` không tồn tại trong Vitest).
+    exclude: ["node_modules/**", ".next/**", "e2e/**", "demo/**"],
   },
 });
