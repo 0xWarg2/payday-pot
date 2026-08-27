@@ -9,6 +9,7 @@ export {
   ALL_FOREIGN_ERROR_SPECS,
   FOREIGN_ERROR_ABI,
   classifyError,
+  toPotError,
 } from "./errors.js";
 
 export {
@@ -29,3 +30,19 @@ export {
   readPotConfig,
   readPotState,
 } from "./pot.js";
+
+export {
+  type DepositFacts,
+  type EncryptedAmount,
+  type FundBlock,
+  type FundFacts,
+  capHeadroom,
+  preflightDeposit,
+  preflightFundPrize,
+  sendClaim,
+  sendDefundPrize,
+  sendDeposit,
+  sendFundPrize,
+  sendWithdraw,
+  sendWithdrawAll,
+} from "./actions.js";

@@ -438,13 +438,30 @@ function revertData(e: unknown): string | undefined {
   return undefined;
 }
 
-function errorCodeOf(e: unknown): string | number | undefined {
-  if (typeof e !== "object" || e === null) return undefined;
+/**
+ * Gom MỌI mã lỗi trong cây, không chỉ mã ngoài cùng.
+ *
+ * ethers bọc lỗi của ví lại: một "user rejected" của EIP-1193 (4001) đi ra
+ * ngoài dưới lớp `code: "UNKNOWN_ERROR"` với bản gốc nằm ở `error`/`info`. Chỉ
+ * đọc mã ngoài cùng thì mọi lần user bấm Reject đều rơi vào nhánh `unknown` —
+ * tức app nói "Something went wrong" cho một việc người dùng vừa cố ý làm.
+ */
+function errorCodesOf(e: unknown, depth = 0): (string | number)[] {
+  if (depth > 6 || typeof e !== "object" || e === null) return [];
   const anyE = e as Record<string, unknown>;
-  if (typeof anyE["code"] === "string" || typeof anyE["code"] === "number") return anyE["code"] as string | number;
-  const info = anyE["info"];
-  if (typeof info === "object" && info !== null) return errorCodeOf(info);
-  return undefined;
+  const out: (string | number)[] = [];
+  const own = anyE["code"];
+  if (typeof own === "string" || typeof own === "number") out.push(own);
+  for (const key of ["info", "error", "cause", "data"]) {
+    const v = anyE[key];
+    if (typeof v === "object" && v !== null) out.push(...errorCodesOf(v, depth + 1));
+  }
+  return out;
+}
+
+function hasCode(e: unknown, ...wanted: (string | number)[]): boolean {
+  const codes = errorCodesOf(e);
+  return wanted.some((w) => codes.includes(w));
 }
 
 function messageOf(e: unknown): string {
@@ -479,10 +496,9 @@ export function classifyError(e: unknown): PotError {
     }
   }
 
-  const code = errorCodeOf(e);
   // EIP-1193: 4001 user rejected · 4902 chain chưa được thêm vào ví.
   // ethers gói lại thành "ACTION_REJECTED".
-  if (code === 4001 || code === "ACTION_REJECTED") {
+  if (hasCode(e, 4001, "ACTION_REJECTED")) {
     return make(
       "user-rejected",
       {
@@ -495,7 +511,7 @@ export function classifyError(e: unknown): PotError {
       e,
     );
   }
-  if (code === 4902 || code === "NETWORK_ERROR" || /unrecognized chain|wrong network|chain mismatch/i.test(messageOf(e))) {
+  if (hasCode(e, 4902, "NETWORK_ERROR") || /unrecognized chain|wrong network|chain mismatch/i.test(messageOf(e))) {
     return make(
       "wrong-network",
       {
@@ -567,3 +583,28 @@ export function classifyError(e: unknown): PotError {
 export const ALL_CONTRACT_ERROR_SPECS = CONTRACT_ERRORS;
 export const ALL_FOREIGN_ERROR_SPECS = FOREIGN_ERRORS;
 export { FOREIGN_ERROR_ABI };
+
+/**
+ * Cổng duy nhất để một thứ ném ra được đi vào UI.
+ *
+ * `classifyError` biết cách đọc revert data và mã ví, nhưng ở tầng component thì
+ * cái ném ra không phải lúc nào cũng là lỗi của chain: một `TypeError` do state
+ * chưa nạp xong cũng ném ra ở đúng chỗ đó. Cast nó thành `PotError` là cách
+ * thẳng nhất để đổi một lỗi nhỏ thành một trang trắng — `ErrorPanel` đọc
+ * `error.action.kind` và `Error` không có `action`.
+ *
+ * Nên: nhận diện `PotError` thật (có `code` và `action`), còn lại đưa hết qua
+ * `classifyError`. Không có nhánh nào trả về thứ không render được.
+ */
+export function toPotError(e: unknown): PotError {
+  if (
+    typeof e === "object" &&
+    e !== null &&
+    typeof (e as { code?: unknown }).code === "string" &&
+    typeof (e as { action?: unknown }).action === "object" &&
+    (e as { action?: { kind?: unknown } }).action?.kind !== undefined
+  ) {
+    return e as PotError;
+  }
+  return classifyError(e);
+}

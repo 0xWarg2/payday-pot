@@ -212,3 +212,34 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     thật. Cùng một nhầm lẫn ở tầng sản phẩm là bug đã sửa ở Day 6 (xem
     EXECUTION_PLAN Day 6): *chưa đọc* là trạng thái thứ tư, không được mượn UI
     của ba trạng thái kia.
+
+## 10. Quirks luồng tiền trong browser (Day 7 — 27/08/2026)
+
+30. **ethers BỌC mã lỗi của ví lại.** Một `4001` (user bấm Cancel/Reject) đi ra
+    ngoài dưới lớp `code: "UNKNOWN_ERROR"` với bản gốc nằm ở `error` hoặc
+    `info.error`. `classifyError` cũ chỉ đọc mã ngoài cùng ⇒ **mọi** lần user từ
+    chối đều rơi vào nhánh `unknown` và app nói "Something went wrong" cho một
+    việc người dùng vừa cố ý làm. Fix: `errorCodesOf` đi đệ quy qua
+    `info`/`error`/`cause`/`data` và khớp theo tập mã, không theo mã ngoài cùng.
+
+31. **Ví stub trong e2e phải chuyển cả `error.data`, không chỉ `message`.** Đó là
+    revert data, và là thứ duy nhất cho phép gọi tên custom error của contract.
+    Bỏ nó đi thì mọi lỗi onchain đều thành "Something went wrong" và test lỗi
+    onchain kiểm sai nhánh — nhìn xanh mà không chứng minh gì.
+
+32. **Cast `e as PotError` ở tầng component = màn hình trắng.** Cái ném ra trong
+    một handler không nhất thiết là lỗi của chain: một `TypeError` do state chưa
+    nạp xong ném ra ở đúng chỗ đó, và `ErrorPanel` đọc `error.action.kind` —
+    `Error` không có `action`. Đường duy nhất được phép đi vào UI là
+    `toPotError()`: PotError thật thì giữ nguyên, còn lại qua `classifyError`.
+
+33. **Ví CI (không có vị thế) revert ngay ở `eth_estimateGas`, trước khi ví mở
+    ra.** Nghĩa là không diễn được "user bấm Reject" bằng deposit/withdraw trong
+    CI — tx chết trước bước ký. Đường duy nhất còn đúng nghĩa là faucet (mint
+    token mock, không phụ thuộc số dư). Ghi lại để đừng "sửa" test bằng cách nới
+    assertion.
+
+34. **Địa chỉ pot cho proof lấy từ manifest, không từ `reads.config`.**
+    `reads.config` là kết quả của một lần đọc RPC có thể chưa xong hoặc đã hỏng;
+    một luồng rút tiền không được phụ thuộc vào cái poll đó (`reads.config!` là
+    nguồn của crash 'kind' nói ở #32).

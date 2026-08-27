@@ -291,12 +291,12 @@ bấm được.
 
 ## Day 7 — 25/08 — My Savings + Employer UX
 
-- [ ] Savings: tabs Deposit/Withdraw/History; amount chỉ ở memory;
+- [x] Savings: tabs Deposit/Withdraw/History; amount chỉ ở memory;
       state machine Approve → Encrypt → Review → Submit → Confirm → Sync
-- [ ] `Withdraw all` không cần reveal; review dialog tách private vs public/linkable
-- [ ] Stale-handle recovery; tx hash resume sau reload; faucet/shield helper
+- [x] `Withdraw all` không cần reveal; review dialog tách private vs public/linkable
+- [x] Stale-handle recovery; tx hash resume sau reload; faucet/shield helper
       + warning wrap amount là public
-- [ ] Employer page (1 trang): overview + fund form + public allocated prize +
+- [x] Employer page (1 trang): overview + fund form + public allocated prize +
       notice "employer không xem được giá trị nhân viên, không chọn winner"
 
 Tests: rejected approval/tx, wrong chain, relayer timeout, duplicate-submit,
@@ -305,6 +305,19 @@ draft không vào persistence/telemetry, employer negative-permission.
 **Exit gate:** Jimmer deposit/withdraw qua UI trên contract thật · employer fund
 prize thật qua UI · mọi error chỉ đúng recovery · giá trị mới masked đến khi
 reveal tươi.
+
+**Trạng thái 27/08 EOD:** code + tests xong và xanh (228 unit web, 150 contract,
+40 e2e). Đường lỗi đã diễn thật trong browser: rejected signature (R6), revert
+onchain gọi được tên, relayer treo/cắt (R7), sai mạng (R8), double-submit,
+resume sau reload (R11). Ba fix thật rơi ra từ đó — xem COMPATIBILITY_NOTES
+#30–#34, trong đó #32 là một crash trắng màn hình ở luồng withdraw.
+
+CÒN LẠI của exit gate — cần người, không cần code: deposit/withdraw thật và
+employer fund prize thật **qua UI với ví có tiền**. Ví employer
+`0x1cE8D5ff…2D57` đang **0 ETH**; nạp ~0.03 ETH từ Account 3
+(`0xd83064F0…90829a`), KHÔNG lấy từ deployer `0x83b2…6877` (giữ cho keeper/draw
+gas). Ví CI không có vị thế nên mọi tx đụng tiền revert ở `eth_estimateGas` —
+đường thành công không diễn được trong CI (COMPATIBILITY_NOTES #33).
 
 **Cut:** 1 sponsor wallet, 1 form; bỏ charts/exports/invite.
 

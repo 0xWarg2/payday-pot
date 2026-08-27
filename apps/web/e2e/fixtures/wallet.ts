@@ -56,7 +56,14 @@ function signerFromEnv(fresh: boolean): { signer: Wallet | HDNodeWallet; funded:
  */
 export async function installWallet(
   page: Page,
-  opts: { chainId?: string; fresh?: boolean; rejectSignatures?: boolean; preauthorized?: boolean } = {},
+  opts: {
+    chainId?: string;
+    fresh?: boolean;
+    rejectSignatures?: boolean;
+    /** Diễn "người dùng bấm Cancel ở hộp thoại GỬI TX" — khác với từ chối chữ ký. */
+    rejectTransactions?: boolean;
+    preauthorized?: boolean;
+  } = {},
 ): Promise<StubWallet> {
   const { signer, funded } = signerFromEnv(opts.fresh ?? false);
   const address = await signer.getAddress();
@@ -86,12 +93,14 @@ export async function installWallet(
       chainId,
       rpcUrl,
       rejectSignatures,
+      rejectTransactions,
       preauthorized,
     }: {
       address: string;
       chainId: string;
       rpcUrl: string;
       rejectSignatures: boolean;
+      rejectTransactions: boolean;
       preauthorized: boolean;
     }) => {
       type Handler = (payload: unknown) => void;
@@ -119,8 +128,20 @@ export async function installWallet(
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
         });
-        const json = (await response.json()) as { result?: unknown; error?: { message: string; code: number } };
-        if (json.error) throw Object.assign(new Error(json.error.message), { code: json.error.code });
+        const json = (await response.json()) as {
+          result?: unknown;
+          error?: { message: string; code: number; data?: unknown };
+        };
+        // `data` phải đi kèm: đó là revert data, và là thứ DUY NHẤT cho phép
+        // `classifyError` gọi tên custom error của contract thay vì rơi về
+        // "Something went wrong". Ví thật chuyển nó lên; một stub bỏ nó đi sẽ
+        // làm mọi test lỗi-onchain kiểm sai nhánh.
+        if (json.error) {
+          throw Object.assign(new Error(json.error.message), {
+            code: json.error.code,
+            ...(json.error.data === undefined ? {} : { data: json.error.data }),
+          });
+        }
         return json.result;
       };
 
@@ -141,6 +162,12 @@ export async function installWallet(
               emit("chainChanged", currentChain);
               return null;
             }
+            case "eth_sendTransaction":
+              // Cùng lý do như dưới: `code: 4001` phải sinh ra TRONG page.
+              if (rejectTransactions) {
+                throw Object.assign(new Error("User denied transaction signature."), { code: 4001 });
+              }
+              return passthrough(method, params);
             case "personal_sign":
             case "eth_signTypedData_v4":
               // Từ chối phải ném TRONG page, không phải trong Node: property
@@ -192,6 +219,7 @@ export async function installWallet(
       chainId: opts.chainId ?? SEPOLIA_HEX,
       rpcUrl: RPC_URL,
       rejectSignatures: opts.rejectSignatures ?? false,
+      rejectTransactions: opts.rejectTransactions ?? false,
       preauthorized: opts.preauthorized ?? true,
     },
   );
