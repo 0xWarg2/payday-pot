@@ -62,7 +62,10 @@ export function PendingUnwrapBanner() {
   const first = pending[0];
 
   return (
-    <div className="border-warning/30 bg-warning/5 rounded-card flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      data-testid="pending-unwrap"
+      className="border-warning/30 bg-warning/5 rounded-card flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="min-w-0">
         <p className="text-[14px] font-semibold">
           {pending.length === 1 ? "An unwrap is waiting to finish" : `${pending.length} unwraps are waiting to finish`}
@@ -90,7 +93,7 @@ export function PendingUnwrapBanner() {
         >
           What to do
         </Link>
-        <Button size="sm" variant="secondary" loading={checking} onClick={() => void check()}>
+        <Button size="sm" variant="secondary" loading={checking} onClick={() => void check()} data-testid="unwrap-recheck">
           Check again
         </Button>
       </div>

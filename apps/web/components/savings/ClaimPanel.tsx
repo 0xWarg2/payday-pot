@@ -68,7 +68,7 @@ export function ClaimPanel() {
     "switch-network": () => void switchToSepolia().catch(() => {}),
     "connect-wallet": () => void connectWallet().catch(() => {}),
     "continue-draw": () => {
-      window.location.href = "/app/draw";
+      window.location.href = "/app/draws/current";
     },
     "wait-for-epoch": () => {
       window.location.href = "/app";

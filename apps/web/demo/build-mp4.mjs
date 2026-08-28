@@ -15,13 +15,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 const REEL = path.join(process.cwd(), "demo-results", "reel");
-const OUT = path.join(process.cwd(), "demo-results", "payday-pot-day7.mp4");
+// Tên file theo ngày: `node demo/build-mp4.mjs day8`. Mặc định day7 để lệnh cũ
+// và các link đã phát ra ngoài không gãy.
+const DAY = (process.argv[2] ?? "day7").replace(/[^a-z0-9]/gi, "");
+const OUT = path.join(process.cwd(), "demo-results", `payday-pot-${DAY}.mp4`);
 const W = 1280;
 const H = 720;
 
 const manifest = path.join(REEL, "manifest.jsonl");
 if (!fs.existsSync(manifest)) {
-  console.error("Chưa có manifest — chạy `pnpm demo:day7:run` trước.");
+  console.error(`Chưa có manifest — chạy \`pnpm demo:${DAY}:run\` trước.`);
   process.exit(1);
 }
 

@@ -36,6 +36,9 @@ apps/web/public/kms_lib_bg.wasm
 # playwright
 apps/web/test-results/
 apps/web/demo-results/
+# reel đã dựng xong, copy ra khỏi demo-results vì thư mục đó bị xoá sạch
+# đầu MỖI lần chạy demo (quay Day N là mất reel Day N-1)
+apps/web/demo-reels/
 apps/web/playwright-report/
 apps/web/blob-report/
 apps/web/.playwright/

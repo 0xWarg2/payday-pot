@@ -243,3 +243,66 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     `reads.config` là kết quả của một lần đọc RPC có thể chưa xong hoặc đã hỏng;
     một luồng rút tiền không được phụ thuộc vào cái poll đó (`reads.config!` là
     nguồn của crash 'kind' nói ở #32).
+
+## 11. Quirks Draw Room + probe cUSDC live (Day 8 — 29/08/2026)
+
+35. **`finalizeUnwrap` trên cUSDC live chỉ có ĐÚNG MỘT chữ ký:
+    `finalizeUnwrap(bytes32,uint64,bytes)`.** Probe read-only (eth_call, không
+    khoá, không gas) vào `0x7c5BF43B…3639` ngày 29/08: biến thể
+    `finalizeUnwrap(bytes32,uint64,bytes[])` kiểu FHEVM-oracle **không tồn tại**,
+    biến thể `uint256` cũng không. Chữ ký đang pin trong `CUSDC_ABI` là đúng —
+    đừng "sửa" nó theo docs của một version khác.
+
+36. **requestId lạ revert bằng custom error `0xd1630f8e` =
+    `InvalidUnwrapRequest(bytes32)`.** Đây là bản lề của R1: một unwrap đã được
+    người khác finalize xong thì lần gọi thứ hai không im lặng thành công, nó
+    revert — và taxonomy phải đọc revert đó thành *"cái này xong rồi"* chứ không
+    phải *"thất bại"*. `packages/sdk/src/errors.ts` đã map sẵn
+    (`code: "unwrap-request-gone"`, `retryable: false`), giờ có test pin selector.
+
+37. **Còn đúng một ẩn số của R1: nội dung tham số `signatures`.** Gần như chắc là
+    `decryptionProof` từ `publicDecrypt()`, nhưng không xác minh được nếu không
+    có một unwrap ĐANG TREO trên ví có tiền. Vì vậy nút *Resume finalize* chưa
+    ship — CLAUDE.md cấm dựng abstraction FHE/ERC-7984 trước khi verify, và
+    ERROR_RECOVERY_MATRIX cấm nút dẫn vào ngõ cụt. Banner hiện tại đưa 3 đường
+    đi thật (Etherscan · giới hạn đã biết · hỏi lại chain) nên không ai kẹt.
+
+38. **Stub RPC trong Playwright phải dùng `route.fetch()`, không dùng `fetch()`
+    của Node.** `fetch` global trong route handler chạy ở tầng Node, đi ra IPv6
+    và treo 10s rồi `ConnectTimeoutError` khi tới publicnode. `route.fetch({
+    postData })` đi bằng network stack của browser nên vào thẳng. Và body
+    JSON-RPC có thể là **mảng** (ethers batch `batchMaxCount: 10`) — phải tách
+    ra, chỉ dàn dựng đúng lời gọi mình quan tâm, phần còn lại forward lên rồi
+    ghép lại theo `id`. Match URL bằng regex, không bằng chuỗi (URL thật có thể
+    mang thêm `/`).
+
+39. **`keeper-progress` / `claim-open-review` chỉ tồn tại ở đúng phase.** Vòng
+    đang Open thì không có cursor để khoe, chưa settle thì không có nút claim.
+    Test và demo phải rẽ nhánh theo `count()` — assert cứng thì đỏ tuỳ giờ chạy,
+    còn nới assertion thì mất luôn ý nghĩa. Nhánh "không có" vẫn phải chứng minh
+    một điều: chỗ đó **không được để trống**, phải nói ra lý do.
+
+40. **`node demo/build-mp4.mjs` mặc định ghi `payday-pot-day7.mp4`.** Chạy
+    không tham số sau khi quay Day 8 sẽ ĐÈ file reel Day 7 bằng nội dung Day 8
+    (thư mục `demo-results/` gitignored nên git không cứu). Script giờ nhận
+    tham số ngày: `node demo/build-mp4.mjs day8`. Và kể cả khi tên file đúng,
+    `demo-results/` vẫn bị **xoá sạch đầu mỗi lần chạy** — hai reel không sống
+    cùng nhau ở đó được. Reel định nộp copy sang `apps/web/demo-reels/`
+    (gitignored, nằm ngoài đường xoá).
+
+41. **`timeout` mặc định của Playwright là 30s và nó ĐÈ mọi `READ_TIMEOUT` dài
+    hơn trong file.** `draw.spec.ts` chờ `draw-timeline` với 60s, nhưng test
+    chết ở giây thứ 30 nên con số 60s chưa bao giờ có tác dụng. Nó xanh suốt vì
+    route đã compile sẵn từ lần chạy trước; chỉ lần chạy nguội (xoá `.next` →
+    Next compile `/app/draws/current` + một vòng đọc Sepolia thật) mới lòi ra, và
+    lòi ở **test đầu tiên** nên trông y như lỗi sản phẩm. Đã
+    `test.describe.configure({ timeout: 120_000 })` cho cả file. Quy tắc: hằng
+    số `*_TIMEOUT` trong file phải nhỏ hơn timeout của test, nếu không nó là số
+    trang trí.
+
+42. **Relayer sập giữa suite đọc thành "lỗi luồng tiền".** Màn review của
+    withdraw chỉ dựng được sau khi relayer mã hoá xong; relayer chết thì app đi
+    đúng nhánh **R7** (input còn nguyên, chưa gửi gì) — hành vi ĐÚNG, có test
+    riêng. Nhưng test "bấm ký hai lần" thì đỏ vì lý do chẳng liên quan đến nó.
+    Cách xử lý: chờ `dialog.or(relayerDown)` rồi `test.skip()` **có lý do**, chứ
+    không nới assertion. Xanh giả tệ hơn đỏ.

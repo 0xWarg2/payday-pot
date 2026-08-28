@@ -15,7 +15,15 @@ test.describe("routes render without a wallet", () => {
   // Phần công khai đọc qua RPC Sepolia cố định, nên không route nào được đòi ví
   // chỉ để hiện chữ. `/docs/known-limitations` là đích của link trong error
   // taxonomy — 69 test copy trỏ vào nó, và một 404 ở đó là ngõ cụt.
-  for (const path of ["/", "/onboarding", "/app", "/app/savings", "/employer", "/docs/known-limitations"]) {
+  for (const path of [
+    "/",
+    "/onboarding",
+    "/app",
+    "/app/savings",
+    "/app/draws/current",
+    "/employer",
+    "/docs/known-limitations",
+  ]) {
     test(`${path} answers 200 and shows a heading`, async ({ page }) => {
       const response = await page.goto(path);
       expect(response?.status()).toBe(200);
@@ -25,7 +33,9 @@ test.describe("routes render without a wallet", () => {
 });
 
 test.describe("no horizontal overflow", () => {
-  for (const path of ["/", "/onboarding", "/app"]) {
+  // Năm màn hình của sản phẩm, không phải ba: QA Day 8 đòi cả năm ở 320px, và
+  // Draw Room là màn hình nhiều cột nhất nên là chỗ dễ tràn nhất.
+  for (const path of ["/", "/onboarding", "/app", "/app/savings", "/app/draws/current", "/employer"]) {
     test(`${path} fits its viewport`, async ({ page }) => {
       await installWallet(page);
       await page.goto(path);

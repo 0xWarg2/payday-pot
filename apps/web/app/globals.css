@@ -35,11 +35,19 @@
   --color-warning: #a86812;
   --color-danger: #c93d3d;
 
-  /* --- Draw Room --- */
+  /* --- Draw Room ---
+   * Hai token chữ được thêm ở Day 8: token shell (`--color-fg`) là #121514,
+   * gần như đen, nên bất kỳ chữ nào quên đổi màu trong phòng tối sẽ biến mất
+   * hoàn toàn thay vì chỉ khó đọc — một lỗi không có triệu chứng nào ngoài
+   * "chỗ đó trống". Đo trên `--color-draw-canvas`: fg ≈ 16:1, fg-muted ≈ 7.3:1,
+   * cả hai qua AA (§7 QA).
+   */
   --color-draw-canvas: #06111e;
   --color-draw-surface: #0b1a2a;
   --color-draw-border: #193047;
   --color-draw-violet: #8b5cf6;
+  --color-draw-fg: #eaf2fb;
+  --color-draw-fg-muted: #93a7bd;
 
   /* --- type ---
    * §14.3 gọi tên "Geist Sans hoặc Inter fallback". Ở đây KHÔNG tải webfont:
@@ -92,6 +100,20 @@
   a[data-cta] {
     min-block-size: 44px;
     min-inline-size: 44px;
+  }
+
+  /*
+   * Draw Room là một BỐI CẢNH, không phải dark mode.
+   *
+   * Đặt ở đây thay vì rắc `dark:` lên từng component vì nó phải đúng cả với chữ
+   * mà không ai nhớ tới — copy trong `ErrorPanel`, `NoticeBanner`, và mọi thứ
+   * dùng lại từ phần sáng của app. `color-scheme` để form control và scrollbar
+   * của trình duyệt đi theo, nếu không thì ô input trắng sẽ chọc thủng phòng tối.
+   */
+  .draw-room {
+    color-scheme: dark;
+    background: var(--color-draw-canvas);
+    color: var(--color-draw-fg);
   }
 
   /* §14.5: reduced-motion bỏ loop/parallax, GIỮ state transition tức thời —

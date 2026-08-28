@@ -150,8 +150,16 @@ test.describe("signing", () => {
     await page.getByLabel("Amount to withdraw").fill("1");
     await page.getByRole("button", { name: "Review withdrawal" }).click();
 
+    // Màn review chỉ dựng được sau khi relayer mã hoá xong. Relayer chết thì app
+    // đi đúng nhánh R7 ("The encryption service is slow", input còn nguyên, chưa
+    // gửi gì) — đó là hành vi ĐÚNG và đã có test riêng. Nhưng nó không phải cái
+    // test này đang kiểm, nên chờ cả hai rồi skip có lý do, thay vì để một lần
+    // relayer sập đọc thành lỗi sản phẩm ở đúng luồng tiền.
     const dialog = page.getByTestId("review-dialog");
-    await dialog.waitFor({ state: "visible", timeout: 150_000 });
+    const relayerDown = page.getByTestId("error-panel").filter({ hasText: /encryption service/i });
+    await expect(dialog.or(relayerDown).first()).toBeVisible({ timeout: 150_000 });
+    test.skip(await relayerDown.isVisible(), "relayer không mã hoá được — nhánh R7, không phải nhánh này");
+
     const sign = page.getByRole("button", { name: "Sign and withdraw" });
     await sign.click();
 

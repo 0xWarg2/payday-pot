@@ -16,6 +16,12 @@
  *   E2E_PRIVATE_KEY — thay thế, nếu chỉ có một khoá lẻ
  * Không set gì thì sinh ví ngẫu nhiên: vẫn đủ cho persona "fresh" (ví trắng chỉ
  * đọc `HIDDEN_HANDLE`), nhưng persona "seeded" sẽ tự skip thay vì đỏ giả.
+ *
+ * `accountIndex` chọn nhánh trong cùng mnemonic (Day 8: cần 2–3 persona cùng
+ * lúc trong một vòng). Chỉ có ý nghĩa với `E2E_MNEMONIC` — một `E2E_PRIVATE_KEY`
+ * là đúng một ví, và im lặng trả về ví đó cho mọi index sẽ làm test "hai người
+ * gửi tiền" thật ra chỉ có một người. `funded` bắt đúng chuyện đó: index > 0 với
+ * khoá lẻ trả `funded: false`, và test tự skip.
  */
 
 import { HDNodeWallet, Mnemonic, Wallet } from "ethers";
@@ -30,7 +36,7 @@ export interface StubWallet {
   funded: boolean;
 }
 
-function signerFromEnv(fresh: boolean): { signer: Wallet | HDNodeWallet; funded: boolean } {
+function signerFromEnv(fresh: boolean, index: number): { signer: Wallet | HDNodeWallet; funded: boolean } {
   // Persona "fresh incognito" phải là ví trắng KỂ CẢ khi env có khoá đã seed.
   // Không có cờ này thì test đó lặng lẽ đổi ý nghĩa tuỳ máy ai chạy nó.
   if (fresh) return { signer: Wallet.createRandom(), funded: false };
@@ -39,12 +45,14 @@ function signerFromEnv(fresh: boolean): { signer: Wallet | HDNodeWallet; funded:
     return {
       // Cùng derivation path với hardhat.config.ts, nếu không sẽ ra một address
       // khác và mọi assertion "đã seed" sẽ sai một cách rất khó hiểu.
-      signer: HDNodeWallet.fromMnemonic(Mnemonic.fromPhrase(mnemonic), "m/44'/60'/0'/0/0"),
+      signer: HDNodeWallet.fromMnemonic(Mnemonic.fromPhrase(mnemonic), `m/44'/60'/0'/0/${index}`),
       funded: true,
     };
   }
   const key = process.env["E2E_PRIVATE_KEY"];
-  if (key) return { signer: new Wallet(key), funded: true };
+  // Một khoá lẻ chỉ dựng được persona 0. Trả nó cho index 1 sẽ làm "hai ví" hoá
+  // ra là một, và test đa-persona sẽ xanh trong lúc không kiểm gì.
+  if (key) return { signer: new Wallet(key), funded: index === 0 };
   return { signer: Wallet.createRandom(), funded: false };
 }
 
@@ -63,9 +71,11 @@ export async function installWallet(
     /** Diễn "người dùng bấm Cancel ở hộp thoại GỬI TX" — khác với từ chối chữ ký. */
     rejectTransactions?: boolean;
     preauthorized?: boolean;
+    /** Nhánh HD trong cùng mnemonic — persona thứ 2, thứ 3 của một vòng. */
+    accountIndex?: number;
   } = {},
 ): Promise<StubWallet> {
-  const { signer, funded } = signerFromEnv(opts.fresh ?? false);
+  const { signer, funded } = signerFromEnv(opts.fresh ?? false, opts.accountIndex ?? 0);
   const address = await signer.getAddress();
 
   await page.exposeFunction("__pdpSign", async (method: string, params: unknown[]): Promise<string> => {

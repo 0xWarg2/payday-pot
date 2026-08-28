@@ -21,7 +21,9 @@
     "demo:day4": "pnpm -w run demo:day4",
     "demo:day5": "pnpm -w run demo:day5",
     "test:e2e:install": "playwright install chromium",
-    "demo:day7:run": "playwright test --config playwright.demo.config.ts demo/demo-day7.spec.ts"
+    "demo:day7:run": "playwright test --config playwright.demo.config.ts demo/demo-day7.spec.ts",
+    "demo:day8": "pnpm demo:day8:run && node demo/build-mp4.mjs day8",
+    "demo:day8:run": "playwright test --config playwright.demo.config.ts demo/demo-day8.spec.ts"
   },
   "dependencies": {
     "@payday-pot/sdk": "workspace:*",

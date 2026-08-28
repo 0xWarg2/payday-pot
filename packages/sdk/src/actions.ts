@@ -28,7 +28,13 @@
 
 import type { Contract, ContractTransactionResponse } from "ethers";
 
-import { HIDDEN_HANDLE, type EncryptedHandle, type EpochPhase } from "./pot.js";
+import {
+  HIDDEN_HANDLE,
+  MAX_BATCH_STEPS,
+  type EncryptedHandle,
+  type EpochPhase,
+  type PendingWork,
+} from "./pot.js";
 import type { PotError } from "./errors.js";
 
 /** Kết quả của một lần encrypt — handle + proof, đã bind vào một contract. */
@@ -340,4 +346,110 @@ export function preflightFundPrize(facts: FundFacts): FundBlock {
   }
   if (facts.allowanceToPot < needed) return { needsApproval: true };
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Draw — permissionless, và đó là cả điểm của nó
+// ---------------------------------------------------------------------------
+
+/**
+ * Năm bước đưa một vòng từ Open tới Settled rồi mở vòng mới.
+ *
+ * Không hàm nào ở đây nhận seed, weight hay winner — chúng nhận nhiều nhất một
+ * `maxSteps`, tức là "làm giúp bao nhiêu việc", không phải "làm ra kết quả gì"
+ * (non-negotiable #7). Đó là lý do keeper của dự án này là tiện nghi chứ không
+ * phải đặc quyền: mất keeper thì bất kỳ ví nào cũng gõ tiếp được từ đúng cursor
+ * đang nằm onchain, và không ai — kể cả người gõ — ảnh hưởng được kết quả.
+ *
+ * `maxSteps` bị kẹp ở tầng này chứ không ở tầng UI: trần HCU là tính chất của
+ * chain, không phải của màn hình, và một lời gọi `selectBatch(32)` trên pool đầy
+ * sẽ revert sau khi người ta đã trả phí gas cho nó (R4).
+ */
+export type DrawStepAction = "begin-snapshot" | "snapshot" | "request-random" | "select" | "start-new-epoch";
+
+export interface DrawStep {
+  action: DrawStepAction;
+  /** Số participant tối đa xử lý trong tx này. Chỉ có ở hai bước batch. */
+  steps?: number;
+}
+
+function assertSteps(maxSteps: number): void {
+  if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > MAX_BATCH_STEPS) {
+    // `snapshotBatch(0)` revert `InvalidConfig`, còn 32 trên pool đầy revert vì
+    // hết HCU — hai lần mất gas cho cùng một sai lầm đếm được ở đây.
+    throw new RangeError(`maxSteps must be between 1 and ${MAX_BATCH_STEPS}, got ${maxSteps}`);
+  }
+}
+
+/** Đóng cửa vòng đã hết giờ. Pool rỗng thì settle luôn trong chính tx này. */
+export async function sendBeginSnapshot(pot: Contract): Promise<ContractTransactionResponse> {
+  return (await pot["beginSnapshot"]!()) as ContractTransactionResponse;
+}
+
+/** Đóng băng weight của tối đa `maxSteps` người, tiếp từ cursor onchain. */
+export async function sendSnapshotBatch(pot: Contract, maxSteps: number): Promise<ContractTransactionResponse> {
+  assertSteps(maxSteps);
+  return (await pot["snapshotBatch"]!(maxSteps)) as ContractTransactionResponse;
+}
+
+/**
+ * Chốt ngẫu nhiên cho vòng — **đúng một lần, không có reroll** (R5).
+ *
+ * Hàm không có tham số, và đó là bảo đảm mạnh nhất trong contract này: người
+ * bấm không có chỗ nào để nhét một con số của mình vào.
+ */
+export async function sendRequestRandom(pot: Contract): Promise<ContractTransactionResponse> {
+  return (await pot["requestRandom"]!()) as ContractTransactionResponse;
+}
+
+/** Quét tối đa `maxSteps` người tìm winner. Tx quét nốt người cuối tự settle vòng. */
+export async function sendSelectBatch(pot: Contract, maxSteps: number): Promise<ContractTransactionResponse> {
+  assertSteps(maxSteps);
+  return (await pot["selectBatch"]!(maxSteps)) as ContractTransactionResponse;
+}
+
+/** Mở vòng mới sau khi vòng cũ đã Settled. Principal và tiền thắng chưa claim đi tiếp. */
+export async function sendStartNewEpoch(pot: Contract): Promise<ContractTransactionResponse> {
+  return (await pot["startNewEpoch"]!()) as ContractTransactionResponse;
+}
+
+/**
+ * `PendingWork` (đọc từ chain) → tx cụ thể để gửi. Thuần, nên test được mà
+ * không cần chain.
+ *
+ * `null` nghĩa là không có việc gì — KHÔNG phải "chưa biết". UI phải phân biệt
+ * hai thứ đó, vì "không có việc" là một câu trả lời hoàn chỉnh còn "chưa đọc
+ * xong" thì không.
+ */
+export function drawStepFor(work: PendingWork): DrawStep | null {
+  switch (work.kind) {
+    case "none":
+      return null;
+    case "begin-snapshot":
+      return { action: "begin-snapshot" };
+    case "snapshot":
+      return { action: "snapshot", steps: work.steps };
+    case "request-random":
+      return { action: "request-random" };
+    case "select":
+      return { action: "select", steps: work.steps };
+    case "start-new-epoch":
+      return { action: "start-new-epoch" };
+  }
+}
+
+/** Gửi đúng một bước draw. Chỗ duy nhất `DrawStep` biến thành tx. */
+export async function sendDrawStep(pot: Contract, step: DrawStep): Promise<ContractTransactionResponse> {
+  switch (step.action) {
+    case "begin-snapshot":
+      return sendBeginSnapshot(pot);
+    case "snapshot":
+      return sendSnapshotBatch(pot, step.steps ?? MAX_BATCH_STEPS);
+    case "request-random":
+      return sendRequestRandom(pot);
+    case "select":
+      return sendSelectBatch(pot, step.steps ?? MAX_BATCH_STEPS);
+    case "start-new-epoch":
+      return sendStartNewEpoch(pot);
+  }
 }
