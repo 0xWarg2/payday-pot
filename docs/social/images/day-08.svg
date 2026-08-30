@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahk" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#1c1c1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; }
+    .cy-t  { fill:none; stroke:#0FB9D6; stroke-width:2.2; stroke-linecap:round; }
+    .lime  { fill:#C6F04B; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
+
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
+
+    <!-- ===== title ===== -->
+  <g filter="url(#marker)">
+    <path d="M86 108 L556 96 L560 142 L88 152 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="92" y="140" class="title" font-size="66" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="96" y="186" class="hand" font-size="30" fill="#3d3d39">day 8 — the draw room, and a page that remembers nothing</text>
+  <text x="96" y="222" class="note" font-size="22">one command: pnpm demo:day8</text>
+  <g filter="url(#rough2)">
+    <path d="M88 240 C 240 236, 400 244, 560 238" class="ink-t" opacity="0.5"/>
+  </g>
+
+  <!-- ===== test tally ===== -->
+  <g filter="url(#rough2)">
+    <path d="M1146 48 L1552 44 L1554 244 L1148 248 Z" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="1170" y="88" class="hand" font-size="25">481 tests green</text>
+  <g class="note" font-size="19">
+    <text x="1170" y="124">150 — the contract, untouched since day 5</text>
+    <text x="1170" y="152">261 — the web app, 11 files</text>
+    <text x="1170" y="180">70 — a real browser, 6 skipped with reasons</text>
+    <text x="1170" y="212">demo: 14 beats, one 4-minute video</text>
+  </g>
+
+  <!-- ===== fingerprint strip ===== -->
+  <g filter="url(#rough2)">
+    <path d="M120 300 L316 298 L318 352 L122 354 Z" class="ink"/>
+    <path d="M348 300 L598 298 L600 352 L350 354 Z" class="ink"/>
+    <path d="M630 300 L780 298 L782 352 L632 354 Z" class="ink"/>
+    <path d="M812 300 L1152 298 L1154 352 L814 354 Z" class="ink"/>
+  </g>
+  <g class="hand" font-size="22" text-anchor="middle">
+    <text x="219" y="333">read the room</text>
+    <text x="474" y="333">wipe every stored key</text>
+    <text x="706" y="333">reload</text>
+    <text x="983" y="333">the same numbers</text>
+  </g>
+  <g class="cy-t" marker-end="url(#ah)">
+    <path d="M320 326 C 330 318, 338 334, 344 326"/>
+    <path d="M602 326 C 612 318, 620 334, 626 326"/>
+    <path d="M784 326 C 794 318, 802 334, 808 326"/>
+  </g>
+
+  <g class="note" font-size="20">
+    <text x="122" y="396">so: what did this page remember about the round? nothing. the cursor lives on chain —</text>
+    <text x="122" y="424">which is also why a stranger can pick up someone else’s half-finished draw and end it</text>
+    <text x="122" y="452">storage never holds the words cursor, epoch, snapshot, winner, prize. sessionStorage stays empty.</text>
+  </g>
+
+  <!-- ===== gotcha note (right) ===== -->
+  <g class="note" font-size="19">
+    <text x="1188" y="308">a timeout in the test file said</text>
+    <text x="1188" y="336">60 seconds. playwright’s default</text>
+    <text x="1188" y="364">is 30, and it quietly wins.</text>
+    <text x="1188" y="392">green for days — because the</text>
+    <text x="1188" y="420">page was already compiled.</text>
+    <text x="1188" y="452" fill="#8a3b2f">a decorative number is worse</text>
+    <text x="1188" y="480" fill="#8a3b2f">than no number.</text>
+  </g>
+
+  <!-- ===== two sealed cards ===== -->
+  <text x="122" y="508" class="hand" font-size="23">before anyone signs:</text>
+  <g filter="url(#rough2)">
+    <path d="M120 524 L330 522 L332 662 L122 664 Z" class="ink"/>
+    <path d="M352 524 L562 522 L564 662 L354 664 Z" class="ink"/>
+  </g>
+  <g class="note" font-size="19">
+    <text x="142" y="556">your result</text>
+    <text x="374" y="556">your result</text>
+    <text x="142" y="646">sealed</text>
+    <text x="374" y="646">sealed</text>
+  </g>
+  <g fill="#0FB9D6">
+    <circle cx="150" cy="596" r="7"/><circle cx="176" cy="596" r="7"/><circle cx="202" cy="596" r="7"/><circle cx="228" cy="596" r="7"/><circle cx="254" cy="596" r="7"/>
+    <circle cx="382" cy="596" r="7"/><circle cx="408" cy="596" r="7"/><circle cx="434" cy="596" r="7"/><circle cx="460" cy="596" r="7"/><circle cx="486" cy="596" r="7"/>
+  </g>
+  <g class="cy-t">
+    <path d="M282 640 C 288 630, 296 630, 302 640"/>
+    <path d="M514 640 C 520 630, 528 630, 534 640"/>
+  </g>
+  <g filter="url(#rough2)">
+    <path d="M276 640 L308 640 L308 658 L276 658 Z" class="cy-t"/>
+    <path d="M508 640 L540 640 L540 658 L508 658 Z" class="cy-t"/>
+  </g>
+
+  <!-- ===== fairness receipt ===== -->
+  <g filter="url(#rough2)">
+    <path d="M800 500 L1552 496 L1554 672 L802 676 Z" class="ink-t" opacity="0.75"/>
+  </g>
+  <text x="824" y="536" class="hand" font-size="23">the fairness receipt, and what it refuses to say:</text>
+  <g class="note" font-size="19">
+    <text x="824" y="574">no winner — the result is written encrypted to everyone at once</text>
+    <text x="824" y="606">no amounts — except the sponsor’s prize, because that money is theirs</text>
+    <text x="824" y="638">no roster — it will not line up who deposited next to who claimed</text>
+    <text x="824" y="666">addresses and timing stay public. encryption changes none of that.</text>
+  </g>
+
+  <!-- ===== bottom ===== -->
+  <g class="note" font-size="20">
+    <text x="122" y="700">one of these two won. the two screens are equal character for character.</text>
+    <text x="122" y="728">claiming stays locked until you open your own number — and a failed read says so, never 0.</text>
+  </g>
+
+  <g filter="url(#marker)">
+    <path d="M118 748 L742 744 L744 782 L120 786 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="128" y="776" class="hand" font-size="24">14 of 15 error rows closed — and i did not fake the 15th</text>
+
+  <g class="note" font-size="19">
+    <text x="122" y="816">it needs a real half-finished withdrawal on a funded wallet to verify, so i shipped no button —</text>
+    <text x="122" y="842">the banner still gives three real ways out, and “someone else already finished it” reads as done, not failed</text>
+    <text x="122" y="876">still by hand tomorrow: one real deposit and one real prize funding — the sponsor wallet sits at 0 ETH</text>
+  </g>
+
+  <text x="1428" y="888" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1544" y="888" class="title" font-size="26" text-anchor="end" letter-spacing="2">ZAMA</text>
+</svg>
