@@ -337,3 +337,50 @@ test.describe("bad round ids", () => {
     await expect(page.getByTestId("draw-timeline")).toHaveCount(0);
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Đường vào phòng
+ * ------------------------------------------------------------------ */
+
+test.describe("getting into the room from the dashboard", () => {
+  test("the round card opens the room, and the two agree on what is waiting", async ({ page }) => {
+    await page.goto("/app");
+    const link = page.getByTestId("dashboard-draw-link");
+    await link.waitFor({ state: "visible", timeout: READ_TIMEOUT });
+
+    // Dashboard và Draw Room đọc cùng một `keeperState()`, nên hai giá trị này
+    // phải bằng nhau. Chúng chỉ lệch được nếu ai đó chép luật sang một bản thứ
+    // hai — và bản thứ hai luôn là bản nói sai trước.
+    // (Ranh giới epoch giữa hai lần đọc về lý thuyết làm chúng lệch; round trên
+    // Sepolia dài 2 ngày nên không có cửa cho chuyện đó ở đây.)
+    const fromCard = await link.getAttribute("data-keeper");
+    expect(fromCard).not.toBeNull();
+
+    await link.click();
+    await expect(page).toHaveURL(/\/app\/draws\/current$/);
+    await page.getByTestId("draw-timeline").waitFor({ state: "visible", timeout: READ_TIMEOUT });
+
+    const inRoom = await page.getByTestId("keeper-state").getAttribute("data-state");
+    expect(inRoom).toBe(fromCard);
+  });
+
+  test("the card never invites a step the room would refuse to run", async ({ page }) => {
+    // Chỗ này là non-negotiable #1 nhìn từ phía khác: pause không được làm hỏng
+    // đường đi, nhưng cũng không được giả vờ là có việc để bấm. Nhãn "…in the
+    // draw room" chỉ được xuất hiện khi phòng thật sự có một bước chạy được.
+    await page.goto("/app");
+    const link = page.getByTestId("dashboard-draw-link");
+    await link.waitFor({ state: "visible", timeout: READ_TIMEOUT });
+
+    const kind = await link.getAttribute("data-keeper");
+    const label = ((await link.textContent()) ?? "").trim();
+    // `textContent` gom cả mũi tên `aria-hidden`, nên so phần chữ chứ không so
+    // hết chuỗi.
+    if (kind === "ready") {
+      expect(label).toContain("in the draw room");
+      expect(label).not.toMatch(/^Open the draw room/);
+    } else {
+      expect(label).toMatch(/^Open the draw room/);
+    }
+  });
+});

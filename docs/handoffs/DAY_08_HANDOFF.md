@@ -138,13 +138,51 @@ R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 R13 R14 R15.
 Cột bằng chứng của từng dòng đã viết lại — mỗi ✅ chỉ tên file + tên test, không
 còn dòng nào tick bằng trí nhớ.
 
+## Bổ sung 30/08 — card "vòng này" giờ có cửa, và nó không mời khi cửa khoá
+
+Dòng cuối cùng của mục *Đang dở* hôm 29/08: dashboard có card vòng đang chạy
+nhưng không có đường sang Draw Room. Card đó tự nói ra một câu rất mạnh —
+**"Anyone can run it — it is not gated on an operator"** — rồi để người đọc
+đứng đó. Đúng hình dạng mà ma trận lỗi cấm (nút dẫn vào ngõ cụt), chỉ khác
+chiều: một lời mời không có cửa.
+
+Sửa bằng đúng một ràng buộc chứ không phải một component: card **gọi thẳng
+`keeperState()`** — cùng hàm Draw Room dùng — thay vì giữ bản sao luật riêng.
+Hệ quả kéo theo:
+
+- Nhãn link lấy từ `keeper.label`, tức **đúng chữ trên nút trong phòng**:
+  *Freeze the next batch in the draw room* → sang phòng thấy *Freeze the next
+  batch*. Không phải đoán mình có tới đúng chỗ không.
+- Round còn đếm ngược → nhãn trung tính *Open the draw room*, và câu "anyone
+  can run it" **biến mất** vì lúc đó không có gì để chạy.
+- `requestRandom` bị pause chặn → cửa vẫn mở (phòng vẫn xem được), nhưng
+  **không giục ai bấm một tx sẽ revert**. Đây là chỗ bản sao luật cũ sai mà
+  không ai thấy: `pendingWork()` không biết gì về `paused`, nên card cũ vẫn nói
+  "ai chạy cũng được" trong lúc phòng nói *on hold*.
+- `WORK_COPY` (bảng chữ thứ hai cho cùng 5 bước) **xoá**; còn một nguồn chữ.
+
+Bằng chứng, không phải mô tả:
+
+| | |
+|---|---|
+| `test/dashboard.test.tsx` (4) | nhãn link **so với `keeperState().label`** chứ không so chuỗi gõ tay — test chỉ có nghĩa khi nó đọc chung hàm với sản phẩm · pause → không có "Anyone can run it" · không có pool → không có link |
+| `e2e/draw.spec.ts` (+2) | `data-keeper` của card **`toBe()`** `data-state` của `keeper-state` trong phòng, sau khi click sang thật · nhãn "…in the draw room" chỉ xuất hiện khi phòng có bước chạy được |
+
+Và một dòng nợ nhỏ từ chính bẫy MP4 hôm qua: `demo:day7` trong `package.json`
+vẫn gọi `build-mp4.mjs` **không tham số** (chạy được nhờ default `day7`). Đã
+truyền tham số tường minh — luật "luôn truyền tham số ngày" mà script còn một
+chỗ ngoại lệ thì đó không phải luật.
+
+**Không đụng tới:** contract (150 test giữ nguyên, ABI không đổi), R1, và hai
+dòng ⛔ của Day 7.
+
 ## Đang dở / chờ
 
-- `docs/social/day-07-*` và `day-08-*` chưa commit/chưa làm (như các ngày trước).
-- `/app` dashboard vẫn chưa nối card "vòng đang chạy" sang Draw Room — giờ đã có
-  Draw Room để nối.
 - Nút *Resume finalize* của R1 (§R1).
 - Hai dòng ⛔ của gate Day 7.
+
+*(`docs/social/day-07-*` đã commit `a03e0d3`; `day-08-*` commit hôm nay. Card
+"vòng đang chạy" đã nối sang Draw Room — xem §Bổ sung 30/08.)*
 
 ## CẦN ANH LÀM — vẫn đúng 1 việc, y như Day 7
 
@@ -177,8 +215,8 @@ Sau khi nạp, ~10 phút bấm tay, và lần này nó đóng **ba** thứ chứ
 | | |
 |---|---|
 | Contract tests | **150** xanh — 19s |
-| Web unit (vitest) | **261** xanh / 11 file — 2.4s |
-| Playwright e2e | **70** xanh, 6 skipped — 18.4s |
+| Web unit (vitest) | **265** xanh / 12 file — 2.6s (261 + 4 của §Bổ sung) |
+| Playwright e2e | **72** xanh, 6 skipped — 51.7s cold (70 + 2 của §Bổ sung) |
 | Demo Day 8 | **5/5** — 4.1 phút headless, MP4 4m07s / 3.4 MB |
 | `tsc --noEmit` | sạch |
 | Ma trận lỗi | **14/15** đóng (UI + action + test) |

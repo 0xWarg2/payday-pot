@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "demo:day6": "playwright test --config playwright.demo.config.ts demo/demo-day6.spec.ts",
-    "demo:day7": "pnpm demo:day7:run && node demo/build-mp4.mjs",
+    "demo:day7": "pnpm demo:day7:run && node demo/build-mp4.mjs day7",
     "demo:day1": "pnpm -w run demo:day1",
     "demo:day2": "pnpm -w run demo:day2",
     "demo:day3": "pnpm -w run demo:day3",
