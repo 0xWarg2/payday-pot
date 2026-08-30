@@ -63,8 +63,22 @@ const STAGE_LABEL: Record<DrawStageId, string> = {
  * làm mốc `open` giữ nguyên trạng thái "đang chạy" thay vì đoán rằng giờ đã hết.
  * Đoán sai chiều nào cũng tệ: hoặc nói round đã đóng khi nó chưa, hoặc ngược lại.
  */
+/**
+ * Cửa nạp tiền đã đóng chưa — đúng theo guard của contract, không phải theo phase.
+ *
+ * `PayDayPot.sol:260` đòi CẢ HAI: `phase == Open` **và** `block.timestamp <
+ * ep.end`. Hai điều kiện đó tách rời nhau được: hết giờ rồi mà chưa ai gọi
+ * `beginSnapshot()` thì phase vẫn còn là Open trong khi deposit đã revert từ
+ * lâu. Màn hình nào chỉ nhìn phase sẽ nói round còn mở suốt quãng đó.
+ *
+ * `now === null` (chưa mount) KHÔNG đoán là đã đóng — xem §drawTimeline.
+ */
+export function depositsClosed(view: EpochView, now: bigint | null): boolean {
+  return view.phase !== "Open" || (now !== null && now >= view.end);
+}
+
 export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
-  const closed = view.phase !== "Open" || (now !== null && now >= view.end);
+  const closed = depositsClosed(view, now);
   const snapshotProgress = { done: view.snapshot.cursor, total: view.snapshot.total };
   const selectProgress = { done: view.draw.cursor, total: view.draw.total };
 

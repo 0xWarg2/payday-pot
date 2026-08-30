@@ -8,7 +8,7 @@ import { Card, CardHeader, PublicBadge } from "@/components/ui/Card";
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SEPOLIA_CHAIN_ID } from "@/lib/chain/rpc";
-import { keeperState } from "@/lib/draw/room";
+import { depositsClosed, keeperState } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount, formatCountdown } from "@/lib/format";
 import { potReadsStore, refreshPotReads, type DeploymentStatus } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
@@ -120,12 +120,12 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
         <div>
           <dt className="text-fg-muted text-[13px]">Deposits close in</dt>
           <dd className="tabular mt-1 text-[18px] font-semibold">
-            {secondsLeft === null ? (
+            {secondsLeft === null || nowSeconds === null ? (
               <Skeleton className="h-[18px] w-[100px]" />
-            ) : secondsLeft > 0 ? (
-              formatCountdown(secondsLeft)
-            ) : (
+            ) : depositsClosed(state, nowSeconds) ? (
               "Closed"
+            ) : (
+              formatCountdown(secondsLeft)
             )}
           </dd>
           <dd className="text-fg-muted mt-1 text-[12px]">{formatAbsolute(state.end)}</dd>

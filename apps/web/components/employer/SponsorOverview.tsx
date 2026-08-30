@@ -2,6 +2,7 @@
 
 import { PublicBadge } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { depositsClosed } from "@/lib/draw/room";
 import { formatAmount, formatCountdown, shortAddress } from "@/lib/format";
 import { potReadsStore } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
@@ -71,8 +72,8 @@ export function SponsorOverview() {
           <dd className="tabular mt-1 text-[15px] font-medium">
             {state === null || now === null
               ? "—"
-              : state.phase !== "Open"
-                ? "closed"
+              : depositsClosed(state, BigInt(Math.floor(now / 1000)))
+                ? "Closed"
                 : formatCountdown(Number(state.end) - Math.floor(now / 1000))}
           </dd>
         </div>
