@@ -6,6 +6,9 @@ Fact base (verify 29/08, chạy lại chứ không lấy từ handoff):
 > + **265** web unit + **72** browser. Chênh 6 test đến từ việc nối card "vòng
 > này" ở `/app` sang Draw Room (4 unit + 2 browser). Bài dưới để nguyên theo
 > fact base 29/08; đổi số thì đổi cả 4 chỗ: A, B, C-4, D.
+>
+> Reel quay lại 30/08 trên build mới: **4m08s / 3.20 MB** (`ffprobe`), chạy
+> `DEMO_HEADLESS=1`. Chỗ nào ghi 4m07s là số của bản 29/08.
 
 - `481 tests green` = **150** contract (24s) + **261** web unit (11 files, 2.9s)
   + **70** browser xanh / 6 skipped (76 test listed, 6 files)

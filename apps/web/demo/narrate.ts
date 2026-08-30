@@ -65,7 +65,12 @@ export function clip(page: Page, info: TestInfo, order: number, slug: string): C
         document.body.appendChild(el);
       }
       el.textContent = t;
-    }, text).catch(() => {});
+      // Nuốt lỗi vẽ phụ đề thì đúng (một cue hỏng không đáng giết demo), nhưng
+      // nuốt IM LẶNG thì sai: khi cửa sổ trình duyệt chết, lỗi thật rơi ở đây và
+      // dòng tiếp theo chỉ báo được "target closed" — không nói được vì sao.
+    }, text).catch((err: unknown) => {
+      console.log(`   ⚠ caption not drawn: ${err instanceof Error ? err.message : String(err)}`);
+    });
     await page.waitForTimeout(ms);
   };
 

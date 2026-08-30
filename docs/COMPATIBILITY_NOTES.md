@@ -306,3 +306,16 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     riêng. Nhưng test "bấm ký hai lần" thì đỏ vì lý do chẳng liên quan đến nó.
     Cách xử lý: chờ `dialog.or(relayerDown)` rồi `test.skip()` **có lý do**, chứ
     không nới assertion. Xanh giả tệ hơn đỏ.
+
+43. **Chạy demo CÓ MÀN HÌNH chết cửa sổ giữa chừng — quay reel thì luôn
+    `DEMO_HEADLESS=1`.** `pnpm demo:day8` mặc định headed (config chỉ headless
+    khi `DEMO_HEADLESS=1`). Một lần chạy 30/08 đứt ở clip 3:
+    `page.waitForTimeout: Target page, context or browser has been closed` tại
+    `narrate.ts:69` — đúng dòng thuyết minh ĐẦU TIÊN của clip, tức trang đã chết
+    trước khi có assert nào chạy. Không assert nào fail; `mode: "serial"` nên 2
+    clip sau "did not run". Chạy lại headless: **5/5 xanh, 4.1 phút**. Cách đọc
+    lỗi này: `waitForTimeout` ném "target closed" là **cửa sổ chết**, không phải
+    sản phẩm sai — `page.evaluate` ngay trên nó có `.catch(() => {})` nên nuốt
+    mất nguyên nhân thật. Và vì run fail thì `build-mp4.mjs` không chạy, trong
+    khi `demo-results/` đã bị xoá sạch từ đầu run → **mất luôn reel cũ ở đó**.
+    Reel nộp nằm ở `apps/web/demo-reels/` chính vì vậy (xem #40).

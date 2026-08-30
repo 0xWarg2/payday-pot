@@ -38,9 +38,19 @@ cd apps/web && pnpm demo:day8        # chạy + dựng MP4
 cd apps/web && pnpm demo:day8:run    # chỉ chạy Playwright
 ```
 
-14 beat / 5 clip / **4m07s**, `demo-results/payday-pot-day8.mp4` (1280×720,
-3.4 MB). Phụ đề tiếng Anh burn trong pixel, cùng cơ chế `demo/narrate.ts` của
-Day 7 (vẽ vào DOM lúc quay, mỗi dòng giữ đúng thời gian đọc).
+14 beat / 5 clip / **4m08s**, `demo-results/payday-pot-day8.mp4` (1280×720,
+3.20 MB — đo bằng `ffprobe`, không ước lượng). Phụ đề tiếng Anh burn trong
+pixel, cùng cơ chế `demo/narrate.ts` của Day 7 (vẽ vào DOM lúc quay, mỗi dòng
+giữ đúng thời gian đọc).
+
+Chạy **có màn hình** (mặc định) một lần bị đứt giữa chừng ở clip 3: cửa sổ
+Chrome chết, Playwright báo `page.waitForTimeout: Target page, context or
+browser has been closed` tại `narrate.ts:69` — dòng thuyết minh ĐẦU TIÊN của
+clip đó, tức trang đã chết trước khi có assert nào chạy. Không assert nào fail;
+`mode: "serial"` nên 2 clip sau không chạy. Chạy lại **`DEMO_HEADLESS=1
+pnpm demo:day8`** thì 5/5 xanh trong 4.1 phút. Kết luận: hỏng ở cửa sổ trình
+duyệt, không phải ở sản phẩm — nhưng đừng lấy lần chạy có màn hình làm bằng
+chứng gate, **quay reel nộp thì luôn `DEMO_HEADLESS=1`**.
 
 Beat 4–5 là **beat của exit gate**: in fingerprint ra màn hình → xoá storage →
 reload → in lại → giống hệt. Beat 11–13 là R1. Beat 14 là đường ra tiền.
@@ -52,7 +62,8 @@ reload → in lại → giống hệt. Beat 11–13 là R1. Beat 14 là đườn
 - `demo-results/` bị **xoá sạch đầu mỗi lần chạy**, nên quay Day N là mất reel
   Day N−1 kể cả khi tên file đã đúng. Reel nào định nộp đã copy sang
   **`apps/web/demo-reels/`** (gitignored, không bị xoá). Hiện có
-  `payday-pot-day7.mp4` (3.5 MB / 4m08s) và `payday-pot-day8.mp4` (3.2 MB / 4m07s).
+  `payday-pot-day7.mp4` (3.5 MB / 4m08s) và `payday-pot-day8.mp4` (3.20 MB /
+  4m08s, quay lại 30/08 trên build có card dashboard mới).
 
 ## Files chính hôm nay
 
@@ -217,7 +228,7 @@ Sau khi nạp, ~10 phút bấm tay, và lần này nó đóng **ba** thứ chứ
 | Contract tests | **150** xanh — 19s |
 | Web unit (vitest) | **265** xanh / 12 file — 2.6s (261 + 4 của §Bổ sung) |
 | Playwright e2e | **72** xanh, 6 skipped — 51.7s cold (70 + 2 của §Bổ sung) |
-| Demo Day 8 | **5/5** — 4.1 phút headless, MP4 4m07s / 3.4 MB |
+| Demo Day 8 | **5/5** — 4.1 phút headless, MP4 4m08s / 3.20 MB (quay lại 30/08; lần chạy có màn hình chết cửa sổ, xem §Demo) |
 | `tsc --noEmit` | sạch |
 | Ma trận lỗi | **14/15** đóng (UI + action + test) |
 | Contract | `0xFF8c126d12715b4fe069728A3f8a24142726ec25` · deployBlock 11570655 · epoch 172800s · perUserCap 10000000000 · participantCap 32 |
