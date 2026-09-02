@@ -1,9 +1,25 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 11 đã XOÁ `onlyBuiltDependencies` (cùng `neverBuiltDependencies`,
+# `ignoredBuiltDependencies`) và thay bằng `allowBuilds`: map tên gói → boolean.
+# File này trước đó có cả hai — một `onlyBuiltDependencies` không còn ai đọc, và
+# một `allowBuilds` với giá trị là chuỗi `set this to true or false` thay vì
+# boolean, tức là chưa quyết định gì cả. Cài local không bao giờ lộ ra vì
+# node_modules đã dựng sẵn từ trước: `pnpm install` in "Already up to date" và
+# không hề đánh giá build script. Chỉ có cold install mới chạm vào, và chỗ cold
+# install đầu tiên là Vercel — nơi nó fail cả lệnh:
+#   [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: keccak, secp256k1, sharp
+#
+# false cho keccak/secp256k1 không phải là nhượng bộ: cả hai ship `prebuilds/`
+# và dùng node-gyp-build để chọn binary lúc require, nên install script của
+# chúng là no-op trên mọi nền tảng có prebuild — và 150 contract test đang xanh
+# trên đúng cái node_modules chưa từng build hai gói này.
 allowBuilds:
-  sharp: set this to true or false
-onlyBuiltDependencies:
-  - keccak
-  - secp256k1
-  - sharp
+  # `node install/check.js || npm run build` — check.js thoát 0 khi
+  # @img/sharp-<platform> đã resolve, nên đây là đường nhanh; chỉ khi thiếu
+  # prebuild nó mới build thật, và lúc ấy build là thứ bắt buộc phải xảy ra.
+  sharp: true
+  keccak: false
+  secp256k1: false

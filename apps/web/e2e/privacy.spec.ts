@@ -97,7 +97,16 @@ test.describe("reveal session", () => {
   // Mặc định 30s của Playwright cắt ngang giữa chừng — và triệu chứng của nó
   // ("Received: hidden") trông y hệt một reveal hỏng, nên đây không phải nới
   // lỏng test mà là để nó đo đúng thứ nó định đo.
-  test.describe.configure({ timeout: 180_000 });
+  //
+  // `mode: "default"` = tuần tự trong MỘT worker, ghi đè `fullyParallel` của
+  // config. Không phải để cho nhanh — ngược lại. Với `--workers=2`, hai test
+  // reveal cạnh nhau chạy đồng thời trên CÙNG một địa chỉ ví, và cả hai đứng
+  // ở `hidden` cho tới hết 120s trong khi ba test reveal khác (chạy lẻ) xanh.
+  // Relayer không phục vụ hai userDecrypt song song của cùng một ví, và triệu
+  // chứng của nó trùng khít với triệu chứng của một reveal hỏng thật. `serial`
+  // sẽ sai ở đây: nó biến một test đỏ thành ba test skip, tức là giấu đi đúng
+  // hai assertion về rò rỉ giữa hai ví trên cùng một máy.
+  test.describe.configure({ mode: "default", timeout: 180_000 });
 
   test("a fresh wallet is told nothing is there — not that it holds zero", async ({ page }) => {
     // Persona 1 của exit gate. Ví ngẫu nhiên chưa từng gửi ⇒ mọi handle là
