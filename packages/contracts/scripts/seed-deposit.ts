@@ -18,6 +18,11 @@
  *
  * Chạy:  pnpm --filter @payday-pot/contracts seed:sepolia
  *        SEED_AMOUNT=500 pnpm --filter @payday-pot/contracts seed:sepolia
+ *        SEED_ACCOUNT_INDEX=2 pnpm --filter @payday-pot/contracts seed:sepolia
+ *
+ * `SEED_ACCOUNT_INDEX` chọn ví thứ mấy trong mnemonic (mặc định 0). Cần nó cho
+ * exit gate "2 user chỉ reveal được của mình": một pot một-người-tham-gia không
+ * chứng minh được gì về ACL, vì không có gì để KHÔNG đọc được.
  */
 
 import { readFileSync } from "node:fs";
@@ -72,8 +77,14 @@ async function main(): Promise<void> {
   if (!potAddress) throw new Error("Chưa có PayDayPot trong deployments/sepolia.json — deploy trước đã.");
 
   const amount = (process.env["SEED_AMOUNT"] ? BigInt(process.env["SEED_AMOUNT"]) : 1_000n) * M;
-  const [signer] = await ethers.getSigners();
-  if (!signer) throw new Error("Không có signer — MNEMONIC chưa set?");
+  const accountIndex = Number(process.env["SEED_ACCOUNT_INDEX"] ?? 0);
+  const signers = await ethers.getSigners();
+  const signer = signers[accountIndex];
+  if (!signer) {
+    throw new Error(
+      `Không có signer ở index ${accountIndex} (mnemonic cho ${signers.length} ví) — MNEMONIC chưa set, hoặc tăng networks.sepolia.accounts.count.`,
+    );
+  }
   const me = signer.address;
 
   const token = new ethers.Contract(tokenAddress, WRAPPER_ABI, signer);
@@ -83,7 +94,7 @@ async function main(): Promise<void> {
   console.log(`\nseed-deposit → ${usdc(amount)}`);
   console.log(`  pot     ${potAddress}`);
   console.log(`  token   ${tokenAddress}`);
-  console.log(`  signer  ${me}  (${ethers.formatEther(await ethers.provider.getBalance(me))} ETH)\n`);
+  console.log(`  signer  ${me}  index ${accountIndex}  (${ethers.formatEther(await ethers.provider.getBalance(me))} ETH)\n`);
 
   // --- Pre-flight: mọi lý do khiến deposit im lặng không làm gì -------------
   //
@@ -190,7 +201,7 @@ async function main(): Promise<void> {
   if (principal === ZERO_HANDLE) {
     throw new Error("Deposit chạy xong nhưng principal vẫn là zero-handle — clamp về 0? Kiểm tra wallet balance.");
   }
-  console.log(`\nSeeded. Import mnemonic index 0 vào MetaMask để diễn reveal trên /app.\n`);
+  console.log(`\nSeeded. Import mnemonic index ${accountIndex} vào MetaMask để diễn reveal trên /app.\n`);
 }
 
 main().catch((error: unknown) => {

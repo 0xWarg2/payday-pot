@@ -26,6 +26,21 @@ export interface ContractDeployment {
   abiHash: string;
   /** source đã verify trên explorer chưa (bắt buộc `true` cho `rc`) */
   verified: boolean;
+  /**
+   * `verified: true` là một lời khẳng định; đây là chỗ nó chỉ ra bằng chứng.
+   * Exit gate Day 9 đọc là "source verified khớp manifest", nên một boolean
+   * không kèm link kiểm được thì không ai kiểm chéo được — kể cả chính mình
+   * sau này, khi contract đã deploy lại vài lần và không còn nhớ bản nào verify
+   * ở đâu.
+   */
+  verification?: {
+    blockscout?: string;
+    sourcify?: string;
+    etherscan?: string;
+    /** kết quả match Sourcify trả về, ghi nguyên văn (full vs partial khác nhau) */
+    sourcifyMatch?: string;
+    note?: string;
+  };
   /** wrapper token pot bị khoá vào (constructor đọc underlying()/rate() từ đây) */
   token?: `0x${string}`;
   /**
