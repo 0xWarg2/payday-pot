@@ -49,6 +49,20 @@ export interface FheInstance {
     start: number,
     days: number,
   ) => Promise<Record<string, bigint | boolean | string>>;
+  /**
+   * Giải mã một handle đã `makePubliclyDecryptable` — không cần ví, không cần
+   * EIP-712, và quan trọng nhất: trả kèm `decryptionProof` mà contract kiểm
+   * bằng `FHE.checkSignatures`. Đây là mảnh còn thiếu của R1 (resume finalize).
+   *
+   * `abiEncodedClearValues` là `abi.encode` của đúng các clear value theo thứ tự
+   * handle — đã đối chiếu khớp trên Sepolia 02/09. `finalizeUnwrap` tự
+   * `abi.encode(uint64)` lại nên chỉ cần truyền số, không truyền chuỗi đó.
+   */
+  publicDecrypt: (handles: string[]) => Promise<{
+    clearValues: Record<string, bigint | boolean | string>;
+    abiEncodedClearValues: string;
+    decryptionProof: string;
+  }>;
 }
 
 export interface RelayerSDK {

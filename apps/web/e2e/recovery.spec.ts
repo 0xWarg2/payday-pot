@@ -6,15 +6,17 @@
  * happy path, và cả hai đều cần một chain nói dối theo kịch bản — nên RPC ở đây
  * bị chặn có chọn lọc.
  *
- * **Chỉ hai lời gọi bị dàn dựng**: `eth_getTransactionReceipt` của đúng một hash
- * bịa, và `unwrapRequester(id)` của đúng requestId đó. Mọi thứ khác đi thẳng ra
- * Sepolia thật. Một stub toàn phần sẽ biến test này thành test của cái stub.
+ * **Chỉ hai lời gọi bị dàn dựng**: `eth_getLogs` cho đúng topic
+ * `UnwrapRequested` của ví test, và `unwrapRequester(id)` của đúng requestId
+ * trong log đó. Mọi thứ khác — kể cả `eth_blockNumber` quyết định cửa sổ 50k
+ * block — đi thẳng ra Sepolia thật. Một stub toàn phần sẽ biến test này thành
+ * test của cái stub.
  */
 
 import { ethers } from "ethers";
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-import { installWallet } from "./fixtures/wallet";
+import { installWallet, switchChain } from "./fixtures/wallet";
 
 const RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 /** Khớp bằng regex chứ không bằng chuỗi: URL thật có thể mang thêm dấu `/`. */
@@ -45,8 +47,13 @@ interface RpcResult {
   error?: { code: number; message: string };
 }
 
-function receiptFor(receiver: string): Record<string, unknown> {
-  const log = {
+/**
+ * Log `UnwrapRequested` như chain thật trả về. Đây là NGUỒN phát hiện: banner
+ * không đọc localStorage nữa, nên không có gì để seed — kịch bản này đúng bằng
+ * đời thật, kể cả khi unwrap được tạo từ một dApp khác trên một máy khác.
+ */
+function logFor(receiver: string): Record<string, unknown> {
+  return {
     address: CUSDC,
     topics: [UNWRAP_TOPIC, ethers.zeroPadValue(receiver, 32), REQUEST_ID],
     data: AMOUNT_HANDLE,
@@ -56,22 +63,6 @@ function receiptFor(receiver: string): Record<string, unknown> {
     transactionIndex: "0x0",
     logIndex: "0x0",
     removed: false,
-  };
-  return {
-    blockHash: log.blockHash,
-    blockNumber: "0x1",
-    contractAddress: null,
-    cumulativeGasUsed: "0x1",
-    effectiveGasPrice: "0x1",
-    from: receiver,
-    gasUsed: "0x1",
-    logs: [log],
-    logsBloom: `0x${"00".repeat(256)}`,
-    status: "0x1",
-    to: CUSDC,
-    transactionHash: UNWRAP_HASH,
-    transactionIndex: "0x0",
-    type: "0x2",
   };
 }
 
@@ -135,8 +126,15 @@ async function stubUnwrap(page: Page, receiver: string, state: { settled: boolea
 }
 
 function stubAnswer(call: RpcCall, receiver: string, state: { settled: boolean }): RpcResult | null {
-  if (call.method === "eth_getTransactionReceipt" && call.params[0] === UNWRAP_HASH) {
-    return { jsonrpc: "2.0", id: call.id, result: receiptFor(receiver) };
+  if (call.method === "eth_getLogs") {
+    const filter = call.params[0] as { address?: string; topics?: (string | null)[] };
+    if (filter.address?.toLowerCase() === CUSDC.toLowerCase() && filter.topics?.[0] === UNWRAP_TOPIC) {
+      // Log của một request ĐÃ finalize vẫn nằm trên chain mãi mãi, nên log
+      // luôn có mặt ở cả hai nhánh `settled` — chỉ `unwrapRequester` đổi câu
+      // trả lời. Trả log ngay cả khi đã settled chính là cách test bắt được lỗi
+      // "coi log là bằng chứng còn treo".
+      return { jsonrpc: "2.0", id: call.id, result: [logFor(receiver)] };
+    }
   }
   if (call.method === "eth_call") {
     const tx = call.params[0] as { to?: string; data?: string };
@@ -148,19 +146,6 @@ function stubAnswer(call: RpcCall, receiver: string, state: { settled: boolean }
     }
   }
   return null;
-}
-
-/** Ghi một tx record như thể tab trước đã gửi `unwrap` rồi bị đóng. */
-async function seedUnwrapRecord(page: Page): Promise<void> {
-  await page.addInitScript(
-    ([key, hash]) => {
-      window.localStorage.setItem(
-        key as string,
-        JSON.stringify([{ chainId: 11155111, action: "unwrap", txHash: hash, createdAt: Date.now() }]),
-      );
-    },
-    ["pdp.tx.v1", UNWRAP_HASH],
-  );
 }
 
 /* ------------------------------------------------------------------ *
@@ -176,7 +161,6 @@ test.describe("an unwrap left half-done (R1)", () => {
     const wallet = await installWallet(page);
     const state = { settled: false };
     await stubUnwrap(page, wallet.address, state);
-    await seedUnwrapRecord(page);
 
     await page.goto("/app");
 
@@ -189,7 +173,11 @@ test.describe("an unwrap left half-done (R1)", () => {
     await expect(banner).toContainText(/has not settled/i);
     await expect(banner).toContainText(/nothing is lost/i);
 
-    // Không có ngõ cụt: ít nhất một đường đi tiếp, và một đường tự xác nhận.
+    // Không có ngõ cụt: một đường TỰ LÀM XONG, một đường đọc, một đường tự
+    // xác nhận. Nút hoàn tất là nút thật — `finalizeUnwrap(id, clear, proof)`
+    // đã chạy trên Sepolia 02/09, tham số thứ ba là `decryptionProof` do
+    // `publicDecrypt` trả về (COMPATIBILITY_NOTES quirk #44).
+    await expect(banner.getByTestId("unwrap-finalize")).toBeEnabled({ timeout: 30_000 });
     await expect(banner.getByRole("link", { name: /what to do/i })).toBeVisible();
     await expect(banner.getByTestId("unwrap-recheck")).toBeVisible();
     // Và một link ra explorer để tự kiểm chứng bằng nguồn khác app này.
@@ -203,7 +191,6 @@ test.describe("an unwrap left half-done (R1)", () => {
     const wallet = await installWallet(page);
     const state = { settled: false };
     await stubUnwrap(page, wallet.address, state);
-    await seedUnwrapRecord(page);
 
     await page.goto("/app");
     const banner = page.getByTestId("pending-unwrap");
@@ -228,10 +215,28 @@ test.describe("an unwrap left half-done (R1)", () => {
     await expect(page.getByText(/went wrong|failed/i)).toHaveCount(0);
   });
 
+  test("the finish button says why it is off instead of going nowhere", async ({ page }) => {
+    const wallet = await installWallet(page);
+    await stubUnwrap(page, wallet.address, { settled: false });
+
+    await page.goto("/app");
+    const banner = page.getByTestId("pending-unwrap");
+    await banner.waitFor({ state: "visible", timeout: 60_000 });
+
+    // Phát hiện đi qua RPC Sepolia cố định, nên banner vẫn hiện khi ví đứng ở
+    // mạng khác — đúng ý: người dùng phải BIẾT có tiền treo trước khi biết cần
+    // đổi mạng. Nhưng nút gửi thì phải khoá, và khoá kèm lý do đọc được (R8).
+    await switchChain(page, "0x1");
+    const finish = banner.getByTestId("unwrap-finalize");
+    await expect(finish).toBeDisabled({ timeout: 30_000 });
+    await expect(finish).toHaveAttribute("title", /sepolia/i);
+    // Đường tự xác nhận vẫn sống — nó chỉ đọc chain, không cần ví.
+    await expect(banner.getByTestId("unwrap-recheck")).toBeEnabled({ timeout: 30_000 });
+  });
+
   test("a confidential balance still refuses to render as zero while this is open", async ({ page }) => {
     const wallet = await installWallet(page);
     await stubUnwrap(page, wallet.address, { settled: false });
-    await seedUnwrapRecord(page);
 
     await page.goto("/app");
     await page.getByTestId("pending-unwrap").waitFor({ state: "visible", timeout: 60_000 });

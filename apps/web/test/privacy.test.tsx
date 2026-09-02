@@ -238,7 +238,7 @@ describe("storage-allowlist-only", () => {
     expect(() =>
       recordTx({
         chainId: 11155111,
-        action: "unwrap",
+        action: "finalize-unwrap",
         txHash: A_HASH,
         createdAt: 1,
         unwrapRequestId: `0x${"f".repeat(64)}`,

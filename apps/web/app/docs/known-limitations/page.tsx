@@ -37,9 +37,11 @@ const SECTIONS = [
     id: "unwrap",
     title: "Unwrapping happens in two steps and can stall",
     body: [
-      "Turning the confidential token back into plain test USDC is a request followed by a settlement. The request burns your confidential balance and asks the decryption oracle for the amount; the oracle then calls the token back to release the USDC.",
-      "If the oracle is slow or unavailable, the request sits open. Your funds are not lost — they are held by the token contract against a request that only your receiving address can be paid from — but they will not appear in your wallet until the second step lands.",
-      "This build detects that state and tells you about it. It cannot finish the step for you: settling it requires a signature set produced by the decryption oracle's key holders, which this app has no way to produce. If a request stays open, check back later; it settles when the oracle catches up.",
+      "Turning the confidential token back into plain test USDC is a request followed by a settlement. The request burns your confidential balance and marks that one amount publicly decryptable; the settlement proves the decrypted amount back to the token contract, which then releases the USDC.",
+      "If the tab closes or the network drops in between, the request sits open. Your funds are not lost — they are held by the token contract against a request that can only ever pay your receiving address — but they will not appear in your wallet until the second step lands.",
+      "This build detects that state by reading the chain for your address, so it finds a stalled request even if it was started somewhere else entirely, and offers to finish it. Settling is permissionless: any wallet can complete it for you, which is also why someone else finishing it looks like success here rather than an error.",
+      "Two edges worth knowing. The lookback is about a week of blocks — the widest window a single public RPC query allows — so a request older than that is real but invisible to this screen; the token contract still honours it. And because a request settles against whatever balance was actually burnt, a request made for more than you held settles for zero: the token caps instead of failing, and this screen says so in plain words rather than showing a tick.",
+      "This app deliberately has no unwrap button of its own. Withdrawing from the pool returns confidential USDC, which stays confidential; converting it back to plain USDC is a token-level operation you do wherever you wrapped it. What this screen owes you is the way out when that operation stalls — not a second place to start it.",
     ],
   },
   {

@@ -10,7 +10,6 @@ const ACTION_LABELS: Record<TxAction, string> = {
   approve: "Approved the wrapper",
   wrap: "Shielded USDC",
   deposit: "Deposited",
-  unwrap: "Requested an unwrap",
   "finalize-unwrap": "Finished an unwrap",
   claim: "Claimed",
   withdraw: "Withdrew",

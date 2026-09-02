@@ -13,8 +13,11 @@ import { STORAGE_KEYS, readJson, registerValidator, writeJson } from "../storage
  *    được vị thế, và localStorage sống lâu hơn tab.
  *  - KHÔNG `unwrapRequestId`. Trên bản cUSDC live, requestId CHÍNH LÀ ciphertext
  *    handle của số đã burn (COMPATIBILITY_NOTES quirk #23). Ghi nó xuống đĩa là
- *    ghi một handle nhạy cảm xuống đĩa. Muốn resume một unwrap thì parse lại
- *    receipt từ `txHash` — chậm hơn vài trăm ms, đổi lại không có gì để rò.
+ *    ghi một handle nhạy cảm xuống đĩa. Resume một unwrap thì quét log
+ *    `UnwrapRequested` theo địa chỉ — xem `pending-unwrap.ts`.
+ *  - KHÔNG có kind `"unwrap"`. App không tự unwrap; một unwrap treo hầu như luôn
+ *    đến từ ngoài app, nên nó được phát hiện từ chain chứ không từ đĩa. Một kind
+ *    không ai ghi là một nhánh UI không ai chạy.
  *  - `status` cũng KHÔNG persist: nó suy ra được từ receipt, nên giữ trong bộ
  *    nhớ tab và tính lại sau reload.
  */
@@ -23,7 +26,6 @@ export type TxAction =
   | "approve"
   | "wrap"
   | "deposit"
-  | "unwrap"
   | "finalize-unwrap"
   | "claim"
   | "withdraw"
@@ -56,7 +58,6 @@ const TX_ACTIONS: readonly string[] = [
   "approve",
   "wrap",
   "deposit",
-  "unwrap",
   "finalize-unwrap",
   "claim",
   "withdraw",

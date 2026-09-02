@@ -172,19 +172,16 @@ test.describe("PayDay Pot — Day 8 EOD demo", () => {
       }
       const calls = (Array.isArray(body) ? body : [body]) as { id: unknown; method: string; params: unknown[] }[];
       const answers = calls.map((call) => {
-        if (call.method === "eth_getTransactionReceipt" && call.params[0] === HASH) {
-          return {
-            jsonrpc: "2.0",
-            id: call.id,
-            result: {
-              blockHash: `0x${"0b".repeat(32)}`,
-              blockNumber: "0x1",
-              contractAddress: null,
-              cumulativeGasUsed: "0x1",
-              effectiveGasPrice: "0x1",
-              from: wallet.address,
-              gasUsed: "0x1",
-              logs: [
+        if (call.method === "eth_getLogs") {
+          const filter = call.params[0] as { address?: string; topics?: (string | null)[] } | undefined;
+          if (
+            filter?.address?.toLowerCase() === CUSDC.toLowerCase() &&
+            filter.topics?.[0] === ethers.id("UnwrapRequested(address,bytes32,bytes32)")
+          ) {
+            return {
+              jsonrpc: "2.0",
+              id: call.id,
+              result: [
                 {
                   address: CUSDC,
                   topics: [
@@ -201,14 +198,8 @@ test.describe("PayDay Pot — Day 8 EOD demo", () => {
                   removed: false,
                 },
               ],
-              logsBloom: `0x${"00".repeat(256)}`,
-              status: "0x1",
-              to: CUSDC,
-              transactionHash: HASH,
-              transactionIndex: "0x0",
-              type: "0x2",
-            },
-          };
+            };
+          }
         }
         const tx = call.params[0] as { to?: string; data?: string } | undefined;
         if (
@@ -246,16 +237,6 @@ test.describe("PayDay Pot — Day 8 EOD demo", () => {
       });
     });
 
-    await page.addInitScript(
-      ([key, hash]) => {
-        window.localStorage.setItem(
-          key as string,
-          JSON.stringify([{ chainId: 11155111, action: "unwrap", txHash: hash, createdAt: Date.now() }]),
-        );
-      },
-      ["pdp.tx.v1", HASH],
-    );
-
     await page.goto("/app");
     await say.beat(11, "The failure that sank last season's winners: an unwrap that stopped halfway.");
     const banner = page.getByTestId("pending-unwrap");
@@ -266,9 +247,11 @@ test.describe("PayDay Pot — Day 8 EOD demo", () => {
     await say.no("It does NOT print a zero balance. A zero here is how a user concludes the money is gone.");
 
     await say.beat(12, "Three ways out, and none of them is a dead end.");
+    await expect(banner.getByTestId("unwrap-finalize")).toBeEnabled({ timeout: 30_000 });
     await expect(banner.getByRole("link", { name: /view the request/i })).toBeVisible();
     await expect(banner.getByRole("link", { name: /what to do/i })).toBeVisible();
-    await say.info("Verify it on Etherscan · read the limitation · or ask the chain again.");
+    await say.info("Finish it here in one click · verify it on Etherscan · or ask the chain again.");
+    await say.info("Detection reads the chain, not this browser — so it works on a machine that never saw step one.");
 
     await say.beat(13, "Finalizing is permissionless too — so someone else finishing it must look like success.");
     const recheck = banner.getByTestId("unwrap-recheck");
@@ -277,9 +260,9 @@ test.describe("PayDay Pot — Day 8 EOD demo", () => {
     await recheck.click();
     await expect(page.getByTestId("pending-unwrap")).toHaveCount(0, { timeout: 30_000 });
     await say.ok("`unwrapRequester` came back empty — the request is done. The banner closes. No red error.");
-    await say.info("Live probe today: `finalizeUnwrap(bytes32,uint64,bytes)` exists; an unknown id reverts");
-    await say.info("with InvalidUnwrapRequest — 0xd1630f8e — which the taxonomy already reads as 'already finished'.");
-    await say.no("Still owed: the one-click Resume button. It needs a real stuck request on a funded wallet first.");
+    await say.info("The finish button calls `finalizeUnwrap(id, amount, decryptionProof)` — run for real on Sepolia,");
+    await say.info("with the proof from `publicDecrypt`. The wrapper marks that handle publicly decryptable itself.");
+    await say.no("And it reports the amount that actually moved — including zero, which is a real outcome here.");
     await say.finish();
   });
 

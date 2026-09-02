@@ -319,3 +319,50 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     mất nguyên nhân thật. Và vì run fail thì `build-mp4.mjs` không chạy, trong
     khi `demo-results/` đã bị xoá sạch từ đầu run → **mất luôn reel cũ ở đó**.
     Reel nộp nằm ở `apps/web/demo-reels/` chính vì vậy (xem #40).
+
+## 12. Quirks đóng R1 + relayer ngoài browser (Day 9 — 02/09/2026)
+
+44. **Tham số thứ ba của `finalizeUnwrap` là `decryptionProof` của
+    `publicDecrypt()` — hết ẩn số (#37 đóng).** Xác nhận hai đường độc lập.
+    (a) Source OZ `@openzeppelin/confidential-contracts@0.5.3`
+    `token/ERC7984/extensions/ERC7984ERC20Wrapper.sol`: tham số tên đúng là
+    `decryptionProof`, và contract **tự** dựng `cleartexts = abi.encode(uint64)`
+    rồi `FHE.checkSignatures(handles, cleartexts, decryptionProof)` — nên chỉ
+    truyền **số** cho tham số `uint64`, không truyền `abiEncodedClearValues`.
+    (b) Chạy thật trên Sepolia 02/09: `unwrap` → `publicDecrypt([requestId])` →
+    `finalizeUnwrap(requestId, clearValue, decryptionProof)` mined thành công.
+    Đối chiếu thêm: `abi.encode(["uint64"], [clearValue])` **khớp từng byte** với
+    `abiEncodedClearValues` mà relayer trả về.
+
+45. **`unwrap` KHÔNG cần ACL để decrypt — wrapper tự
+    `FHE.makePubliclyDecryptable` lên handle số đã burn.** Đó là lý do bước hai
+    permissionless được (ví nào cũng finalize hộ được) và lý do không cần chữ ký
+    EIP-712 thứ hai. Hệ quả cho privacy: **exit là chỗ duy nhất một số tiền
+    thôi confidential** — nói thẳng trong UI, đừng để judge tự phát hiện.
+    Và `requestId` **chính là** handle đó (#23) nên nó vẫn không có việc gì phải
+    nằm trong localStorage/URL/analytics.
+
+46. **`unwrap` vượt số dư KHÔNG revert — nó clamp về encrypted zero rồi
+    `finalizeUnwrap` chuyển 0.** Gặp thật lúc probe: unwrap 1 USDC từ ví có 0
+    cUSDC tạo request bình thường, finalize thành công, chuyển 0. Cùng ngữ nghĩa
+    clamp với deposit (non-negotiable #2) nhưng ở biên unwrap. Hệ quả UI: nút
+    hoàn tất **phải báo số thật**, kể cả 0 — một dấu tích xanh không kèm số ở đây
+    là app nói dối về một giao dịch thành công.
+
+47. **`userDecrypt` của relayer-sdk KHÔNG chạy được ngoài browser
+    (`node-tkms@0.12.8`).** Mọi lời gọi từ Node chết trong WASM:
+    `core/service/src/client/user_decryption_wasm.rs:412:44 … Gao decoding
+    failure … n=13, deg=4, #shares=9`. Đã loại trừ mọi giả thuyết phía server:
+    handle mới tinh và handle 6 ngày tuổi, một handle và nhiều handle, một
+    contract và nhiều contract — đều chết như nhau; **`publicDecrypt` trên cùng
+    relayer đó thành công** và proof của nó được contract nhận (#44), nên KMS
+    khoẻ. Kết luận: lỗi ở binding Node của tkms. Hệ quả: **mọi verify liên quan
+    tới reveal phải chạy trong browser** (Playwright), không có đường script hoá.
+    `publicDecrypt` thì chạy tốt ở Node — đủ cho script vận hành R1.
+
+48. **`eth_getLogs` ở publicnode chặn đúng 50.000 block; Infura chặn thấp hơn.**
+    Đo thật 02/09: 100k → `exceed maximum block range: 50000`, 50k → OK. ≈6,9
+    ngày Sepolia trong một request. Vì vậy `UNWRAP_LOOKBACK_BLOCKS = 50_000` là
+    con số đo được chứ không phải chọn cho tròn, và giới hạn "unwrap treo cũ hơn
+    ~7 ngày thì banner không thấy" phải ghi ở KNOWN_LIMITATIONS thay vì phân
+    trang ngược vô hạn lúc mount.
