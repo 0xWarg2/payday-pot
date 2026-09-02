@@ -366,3 +366,65 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     con số đo được chứ không phải chọn cho tròn, và giới hạn "unwrap treo cũ hơn
     ~7 ngày thì banner không thấy" phải ghi ở KNOWN_LIMITATIONS thay vì phân
     trang ngược vô hạn lúc mount.
+
+---
+
+## 13. Quirks RC lên Sepolia (Day 9 — 02/09/2026)
+
+49. **`@nomicfoundation/hardhat-verify@2.1.3` dùng shape config v2, KHÔNG phải
+    của Hardhat 3.** Context7 trả docs Hardhat 3 (`defineConfig`, khối
+    `verify: { etherscan: … }`) cho một repo Hardhat 2.29.0 — sai hoàn toàn và
+    trông rất giống đúng. Nguồn thật là `types.d.ts` +
+    `internal/type-extensions.d.ts` của chính bản đã cài: ba key **top-level**
+    `etherscan`, `blockscout`, `sourcify`. Bài học chung: version pin nào mà
+    Context7 không phân biệt được major thì đọc `.d.ts` trong `node_modules`,
+    nó không bao giờ nói về một version khác.
+
+50. **Blockscout Sepolia không cần API key, và nó tự propagate sang Sourcify.**
+    `internal/blockscout.chain-config.js` đã có sẵn `eth-sepolia`
+    (`https://eth-sepolia.blockscout.com/api`). Đây là đường verify duy nhất
+    không đòi tạo account. Kết quả đo trên RC: Sourcify v2 trả
+    `creationMatch=match` + `runtimeMatch=match` — **full match, kể cả với
+    `bytecodeHash: "none"`** (dự đoán ban đầu của tôi là partial; sai). Kiểm:
+    `curl https://sourcify.dev/server/v2/contract/11155111/<address>`
+
+51. **Provider Sourcify của plugin là DEAD CODE — nó vẫn gọi API v1.** Client
+    trong 2.1.3 gọi `${apiUrl}/check-all-by-addresses`, endpoint Sourcify đã bỏ;
+    giờ trả HTML 404 nên lỗi hiện ra là `Unexpected token '<', "<!DOCTYPE "…`,
+    tức là trông như lỗi mạng chứ không như "endpoint không còn tồn tại". Vẫn để
+    `enabled: true` có chủ ý: thà lệnh verify nói nó không chạy được, hơn là im
+    lặng bỏ qua một provider mà mình tưởng đang chạy.
+
+52. **Task `verify` chạy MỌI provider đang bật, và một provider bật mà thiếu key
+    sẽ fail CẢ lệnh** — kéo theo hai provider đang chạy được cũng không báo cáo
+    gì. Vì vậy `etherscan.enabled: ETHERSCAN_API_KEY !== ""` là bắt buộc chứ
+    không phải cho gọn. Kèm theo: **không gọi được subtask từ CLI** —
+    `npx hardhat verify:blockscout` chết bằng `HHE3`/`HH312`; chỉ chạy task cha
+    `verify`, còn chọn provider thì bằng `enabled`.
+
+53. **pnpm 11 XOÁ `onlyBuiltDependencies`, thay bằng `allowBuilds` (map → bool).**
+    Cùng lúc xoá `neverBuiltDependencies`, `ignoredBuiltDependencies`,
+    `onlyBuiltDependenciesFile`, `ignoreDepScripts`. Nguy hiểm ở chỗ **im lặng
+    trên máy dev**: `pnpm install` gặp `node_modules` dựng sẵn thì in "Already up
+    to date" và không đánh giá build script lần nào, nên một `allowBuilds` sai
+    kiểu (giá trị là chuỗi thay vì boolean) sống được 8 ngày. Cold install đầu
+    tiên — trên Vercel — fail cả lệnh bằng `ERR_PNPM_IGNORED_BUILDS`.
+    Cách reproduce cold install trong 5 giây, không phá `node_modules` đang chạy:
+    copy đúng 6 file manifest (root `package.json`, `pnpm-workspace.yaml`,
+    `pnpm-lock.yaml`, và `package.json` của 4 workspace) sang thư mục trống rồi
+    `pnpm install --frozen-lockfile`.
+
+54. **Relayer không phục vụ hai `userDecrypt` song song của CÙNG một ví.** Với
+    `--workers=2`, hai test reveal cạnh nhau treo ở `data-state="hidden"` tới hết
+    120s trong khi ba test reveal chạy lẻ đều xanh trong 11–27s. Triệu chứng
+    trùng khít với một reveal hỏng thật, nên nó đọc như bug sản phẩm. Fix ở tầng
+    test: `test.describe.configure({ mode: "default" })` cho khối reveal (tuần
+    tự trong một worker, ghi đè `fullyParallel`). **Không** dùng `serial` — nó
+    biến một test đỏ thành ba test skip.
+
+55. **Vercel bật `ssoProtection` cho project mới, phạm vi `all_except_custom_domains`.**
+    Nghĩa là mọi URL `*.vercel.app` — kể cả production alias — nằm sau màn hình
+    đăng nhập Vercel. Judge mở link sẽ thấy login, không thấy sản phẩm, và không
+    có gì trong build log nói ra điều đó. Phải tắt tường minh và kiểm bằng một
+    request không cookie (`curl -I` → 200, không phải 401/307 sang
+    `vercel.com/sso`).
