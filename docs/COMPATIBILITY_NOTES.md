@@ -15,7 +15,7 @@ Nguồn sự thật về version pins, quirks, và Decision D2. Mọi ngày sau 
 | `encrypted-types` | **0.0.4** | |
 | Solidity | **0.8.27**, optimizer 800, evmVersion **cancun** | |
 | Node / pnpm | v24.5.0 / 11.22.0 (corepack) | pnpm 11: `onlyBuiltDependencies` phải nằm trong `pnpm-workspace.yaml` (keccak, secp256k1, sharp) |
-| next / react / ethers | 15.5.6 / 19.2.4 / 6.15.0 | |
+| next / react / ethers | 15.5.25 / 19.2.4 / 6.15.0 | 15.5.6 → 15.5.25 ở Day 9: Vercel TỪ CHỐI serve build có Next dễ bị CVE-2025-66478 (quirk 56) |
 
 ## 2. Decision D2 — Đường deposit/withdraw (CHỐT)
 
@@ -428,3 +428,25 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     có gì trong build log nói ra điều đó. Phải tắt tường minh và kiểm bằng một
     request không cookie (`curl -I` → 200, không phải 401/307 sang
     `vercel.com/sso`).
+
+56. **Vercel TỪ CHỐI serve deployment có Next.js trong danh sách CVE của họ.**
+    Không phải cảnh báo — `readyState: ERROR`, `errorCode:
+    VULNERABLE_NEXTJS_VERSION`, `errorStep: "direct:build"`, link
+    `vercel.link/CVE-2025-66478`. Build log của nó **kết thúc bằng "Build
+    Completed"** rồi "Deploying outputs...", nên đọc log thôi sẽ tưởng là xanh;
+    chỉ `readyState` nói thật. Next 15.5.6 (pin từ Day 1) nằm trong danh sách đó
+    → **buộc phải phá pin**: 15.5.6 → **15.5.25** (dist-tag `backport` = bản
+    15.5.x cuối). `pnpm audit` sau khi bump: 0 advisory cho `next`. Đây là ngoại
+    lệ có lý do cho hard rule "version pin", và lý do là chủ nhà không cho ở.
+
+57. **Một deployment fail vẫn trả HTTP 200.** Vercel serve trang "Deployment has
+    failed" của chính nó ở mọi path, kèm `x-matched-path: /[[...slug]]` và CSP
+    của `instant-preview-site.vercel.app`. Nên `curl -o /dev/null -w %{http_code}`
+    → `200` **không chứng minh gì cả**; suýt ghi vào scorecard là "public URL
+    sống". Cách kiểm đúng, và là cách duy nhất tự phát hiện được:
+    - `readyState` phải là `READY` (không phải `ERROR`), và
+    - body phải chứa nội dung của mình (`<title>` thật), và
+    - **`cross-origin-opener-policy`/`cross-origin-embedder-policy` phải có mặt**
+      — trang lỗi của Vercel không có chúng, mà relayer-sdk thì không chạy được
+      nếu thiếu. Chính chỗ thiếu hai header này làm lộ ra là trang không phải
+      của mình.
