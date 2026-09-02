@@ -185,3 +185,33 @@ sẽ fail to tiếng thay vì gửi call sai shape.
 Gao decoding (quirk #47). `publicDecrypt` thì chạy. Nghĩa là mọi kiểm chứng liên
 quan tới reveal phải làm trong browser (Playwright hoặc bằng tay), không có
 đường script hoá từ terminal. Đừng mất thời gian thử lại.
+
+## 11. Kiểm public URL — đừng tin status code
+
+```bash
+scripts/check-deploy.sh https://<host>
+```
+
+Một deployment fail trên Vercel **vẫn trả HTTP 200**: nó serve trang "Deployment
+has failed" của chính nó ở mọi path. Nên `curl -w %{http_code}` → 200 không
+chứng minh gì cả. Script kiểm ba điều kiện trên 5 route:
+
+1. status 200,
+2. `<title>` là của mình (trang lỗi Vercel có title khác),
+3. **có `Cross-Origin-Opener-Policy` + `Cross-Origin-Embedder-Policy`** —
+   relayer-sdk cần cross-origin isolation để nạp WASM. Thiếu hai header này thì
+   trang mở được nhưng reveal không bao giờ chạy, và trang lỗi của Vercel cũng
+   không có chúng → đây là điều kiện bắt được cả hai lỗi cùng lúc.
+
+Ba thứ đã cắn ở Day 9, theo đúng thứ tự gặp:
+
+| Triệu chứng | Nguyên nhân | Sửa |
+|---|---|---|
+| `ERR_PNPM_IGNORED_BUILDS` | pnpm 11 xoá `onlyBuiltDependencies`, `allowBuilds` thay chỗ | `pnpm-workspace.yaml` → `allowBuilds` (quirk 53) |
+| `Can't resolve '@payday-pot/sdk'` | Root Directory `apps/web` → `pnpm run build` không dựng workspace dep | `apps/web/vercel.json` → `pnpm --filter @payday-pot/web... build` |
+| `VULNERABLE_NEXTJS_VERSION` | Vercel từ chối serve Next có CVE; build log vẫn in "Build Completed" | Next 15.5.6 → 15.5.25 (quirk 56) |
+
+Deployment protection: project mới bật `ssoProtection` phạm vi
+`all_except_custom_domains`, tức mọi `*.vercel.app` nằm sau login Vercel — judge
+mở link sẽ thấy màn hình đăng nhập và **không có gì trong build log nói ra điều
+đó**. Phải tắt tường minh rồi kiểm lại bằng script trên (nó chạy không cookie).
