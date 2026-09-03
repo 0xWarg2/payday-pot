@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { toPotError, type PotError } from "@payday-pot/sdk";
 
 import { ClaimReviewDialog } from "./ClaimReviewDialog";
@@ -47,46 +47,81 @@ export function DrawRoom({ epochId }: { epochId: bigint | null }) {
 
   if (load.kind === "loading") {
     return (
-      <p className="text-draw-fg-muted text-[14px]" data-testid="draw-loading">
-        Reading this round from the chain…
-      </p>
+      <RoomTitle>
+        <p className="text-draw-fg-muted text-[14px]" data-testid="draw-loading">
+          Reading this round from the chain…
+        </p>
+      </RoomTitle>
     );
   }
 
   if (load.kind === "not-deployed") {
     return (
-      <DrawNotice title="No pool on this network yet">
-        This build has no pool deployed, so there is no round to watch. Everything else on the site still works.
-      </DrawNotice>
+      <RoomTitle>
+        <DrawNotice title="No pool on this network yet">
+          This build has no pool deployed, so there is no round to watch. Everything else on the site still works.
+        </DrawNotice>
+      </RoomTitle>
     );
   }
 
   if (load.kind === "mismatch") {
     return (
-      <DrawNotice tone="warning" title="This page and the pool disagree">
-        The site was built against a different version of the pool than the one on chain, so its numbers are not
-        trustworthy enough to show.
-      </DrawNotice>
+      <RoomTitle>
+        <DrawNotice tone="warning" title="This page and the pool disagree">
+          The site was built against a different version of the pool than the one on chain, so its numbers are not
+          trustworthy enough to show.
+        </DrawNotice>
+      </RoomTitle>
     );
   }
 
   if (load.kind === "not-found") {
     return (
-      <DrawNotice tone="warning" title={`There is no round ${load.requested.toString()}`}>
-        Rounds run from 1 to {load.currentEpochId.toString()}.{" "}
-        <Link href="/app/draws/current" className="text-draw-fg underline underline-offset-4">
-          Go to the current round
-        </Link>
-        .
-      </DrawNotice>
+      <RoomTitle>
+        <DrawNotice tone="warning" title={`There is no round ${load.requested.toString()}`}>
+          Rounds run from 1 to {load.currentEpochId.toString()}.{" "}
+          <Link href="/app/draws/current" className="text-draw-fg underline underline-offset-4">
+            Go to the current round
+          </Link>
+          .
+        </DrawNotice>
+      </RoomTitle>
     );
   }
 
   if (load.kind === "error") {
-    return <ErrorPanel surface="draw" error={load.error} handlers={{ retry: retryRead }} />;
+    return (
+      <RoomTitle>
+        <ErrorPanel surface="draw" error={load.error} handlers={{ retry: retryRead }} />
+      </RoomTitle>
+    );
   }
 
   return <Room load={load} now={nowSeconds} />;
+}
+
+/**
+ * Tiêu đề cấp 1 luôn có, kể cả khi chain chưa trả lời.
+ *
+ * `Round N` là tên đúng của phòng này, nhưng N đọc từ chain — nên trước khi
+ * đọc xong, và trong mọi trạng thái đọc không được, trang NÀY KHÔNG CÓ `<h1>` nào
+ * cả. Một trang không có heading cấp 1 là trang mà screen reader không nói được
+ * nó là trang gì, và triệu chứng chỉ hiện ra khi RPC chậm hoặc chết — tức là đúng
+ * lúc người dùng cần biết mình đang ở đâu nhất. E2E bắt được nó đúng một lần trên
+ * 79 test, và trông như flaky.
+ *
+ * Không điền số vòng vào đây: một `Round 0` bịa ra tệ hơn là không có số. Và
+ * đúng một `<h1>` trong mọi trạng thái: `Room` tự render tiêu đề `Round N` của nó,
+ * nên hai nhánh này loại trừ nhau.
+ */
+function RoomTitle({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-[26px] font-semibold tracking-tight sm:text-[30px]">Draw room</h1>
+      {children}
+    </div>
+  );
 }
 
 function Room({

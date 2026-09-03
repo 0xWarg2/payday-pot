@@ -142,7 +142,65 @@ Vòng draw: xem §8 (điền sau khi chạy).
 
 ## 8. Vòng draw RC — tx hashes
 
-_Điền từ output `scripts/keeper.ts`._
+Epoch #1 của RC `0x792c77D9…a035`, chạy 03/09 bằng
+`npx hardhat run scripts/keeper.ts --network sepolia`, signer index 0
+(`0x83b22dcd…6877`), batch 8, 2 participant. Bốn bước, bốn tx, không bước nào
+bị bỏ và không bước nào chạy hai lần:
+
+| Bước | Gas | Tx |
+|---|---|---|
+| `beginSnapshot()` | 132,337 | [`0x862d3e44…f65f`](https://eth-sepolia.blockscout.com/tx/0x862d3e44c5e8ff1289889bc78a4d4b61ea504290f33ac55ecf0296782b8df65f) |
+| `snapshotBatch()` | 390,638 | [`0x49de0eab…270b`](https://eth-sepolia.blockscout.com/tx/0x49de0eab6c4f2f14f72390a7ba4ff389400128b1cf52242e1c8f79e93a63270b) |
+| `requestRandom()` | 458,328 | [`0x52915a61…b23d1`](https://eth-sepolia.blockscout.com/tx/0x52915a613fa4d9ce6e35c9d891ed09d0ce95a0b990118f742de4e3a6586b23d1) |
+| `selectBatch()` → **Settled** | 697,726 | [`0xe30b3f8c…c698`](https://eth-sepolia.blockscout.com/tx/0xe30b3f8c92dc1d0b510109fdddfa4568074deaea8123ed48b6c692026cc6d698) |
+
+Trạng thái cuối: `epoch #1 · Settled · prize 50.0 USDC · 2 people · snapshot 2/2
+· draw 2/2 · seed locked`. Keeper **không** tự mở epoch mới — nó dừng ở Settled
+và nói ra `KEEPER_NEW_EPOCH=1`, vì mở một epoch mới là một quyết định chứ không
+phải một bước tiếp theo.
+
+### Epoch #2 — chạy bằng **hai ví khác nhau**, cắt ngang giữa lúc scan
+
+Epoch #1 chứng minh vòng draw chạy. Epoch #2 chứng minh câu mạnh hơn, và là
+dòng exit gate của Day 9: *ví khác tiếp tục được draw*. Cách chạy là cố tình
+dừng giữa chừng — `KEEPER_BATCH=1 KEEPER_ONCE=1` để cursor nằm ở **1/2**, tức
+đứt ngay giữa lượt quét chứ không phải ở ranh giới đẹp giữa hai bước — rồi đổi
+ví và chạy tiếp mà không truyền lại bất cứ state nào:
+
+| Bước | Ví | Gas | Tx |
+|---|---|---|---|
+| `beginSnapshot()` | `0x83b22dcd…6877` | 132,341 | [`0x4c718d0b…ffcf`](https://eth-sepolia.blockscout.com/tx/0x4c718d0bbbecb3e294704a54b2d58cbf0fb70638e18e50d2162514d49945ffcf) |
+| `snapshotBatch()` → cursor 1/2 | `0x83b22dcd…6877` | 220,280 | [`0xd63a4c4f…e830`](https://eth-sepolia.blockscout.com/tx/0xd63a4c4fdfc3daaa17587d80ff6fcc76ee7c2e540f13b2127ef5098a1060e830) |
+| `snapshotBatch()` → 2/2 | **`0xd83064F0…829a`** | 224,542 | [`0x05ad3b29…bef8`](https://eth-sepolia.blockscout.com/tx/0x05ad3b29651df2db5166bb24aacd9fdc0b6a523500554f7d5cfb8e5cc331bef8) |
+| `requestRandom()` | **`0xd83064F0…829a`** | 450,308 | [`0x50721278…7b6e`](https://eth-sepolia.blockscout.com/tx/0x5072127823d4c27e8794d7b95d4d712e6684451ad08512ced585012541267b6e) |
+| `selectBatch()` → **Settled** | **`0xd83064F0…829a`** | 616,832 | [`0xb2b22f93…3678`](https://eth-sepolia.blockscout.com/tx/0xb2b22f93d9c07ab1b7465494d362c54bc6c2dd78580305d3b1a1a43e0c913678) |
+
+Ví thứ hai **không phải** keeper, không phải owner, không được cấp quyền gì: nó
+chỉ là một địa chỉ có ETH trả gas. Lệnh chạy y hệt, khác đúng một biến môi
+trường:
+
+```bash
+KEEPER_BATCH=1 KEEPER_ONCE=1 npx hardhat run scripts/keeper.ts --network sepolia
+KEEPER_ACCOUNT_INDEX=2      npx hardhat run scripts/keeper.ts --network sepolia
+```
+
+Ví thứ hai đọc cursor từ chain, thấy 1/2, và đi tiếp từ đó. Không có bước nào
+chạy lại, không participant nào bị quét hai lần, và seed vẫn rút đúng một lần.
+
+Trạng thái cuối: `epoch #2 · Settled · prize 50.0 USDC · 2 people · snapshot 2/2
+· draw 2/2 · seed locked`.
+
+Gas epoch #2 **thấp hơn** epoch #1 ở cùng một bước với cùng một batch size:
+`selectBatch` 616,832 vs 697,726, `requestRandom` 450,308 vs 458,328. Chênh
+lệch khớp với hình dạng của storage đã ấm (epoch #1 là lần đầu ghi vào những
+slot đó), nhưng **chưa trace để khẳng định** — ghi lại ở đây như một quan sát,
+đừng trích nó thành nguyên nhân. Điều cần nhớ khi ước gas: con số của epoch đầu
+tiên là con số xấu nhất, không phải con số điển hình.
+
+Còn `snapshotBatch` thì ngược lại và lý do rõ ràng: epoch #2 tốn tổng 444,822
+cho hai tx một-participant, epoch #1 tốn 390,638 cho một tx hai-participant.
+Chia nhỏ batch để đứt được giữa chừng là có giá — khoảng 54k gas cho một lần
+cắt.
 
 ## 9. Verify source
 
@@ -179,12 +237,29 @@ pnpm manifest:sync && pnpm manifest:check
 module đã generate. Web app assert ABI hash lúc boot, nên frontend lệch contract
 sẽ fail to tiếng thay vì gửi call sai shape.
 
-## 10. Reveal chỉ chạy trong browser
+## 10. Reveal — verify trong browser, chẩn đoán trong Node
 
-`userDecrypt` **không dùng được trong Node** — `node-tkms@0.12.8` fail ở bước
-Gao decoding (quirk #47). `publicDecrypt` thì chạy. Nghĩa là mọi kiểm chứng liên
-quan tới reveal phải làm trong browser (Playwright hoặc bằng tay), không có
-đường script hoá từ terminal. Đừng mất thời gian thử lại.
+Kiểm chứng luồng reveal (chữ ký, TTL, hide, đổi ví) phải làm trong browser:
+Playwright hoặc bằng tay. Đó là nơi sản phẩm chạy.
+
+Nhưng **`userDecrypt` chạy được trong Node** — điều này Day 9 mới biết và nó
+lật lại quirk #47. Script:
+
+```bash
+cd packages/contracts && npx hardhat run scripts/kms-probe.ts --network sepolia
+```
+
+`kms-probe.ts` đọc `principalOf`/`twabAreaOf`/`pendingPrizeOf` của từng
+participant rồi tự ký EIP-712 và gọi thẳng relayer, **không đi qua Next, không
+qua WASM path của browser, không cần COOP/COEP**. Dùng nó khi reveal hỏng trên
+web và cần trả lời đúng một câu: *lỗi của app hay của hạ tầng?* Probe hỏng y
+hệt → hạ tầng. Probe chạy được mà web không → mới là việc của mình.
+
+Kết quả bình thường **không phải** 100%: cùng một thời điểm, có tập handle mở
+được và có tập không (quirk #60). Đừng đọc một lần hỏng là hỏng hẳn, và cũng
+đừng đọc một lần chạy là đã yên.
+
+`publicDecrypt` thì luôn chạy tốt ở Node — đủ cho script vận hành R1.
 
 ## 11. Kiểm public URL — đừng tin status code
 

@@ -75,6 +75,11 @@ export function ErrorPanel({
       // Next tự render một `role="alert"` rỗng (route announcer) trong mọi trang,
       // nên `getByRole("alert")` không định vị được panel này. Test hook riêng.
       data-testid="error-panel"
+      // Code + row ra DOM để test (và người đọc trace) phân biệt được ĐÚNG lỗi
+      // nào đang hiện. Không phải dữ liệu nhạy cảm: đây là định danh trong
+      // taxonomy, không phải số tiền hay địa chỉ (non-negotiable #5).
+      data-code={error.code}
+      data-row={error.row ?? "none"}
       className={`rounded-card flex flex-col gap-3 border p-4 sm:flex-row sm:items-start sm:justify-between ${palette.shell}`}
     >
       <div className="min-w-0">

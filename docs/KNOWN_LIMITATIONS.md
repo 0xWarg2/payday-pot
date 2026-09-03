@@ -232,3 +232,48 @@ ra khỏi pot vẫn kín".
 treo, không cần chữ ký của chủ. Một trade-off, không phải thuần mất mát.
 
 Chi tiết và mitigation: `PRIVACY.md` §2 mục 3.
+
+---
+
+## 12. User decryption trên Sepolia hiện không đáng tin, và không có gì trong repo này sửa được
+
+Reveal là hành động chủ lực của sản phẩm, nên đây là hạn chế thật nhất trong
+danh sách này: **committee KMS của Zama trên Sepolia có lúc trả về bộ share
+không dựng lại được.** Relayer trả `202` rồi `200` với `{"status":"succeeded"}`
+và payload đầy đủ; client dựng lại thì chết:
+
+```
+Gao decoding failure: Allowed at most 0 errors but xgcd factor degree
+indicates 1.. n=13, deg=4, #shares=9, block_shares=9, recovery_errors=0
+```
+
+13 party gửi về 9 share cho polynomial bậc 4 với một share không nhất quán — ở
+tỉ lệ đó Reed–Solomon phát hiện được nhưng không sửa được.
+
+**Vì sao chắc là phía Zama, không phải phía này:** `packages/contracts/scripts/
+kms-probe.ts` chạy trong Node — không Next build, không WASM path của web,
+không COOP/COEP, keypair sinh tại chỗ, ví ký trực tiếp — và thất bại y hệt, kể
+cả 12 lần liên tiếp trong cửa sổ xấu. Số liệu đầy đủ: `COMPATIBILITY_NOTES` #58
+và #60.
+
+**Đã làm được gì:**
+
+- `decryptTargets` tách batch thành từng handle khi cả batch hỏng. Đo được là
+  kết quả phụ thuộc **tập handle** và **dịch chuyển theo thời gian**, nên tách
+  ra cho mỗi giá trị một cơ hội độc lập — và **không tốn chữ ký thứ hai**, vì
+  tập handle không nằm trong payload EIP-712.
+- Mở được một phần thì hiện phần đó; giá trị chưa mở **ở lại trạng thái ẩn**,
+  không bao giờ thành `0` (non-negotiable #8).
+- Không mở được gì thì rơi vào **R7** với copy nói thẳng "answered with an
+  incomplete result… nothing was sent" — cố ý **không** dùng câu "service is
+  slow" của nhánh timeout, vì bảo người dùng đợi một thứ đã xong là một ngõ cụt
+  thứ hai.
+
+**Không làm được gì:** hỏi lại y nguyên vô ích (cùng body → cùng `requestId` →
+cùng câu trả lời hỏng), phiên mới cũng vô ích. Không có đường nào từ phía
+client bắt committee gửi lại một bộ share sạch. Khi cửa sổ xấu, reveal **không
+chạy được** — và app nói đúng như vậy thay vì đứng ở spinner hay hiện `0`.
+
+Deposit, withdraw, claim, draw, và toàn bộ phần onchain **không phụ thuộc** vào
+đường này: chúng vẫn chạy bình thường trong cửa sổ xấu. Chỉ việc *xem* số của
+mình là bị chặn.

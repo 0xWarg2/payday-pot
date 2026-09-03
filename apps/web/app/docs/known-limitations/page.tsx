@@ -34,6 +34,16 @@ const SECTIONS = [
     ],
   },
   {
+    id: "decryption",
+    title: "Opening your own numbers depends on a service that is sometimes unavailable",
+    body: [
+      "Revealing a value is not a read from the chain. The encrypted value is held onchain, but turning it back into a number takes a threshold key-management service run by a committee of independent parties: they each return a share, and your browser reassembles the number locally from those shares.",
+      "On this testnet that service is sometimes unable to produce a usable set of shares. It answers that it succeeded, and the reassembly then fails — which means nothing was sent, nothing changed, and nothing was decrypted. It is not a slow network you can wait out, and it is not something this app can fix from its side.",
+      "What this app does about it: it asks for each value separately when asking for them together fails, because the outcome depends on which values are asked for and shifts over time. So you may see one number open while another stays closed. A value that could not be opened stays closed — it is never shown as zero — and the screen says which one it was.",
+      "Everything else keeps working while this is happening: depositing, withdrawing, claiming, and running the draw do not go through that service. Only looking at your own numbers does.",
+    ],
+  },
+  {
     id: "unwrap",
     title: "Unwrapping happens in two steps and can stall",
     body: [

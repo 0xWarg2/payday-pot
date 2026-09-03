@@ -339,6 +339,31 @@ test.describe("bad round ids", () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Chain không trả lời
+ * ------------------------------------------------------------------ */
+
+test.describe("the chain does not answer", () => {
+  test("the room still says which page it is", async ({ page }) => {
+    // Tên phòng là `Round N`, và N đọc từ chain — nên trước Day 9 trang này
+    // KHÔNG có `<h1>` nào trong cả năm trạng thái chưa-đọc-được. Screen reader
+    // mở nó ra và không có gì nói đây là trang gì, và triệu chứng chỉ hiện khi
+    // RPC chậm hoặc chết: suite bắt được đúng một lần trên 79 test và trông y
+    // như flaky.
+    //
+    // Chặn RPC hoàn toàn là cách duy nhất kiểm được nhánh đó một cách xác định.
+    await page.route(/ethereum-sepolia-rpc\.publicnode\.com/, (route) => route.abort());
+    await page.goto(ROOM);
+
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toBeVisible();
+    // Đúng MỘT `<h1>`: nhánh này và `Round N` phải loại trừ nhau, không cộng vào.
+    await expect(heading).toHaveCount(1);
+    // Và không bịa ra số vòng — `Round 0` tệ hơn là không có số.
+    await expect(heading).not.toContainText(/round/i);
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Đường vào phòng
  * ------------------------------------------------------------------ */
 

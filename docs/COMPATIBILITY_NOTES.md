@@ -349,15 +349,23 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     hoàn tất **phải báo số thật**, kể cả 0 — một dấu tích xanh không kèm số ở đây
     là app nói dối về một giao dịch thành công.
 
-47. **`userDecrypt` của relayer-sdk KHÔNG chạy được ngoài browser
-    (`node-tkms@0.12.8`).** Mọi lời gọi từ Node chết trong WASM:
+47. **~~`userDecrypt` của relayer-sdk KHÔNG chạy được ngoài browser
+    (`node-tkms@0.12.8`)~~ — SAI ở phần kết luận, xem #60.** Triệu chứng ghi
+    dưới đây là thật và vẫn đúng, nhưng "Node không chạy được" thì không: Day 9
+    `kms-probe.ts` chạy `userDecrypt` **trong Node** và có lần xong 3/3 (quirk
+    #60). Cùng một script, cùng một máy, vài phút sau lại hỏng 3/3. Nên đây
+    không phải giới hạn của binding Node — nó là cùng một sự cố hạ tầng mà
+    browser cũng dính. Giữ nguyên phần mô tả để thấy vì sao kết luận cũ trông
+    vững: lúc đó mọi lần thử trong Node đều hỏng.
+
+    Mọi lời gọi từ Node **hôm 01/09** chết trong WASM:
     `core/service/src/client/user_decryption_wasm.rs:412:44 … Gao decoding
     failure … n=13, deg=4, #shares=9`. Đã loại trừ mọi giả thuyết phía server:
     handle mới tinh và handle 6 ngày tuổi, một handle và nhiều handle, một
     contract và nhiều contract — đều chết như nhau; **`publicDecrypt` trên cùng
     relayer đó thành công** và proof của nó được contract nhận (#44), nên KMS
-    khoẻ. Kết luận: lỗi ở binding Node của tkms. Hệ quả: **mọi verify liên quan
-    tới reveal phải chạy trong browser** (Playwright), không có đường script hoá.
+    khoẻ. Kết luận **lúc đó**: lỗi ở binding Node của tkms — hợp lý với dữ liệu
+    có trong tay, và sai. Đọc #60 trước khi trích dòng này.
     `publicDecrypt` thì chạy tốt ở Node — đủ cho script vận hành R1.
 
 48. **`eth_getLogs` ở publicnode chặn đúng 50.000 block; Infura chặn thấp hơn.**
@@ -414,13 +422,23 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     `pnpm-lock.yaml`, và `package.json` của 4 workspace) sang thư mục trống rồi
     `pnpm install --frozen-lockfile`.
 
-54. **Relayer không phục vụ hai `userDecrypt` song song của CÙNG một ví.** Với
-    `--workers=2`, hai test reveal cạnh nhau treo ở `data-state="hidden"` tới hết
-    120s trong khi ba test reveal chạy lẻ đều xanh trong 11–27s. Triệu chứng
-    trùng khít với một reveal hỏng thật, nên nó đọc như bug sản phẩm. Fix ở tầng
-    test: `test.describe.configure({ mode: "default" })` cho khối reveal (tuần
-    tự trong một worker, ghi đè `fullyParallel`). **Không** dùng `serial` — nó
-    biến một test đỏ thành ba test skip.
+54. **~~Relayer không phục vụ hai `userDecrypt` song song của cùng một ví.~~
+    SAI — nguyên nhân thật là #58.** Quirk này viết ngày 02/09 từ một tương quan:
+    với `--workers=2`, hai test reveal cạnh nhau treo ở `data-state="hidden"`
+    tới hết 120s, trong khi ba test reveal chạy lẻ xanh trong 11–27s. Kết luận
+    "relayer không chịu request song song" khớp với dữ liệu đang có và **vẫn
+    sai**. Bác bỏ ngày 03/09 bằng một lần chạy `--workers=1` (tuần tự, một
+    worker, một ví): hai test reveal vẫn đỏ, và trace cho thấy relayer trả
+    `POST /v2/user-decrypt` → 202 rồi `GET /v2/user-decrypt/<id>` → 200 trong
+    809ms. Không có gì song song, và relayer không từ chối gì cả — thất bại xảy
+    ra **sau** khi nó trả lời, ở tầng dựng lại share phía client (#58).
+
+    Giữ lại nguyên văn kết luận sai vì cái bẫy đáng ghi hơn cả kết luận: `hidden`
+    là state mặc định của "chưa biết gì", nên MỌI cách reveal chết đều hiện ra
+    y hệt nhau, và một tương quan với `--workers` là thứ đầu tiên đập vào mắt.
+    Việc phải làm là đọc chuỗi `cause` chứ không phải đọc lịch chạy test.
+    `mode: "default"` vẫn giữ (tuần tự dễ đọc log hơn), nhưng nó không phải fix
+    của bất cứ thứ gì.
 
 55. **Vercel bật `ssoProtection` cho project mới, phạm vi `all_except_custom_domains`.**
     Nghĩa là mọi URL `*.vercel.app` — kể cả production alias — nằm sau màn hình
@@ -450,3 +468,101 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
       — trang lỗi của Vercel không có chúng, mà relayer-sdk thì không chạy được
       nếu thiếu. Chính chỗ thiếu hai header này làm lộ ra là trang không phải
       của mình.
+
+58. **KMS threshold trả về một bộ share KHÔNG dựng lại được, ở tỉ lệ ~1/3
+    request — và `@zama-fhe/relayer-sdk` che mất nguyên nhân.** Đây là quirk
+    đắt nhất của Day 9, và là nguyên nhân thật của #54.
+
+    Triệu chứng: `reveal` chết. Relayer trả `POST /v2/user-decrypt` → 202,
+    `GET /v2/user-decrypt/<id>` → 200 với body `{"status":"succeeded", "result":
+    {"result":[{"payload":"29000000…"}]}}` — tức nó **đã trả lời đầy đủ**. Rồi
+    WASM phía client ném ra. Payload của lần chết và lần chạy được có cấu trúc
+    byte giống hệt nhau ở mọi field độ dài, nên nhìn network tab sẽ không bao
+    giờ thấy khác biệt.
+
+    Lỗi thật, đọc được sau khi đi theo chuỗi `cause`:
+
+    ```
+    Error in core/service/src/client/user_decryption_wasm.rs:412:44:
+      Error reconstructing all blocks:
+      Error in core/threshold/src/algebra/poly.rs:699:20:
+      Gao decoding failure: Allowed at most 0 errors but xgcd factor degree
+      indicates 1.. n=13, deg=4, #shares=9, block_shares=9, recovery_errors=0
+    ```
+
+    Committee 13 party, polynomial bậc 4, client nhận 9 share — và **một share
+    không nhất quán**. Ở tỉ lệ 9 share cho bậc 4, Reed-Solomon còn đủ chỗ để
+    PHÁT HIỆN một lỗi nhưng không đủ để SỬA, nên nó fail cứng thay vì sửa. Lỗi
+    nằm hoàn toàn ở hạ tầng KMS testnet; không có gì trong repo này sửa được.
+
+    **Vì sao khó tìm:** SDK bọc *mọi* thất bại của bước decrypt lại thành đúng
+    một câu — `throw new Error("An error occured during decryption", { cause: st })`
+    (đúng, "occured" một chữ r, đừng grep bằng chính tả đúng). `console.error(e)`
+    của trình duyệt **không** đi theo `cause`, nên thứ duy nhất ra console là câu
+    ấy; và `classifyError` cũng chỉ đọc `e.message`, nên nó rơi vào nhánh
+    `unknown` → `row: null` → panel "Something went wrong". Hành động chủ lực của
+    sản phẩm chết ở một dead end, đúng tiêu chí "handle errors gracefully".
+
+    **Đã làm:** (1) `causeChain()` dẹt chuỗi `cause` thành một dòng, log đúng một
+    chỗ trong `catch` của `revealHandles`; (2) `messageChainOf()` trong taxonomy
+    đọc cả chuỗi `cause` cho **đúng nhánh này** — không đổi `messageOf` chung, vì
+    một `cause` tình cờ chứa chữ "network" đủ để kéo một lỗi hợp đồng sang nhánh
+    RPC; (3) code mới `decryption-incomplete` → **R7**, retryable, copy nói thẳng
+    "answered with an incomplete result… nothing was sent"; (4) gọi lại — nhưng
+    **không** phải gọi lại y nguyên, xem **#60**: giả thiết "mỗi request lấy một
+    bộ share mới" là SAI, và #60 là phép đo đã bác nó. Điều duy nhất của #58 còn
+    đứng nguyên: chữ ký EIP-712 ký lên public key của keypair phiên + cửa sổ hiệu
+    lực, **không** ký lên request — nên hỏi lại (kiểu nào) cũng không cần chữ ký
+    thứ hai. Chỉ xử lý đúng họ lỗi này; mọi lỗi khác ném ra ngay.
+
+59. **Trang `/app/draws/current` không có `<h1>` nào trong cả năm trạng thái
+    chưa-đọc-được-chain.** Tên phòng là `Round N` và N đọc từ chain, nên trước
+    khi đọc xong — và trong `loading`/`not-deployed`/`mismatch`/`not-found`/
+    `error` — heading cấp 1 duy nhất của trang không tồn tại; `DrawNotice` render
+    title của nó bằng `<p class="font-semibold">`, trông y như heading nhưng
+    không phải. Screen reader không nói được đây là trang gì, và triệu chứng chỉ
+    hiện khi RPC chậm hoặc chết, tức đúng lúc người dùng cần biết mình đang ở đâu
+    nhất. E2E bắt được đúng **một lần trên 79 test** và trông như flaky. Fix:
+    `<h1>Draw room</h1>` luôn có, và **không** điền số vòng vào đó (một `Round 0`
+    bịa ra tệ hơn là không có số); pin bằng một test chặn thật RPC
+    (`route.abort()`) rồi assert đúng một `<h1>` không chứa chữ "round".
+
+60. **Hỏi lại y nguyên KHÔNG cứu được #58 — nhưng đổi tập handle thì cứu được.**
+    Đây là chỗ #58 đoán sai và phép đo bác lại, giữ nguyên ở đây vì nó là cái bẫy
+    đắt nhất của cả hai ngày: `decryptWithRetry` gọi lại **cùng một request** 3
+    lần và cả 3 lần đều chết ở đúng một chỗ (`n=13, deg=4, #shares=9` không đổi
+    một chữ). Trace Day 9 nói vì sao: ba POST `/v2/user-decrypt` liên tiếp cùng
+    body (`content-length: 2596` cả ba) nhận về **cùng một `requestId`**
+    `7dab9f00-d7ad-4c86-b633-d675431f9ac7` → cùng một câu trả lời hỏng. Phiên
+    mới (keypair khác, `start` khác, tức body khác) cũng vẫn hỏng 3/3.
+
+    Đo bằng `packages/contracts/scripts/kms-probe.ts` — chạy trong **Node**,
+    ngoài toàn bộ hạ tầng web (không Next build, không WASM path riêng, không
+    COOP/COEP): với `A` = principal, `B` = twabArea, `C` = pendingPrize, cùng một
+    thời điểm, 3 lần mỗi ca —
+
+    | request | kết quả |
+    |---|---|
+    | `[C]`, `[C,A]` | xong 3/3 |
+    | `[A]`, `[B]`, `[A,B]`, `[B,A]`, `[A,C]`, `[A,B,C]`, `[C,B,A]` | hỏng 3/3 |
+
+    …và **nửa giờ trước đó** `[A,B]` với `[A,B,C]` lại xong 10/10 trong khi `[A]`
+    hỏng 10/10. Nên nó không phải một handle "xấu" cố định, cũng không phải kích
+    thước batch: nó **dịch chuyển theo thời gian** và phụ thuộc **tập handle**.
+    Việc probe trong Node cũng hỏng y hệt là bằng chứng đóng lại câu hỏi "lỗi của
+    web hay của hạ tầng".
+
+    Fix: `decryptTargets` thử cả batch một lần, và khi hỏng thì **tách thành từng
+    handle** thay vì hỏi lại y nguyên — miễn phí, vì tập handle không nằm trong
+    payload EIP-712 nên không sinh chữ ký thứ hai. Mở được 2/3 giá trị vẫn tốt
+    hơn một bức tường; handle không mở được thì **ở lại trạng thái ẩn** (chỉ
+    những key có trong `values` được `commitReveals` ghi) nên không có đường nào
+    biến nó thành `0` (non-negotiable #8), và card hiện panel R7 nói giá trị nào
+    còn đóng.
+
+    Kèm một hệ quả cho test: e2e reveal trước đây chỉ chờ `revealed`, nên KMS từ
+    chối và app hỏng **đỏ y hệt nhau** sau 120s với đúng một thông tin "vẫn
+    hidden" — tức là buộc tội code của mình cho sự cố hạ tầng, và làm regression
+    thật sau này lẫn vào nhiễu. Giờ `ErrorPanel` render `data-code`/`data-row`,
+    và `revealPosition` đua `revealed` với panel: `decryption-incomplete` →
+    `test.skip()` có lý do đọc được, mọi code khác → đỏ kèm code thật.

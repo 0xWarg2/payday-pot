@@ -50,3 +50,47 @@ describe("error taxonomy", () => {
     expect(classifyError({ code: 4902 }).row).toBe("R8");
   });
 });
+
+/**
+ * Thất bại dựng lại share của KMS — họ lỗi Day 9, và nó từng là một dead end.
+ *
+ * Đo thật trên Sepolia: relayer trả `{"status":"succeeded"}` kèm payload, rồi
+ * WASM phía client chết ở `Gao decoding failure … n=13, deg=4, #shares=9`. Câu
+ * duy nhất `@zama-fhe/relayer-sdk` để lộ ra ngoài là "An error occured during
+ * decryption", nguyên nhân thật nằm trong `cause` — nên trước khi sửa, hành
+ * động chủ lực của sản phẩm rơi vào nhánh `unknown` với `row: null` và câu
+ * "Something went wrong". Tức là: reveal chết, và không còn thông tin nào ở
+ * đâu cả, kể cả cho người đang debug.
+ */
+describe("KMS share reconstruction failure", () => {
+  const real = (): Error =>
+    new Error("An error occured during decryption", {
+      cause: new Error(
+        "Error in core/service/src/client/user_decryption_wasm.rs: Error reconstructing all blocks: " +
+          "Gao decoding failure: Allowed at most 0 errors but xgcd factor degree indicates 1.. n=13, deg=4, #shares=9",
+      ),
+    });
+
+  it("lands on a real recovery row, not the unknown bucket", () => {
+    const e = classifyError(real());
+    expect(e.code).toBe("decryption-incomplete");
+    expect(e.row).toBe("R7");
+    expect(e.retryable).toBe(true);
+    expect(e.action.kind).toBe("retry");
+  });
+
+  it("is found through the cause chain, not the outer message", () => {
+    // Lớp ngoài không khớp regex nào của taxonomy — bằng chứng là chuỗi `cause`
+    // mới là thứ mang thông tin. Nếu ai đó "dọn" `messageChainOf` đi, test này đỏ.
+    const causeOnly = new Error("wrapped", { cause: real().cause });
+    expect(classifyError(causeOnly).code).toBe("decryption-incomplete");
+  });
+
+  it("does not tell the user to wait, and does not blame them", () => {
+    const e = classifyError(real());
+    // "service is slow" (R7 timeout) sẽ khiến người dùng ngồi đợi một thứ đã xong.
+    expect(`${e.title} ${e.detail}`).not.toMatch(/slow|wait/i);
+    expect(e.detail).toMatch(/nothing was sent/i);
+    expect(`${e.title} ${e.detail}`).not.toMatch(/\d{2,}/);
+  });
+});

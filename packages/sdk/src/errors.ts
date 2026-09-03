@@ -81,6 +81,7 @@ export type PotErrorCode =
   | "wallet-missing"
   // --- relayer / rpc ---
   | "relayer-timeout"
+  | "decryption-incomplete"
   | "network-unreachable"
   // --- fallback ---
   | "unknown";
@@ -464,6 +465,25 @@ function hasCode(e: unknown, ...wanted: (string | number)[]): boolean {
   return wanted.some((w) => codes.includes(w));
 }
 
+/**
+ * Message của lỗi CỘNG toàn bộ chuỗi `cause`, dẹt thành một chuỗi.
+ *
+ * `messageOf` cố ý không đi theo `cause`: đổi nó sẽ đổi cách phân loại của mọi
+ * lỗi đã có, và một `cause` tình cờ chứa chữ "network" đủ để kéo một lỗi hợp
+ * đồng sang nhánh RPC. Nhưng có đúng một họ lỗi mà thông tin CHỈ nằm ở `cause`:
+ * `@zama-fhe/relayer-sdk` bọc mọi thất bại của bước decrypt lại thành cùng một
+ * câu ("An error occured during decryption"), nên nếu chỉ đọc lớp ngoài thì mọi
+ * nguyên nhân khác nhau đều rơi vào `unknown`. Nhánh đó — và chỉ nhánh đó —
+ * đọc chuỗi này.
+ */
+function messageChainOf(e: unknown, depth = 0): string {
+  if (depth > 5) return "";
+  const head = messageOf(e);
+  const cause = typeof e === "object" && e !== null ? (e as Record<string, unknown>)["cause"] : undefined;
+  const tail = cause === undefined || cause === null ? "" : messageChainOf(cause, depth + 1);
+  return tail === "" ? head : `${head} ${tail}`;
+}
+
 function messageOf(e: unknown): string {
   if (typeof e === "string") return e;
   if (typeof e === "object" && e !== null) {
@@ -534,6 +554,22 @@ export function classifyError(e: unknown): PotError {
         title: "No wallet detected",
         detail: "This page needs a browser wallet to read your own encrypted balance.",
         action: { kind: "connect-wallet" },
+        retryable: true,
+      },
+      e,
+    );
+  }
+  // Trước nhánh relayer/timeout: một reconstruction hỏng KHÔNG phải timeout, và
+  // gọi nó là "service is slow" thì người dùng sẽ ngồi đợi thay vì bấm lại.
+  if (/gao decoding|error reconstructing|user_decryption_wasm|error occured during decryption/i.test(messageChainOf(e))) {
+    return make(
+      "decryption-incomplete",
+      {
+        row: "R7",
+        title: "The decryption service could not finish",
+        detail:
+          "It answered with an incomplete result, so nothing could be opened. Nothing was sent and nothing changed. Try again — a second attempt almost always goes through.",
+        action: { kind: "retry" },
         retryable: true,
       },
       e,
