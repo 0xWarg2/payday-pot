@@ -5,6 +5,7 @@ import { HIDDEN_HANDLE, classifyError } from "@payday-pot/sdk";
 
 import { ensureFheInstance } from "../fhevm/instance";
 import { getSigner } from "../wallet/connect";
+import { causeChain, decryptTargets } from "./retry";
 import {
   commitReveals,
   currentGeneration,
@@ -91,15 +92,20 @@ export async function revealHandles(params: RevealParams): Promise<void> {
     );
 
     setFlight({ phase: "DECRYPTING", keys });
-    const decrypted = await instance.userDecrypt(
-      usable.map((t) => ({ handle: t.handle, contractAddress })),
-      keypair.privateKey,
-      keypair.publicKey,
-      signature.replace("0x", ""),
-      [contractAddress],
-      account,
-      start,
-      days,
+    const { decrypted, failed } = await decryptTargets(
+      usable.map((t) => t.handle),
+      (subset) =>
+        instance.userDecrypt(
+          subset.map((handle) => ({ handle, contractAddress })),
+          keypair.privateKey,
+          keypair.publicKey,
+          signature.replace("0x", ""),
+          [contractAddress],
+          account,
+          start,
+          days,
+        ),
+      generation,
     );
 
     const values = new Map<string, bigint>();
@@ -120,7 +126,37 @@ export async function revealHandles(params: RevealParams): Promise<void> {
     }
 
     commitReveals(generation, values);
+
+    // Mở được một phần. Giá trị nào không mở được thì Ở LẠI trạng thái ẩn —
+    // `commitReveals` chỉ ghi những key có trong `values`, nên không có đường
+    // nào để một handle hỏng biến thành `0` (non-negotiable #8). Nói ra bằng
+    // copy của R7, đúng bản đang dùng cho lỗi hạ tầng ở nơi khác, chứ không
+    // viết một câu riêng chỉ sống ở nhánh này.
+    if (failed.length > 0) {
+      const error = classifyError(new Error("Error reconstructing all blocks: partial user decryption"));
+      const names = usable
+        .filter((t) => failed.includes(t.handle))
+        .map((t) => t.label.toLowerCase())
+        .join(" and ");
+      setNotice({
+        kind: "error",
+        title: error.title,
+        detail: `${names ? `${names[0]?.toUpperCase()}${names.slice(1)} stayed closed. ` : ""}${error.detail}`,
+        error,
+      });
+    }
   } catch (e) {
+    // Lỗi thô ra console, đúng một chỗ này.
+    //
+    // Không phải để debug cho vui: `classifyError` cố tình có một nhánh "unknown"
+    // với câu "Something went wrong", và một lần reveal chết ở nhánh đó là một
+    // lần KHÔNG CÒN thông tin nào ở đâu cả — panel nói câu chung nhất có thể,
+    // network tab thì thấy relayer trả 200. Đúng thứ đã ngốn một giờ ở Day 9.
+    //
+    // An toàn với non-negotiable #5: đường này chỉ chạy khi decrypt THẤT BẠI,
+    // nên không có plaintext nào tồn tại để mà lọt ra. Handle và address thì
+    // public theo thiết kế.
+    console.error(`[reveal] failed: ${causeChain(e)}`, e);
     const error = classifyError(e);
     // Copy LUÔN lấy từ taxonomy, kể cả nhánh user-rejected.
     //

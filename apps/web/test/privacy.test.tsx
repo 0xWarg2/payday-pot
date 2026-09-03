@@ -148,6 +148,13 @@ describe("position-card-never-claims-what-it-has-not-read", () => {
     expect(screen.queryByTestId("position-loading")).toBeNull();
     expect(screen.getByTestId("error-panel")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+
+    // Code + row phải ra tới DOM. Không phải để làm đẹp: e2e reveal dùng đúng
+    // hai thuộc tính này để phân biệt "hạ tầng KMS từ chối (R7)" với "app hỏng",
+    // và không có chúng thì hai chuyện đó đỏ y hệt nhau (#59).
+    const panel = screen.getByTestId("error-panel");
+    expect(panel.getAttribute("data-code")).toBeTruthy();
+    expect(panel.getAttribute("data-row")).toMatch(/^R\d+$/);
   });
 
   it("points a never-registered wallet at its first deposit, with no Reveal button", () => {
@@ -238,7 +245,7 @@ describe("storage-allowlist-only", () => {
     expect(() =>
       recordTx({
         chainId: 11155111,
-        action: "unwrap",
+        action: "finalize-unwrap",
         txHash: A_HASH,
         createdAt: 1,
         unwrapRequestId: `0x${"f".repeat(64)}`,

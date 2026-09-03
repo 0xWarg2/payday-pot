@@ -291,12 +291,12 @@ bấm được.
 
 ## Day 7 — 25/08 — My Savings + Employer UX
 
-- [ ] Savings: tabs Deposit/Withdraw/History; amount chỉ ở memory;
+- [x] Savings: tabs Deposit/Withdraw/History; amount chỉ ở memory;
       state machine Approve → Encrypt → Review → Submit → Confirm → Sync
-- [ ] `Withdraw all` không cần reveal; review dialog tách private vs public/linkable
-- [ ] Stale-handle recovery; tx hash resume sau reload; faucet/shield helper
+- [x] `Withdraw all` không cần reveal; review dialog tách private vs public/linkable
+- [x] Stale-handle recovery; tx hash resume sau reload; faucet/shield helper
       + warning wrap amount là public
-- [ ] Employer page (1 trang): overview + fund form + public allocated prize +
+- [x] Employer page (1 trang): overview + fund form + public allocated prize +
       notice "employer không xem được giá trị nhân viên, không chọn winner"
 
 Tests: rejected approval/tx, wrong chain, relayer timeout, duplicate-submit,
@@ -306,20 +306,38 @@ draft không vào persistence/telemetry, employer negative-permission.
 prize thật qua UI · mọi error chỉ đúng recovery · giá trị mới masked đến khi
 reveal tươi.
 
+**Trạng thái 27/08 EOD:** code + tests xong và xanh (228 unit web, 150 contract,
+40 e2e). Đường lỗi đã diễn thật trong browser: rejected signature (R6), revert
+onchain gọi được tên, relayer treo/cắt (R7), sai mạng (R8), double-submit,
+resume sau reload (R11). Ba fix thật rơi ra từ đó — xem COMPATIBILITY_NOTES
+#30–#34, trong đó #32 là một crash trắng màn hình ở luồng withdraw.
+
+CÒN LẠI của exit gate — cần người, không cần code: deposit/withdraw thật và
+employer fund prize thật **qua UI với ví có tiền**. Ví employer
+`0x1cE8D5ff…2D57` đang **0 ETH**; nạp ~0.03 ETH từ Account 3
+(`0xd83064F0…90829a`), KHÔNG lấy từ deployer `0x83b2…6877` (giữ cho keeper/draw
+gas). Ví CI không có vị thế nên mọi tx đụng tiền revert ở `eth_estimateGas` —
+đường thành công không diễn được trong CI (COMPATIBILITY_NOTES #33).
+
 **Cut:** 1 sponsor wallet, 1 form; bỏ charts/exports/invite.
 
 ---
 
 ## Day 8 — 26/08 — Dark Draw Room + browser E2E
 
-- [ ] Draw Room: phase timeline public, Trigger/Continue permissionless,
+- [x] Draw Room: phase timeline public, Trigger/Continue permissionless,
       orb tĩnh là đủ, onchain cursor là source of truth
-- [ ] Sealed result → EIP-712 reveal (winner và loser UI giống hệt trước reveal)
-- [ ] Claim review + linkage warning; Fairness Receipt là tab trong Draw Room
+      *(+30/08: card "vòng này" ở `/app` nối sang phòng, nhãn lấy từ cùng
+      `keeperState()` nên hai màn hình không nói khác nhau)*
+- [x] Sealed result → EIP-712 reveal (winner và loser UI giống hệt trước reveal)
+- [x] Claim review + linkage warning; Fairness Receipt là tab trong Draw Room
 - [ ] E2E 2–3 browser profiles: fresh assets → deposit lệch thời gian →
       fund → snapshot/random/select → reveals → claim → withdrawAll
-- [ ] Reload tại: approval, deposit pending, draw cursor, claim pending
-- [ ] QA: mobile 5 màn, keyboard path, reduced motion, privacy regression
+      ⛔ **Còn ☐ có chủ ý:** so-sánh-2-profile đang `test.skip()` vì chưa có 2 vị
+      thế đã settle — cùng ví chưa nạp của gate Day 7. Toàn bộ phần chạy được mà
+      không cần tiền thì đã xanh.
+- [x] Reload tại: approval, deposit pending, draw cursor, claim pending
+- [x] QA: mobile 5 màn, keyboard path, reduced motion, privacy regression
       (DOM/storage/network/telemetry)
 
 **Exit gate (Product Complete):** browser E2E xanh · draw resume sau khi kill
@@ -474,9 +492,9 @@ thích ngắn winner selection vẫn fair và confidential. Ràng buộc: ≤3 p
 | 4 | 22/08 | Encrypted draw correct | ✅ 103 pass (26 draw + 3 HCU Day 4 + Monte Carlo 64 epoch) | ✅ `pnpm demo:day4` | ✅ | ✅ Local full 24/08 — random 1 lần (AlreadyDrawn + handle equality), ticket P-2 exact `== (R·T)>>64`, đúng-1-winner structural (exact-replication + 1:3:6 ±3.5σ), stranger resume (R4), scan ceiling 22/tx, ACL 5 lớp (won contract-only §15.1) |
 | 5 | 23/08 | Protocol full cycle | ✅ 150 pass (38 prize/claim/lifecycle + 5 HCU Day 5 + solvency property mở rộng) | ✅ `pnpm demo:day5` | ✅ | ✅ Local full 25/08 — employer fund bằng USDC công khai + pot tự `wrap` (R12 revert plaintext thật), carry roll encrypted (B4: 1,000 → winner epoch sau nhận 1,500), settle tự động trong `selectBatch` cuối + empty-pool Open→Settled (D9), `claim()` uniform **bằng nhau tuyệt đối** winner/non-winner (748,032 HCU / 396,250 gas — R9), `startNewEpoch` permissionless không đụng principal/pendingPrize (B3), ceiling scan giữ 22/tx, PRIVACY.md + THREAT_MODEL.md. **Red-team pass trên code đã ship: 0 P0**, siết 3 chỗ (rug window `defundPrize` sau khi weight freeze · `snapshotProgress`/`drawProgress` trả `total` của list hiện tại thay vì của chính epoch · `renounceOwnership` khi paused = pause vĩnh viễn) — ABI **không đổi**, chi tiết `docs/handoffs/DAY_05_HANDOFF.md` |
 | 6 | 24/08 | Entry/dashboard | ◐ 70 web unit + 1 e2e (COOP/COEP) | ☐ | ◐ | ◐ **Prep xong 26/08** — shared ABI/manifest, SDK error taxonomy (31 code → R1–R15) + read model handle-only, Tailwind v4 tokens §14.2, Vitest+RTL+Playwright xanh, probe live cUSDC (đóng blocker Day 9; phát hiện wrapper **upgradeable và đã upgrade** → KNOWN_LIMITATIONS §10, faucet mở → R14 in-app, unwrap public amount → PRIVACY §2.3, R1 detect bằng 1 view call). **Chặn:** dev deploy Sepolia cần ví của anh |
-| 7 | 25/08 | Money UX | ☐ | ☐ | ☐ | — |
-| 8 | 26/08 | Browser E2E | ☐ | ☐ | ☐ | — |
-| 9 | 27/08 | Sepolia RC live | ☐ | ☐ | ☐ | — |
+| 7 | 25/08 | Money UX | ◐ 231 web unit + 40 e2e (5 skip) | ✅ `pnpm demo:day7` (4m09s) | ✅ | ◐ **Code full 28/08** — `/app/savings` (Deposit·Withdraw·History) + `/employer` chạy trên contract thật; SDK writes + `toPotError()` là cửa duy nhất vào `ErrorPanel`; 3 bug thật rơi ra từ diễn lại nhánh hỏng, 1 là crash trắng màn hình ở withdraw. **Chặn:** deposit/withdraw thật + employer fund thật cần ví có tiền — ví CI revert ngay ở `eth_estimateGas` (COMPATIBILITY_NOTES #33) |
+| 8 | 26/08 | Browser E2E | ✅ 150 contract + 265 web unit + 72 e2e (6 skip) | ✅ `pnpm demo:day8` (4m08s, `DEMO_HEADLESS=1`) | ✅ | ◐ **4/5 dòng exit gate đạt 29/08** — Draw Room (`/app/draws/current`) đọc **onchain cursor** làm nguồn sự thật: wipe storage → reload → fingerprint giống hệt từng ký tự (exit gate "kill keeper"); sealed result winner ≡ loser trước reveal (so DOM 2 profile); claim gate + Fairness Receipt (facts · log · **absences**); `draw-withdraw-link` ra `/app/savings` từ trong phòng tối; QA mobile-320 quét 6 route, keyboard, reduced-motion, `privacy.spec.ts` 11 test. **Ma trận lỗi 14/15 đóng** (UI+action+test) — R2–R15 ✅; probe live cUSDC đóng 2/3 ẩn số của **R1** (`finalizeUnwrap(bytes32,uint64,bytes)` là chữ ký DUY NHẤT tồn tại · id lạ revert `0xd1630f8e` = `InvalidUnwrapRequest`), còn nút *Resume finalize* — chặn bởi cùng cái ví chưa nạp của Day 7. **Chưa ✅ vì đúng dòng exit gate thứ 5** ("mọi dòng ma trận đã tick") còn hở 1/15 — tick nó bằng "đã hiểu cơ chế" là thứ mà chính ma trận này cấm. **30/08:** card vòng ở `/app` nối sang Draw Room qua chính `keeperState()` — nhãn link = nhãn nút trong phòng, và pause thì không mời bấm; bảng chữ thứ hai (`WORK_COPY`) xoá. +4 unit +2 e2e, contract/ABI không đụng. Chi tiết `docs/handoffs/DAY_08_HANDOFF.md` |
+| 9 | 27/08 | Sepolia RC live | ✅ 150 contract + 288 web unit + **79 e2e** (1 skip) | ✅ vòng draw thật, RUNBOOK §8 hai bảng tx | ✅ | ◐ **6/7 dòng exit gate đạt 03/09** — RC `0x792c77D9…a035` sống trên Sepolia (epoch **3600s**, prize 50 USDC employer-funded), source verified hai chỗ (Blockscout `#code` + Sourcify **full match**), public URL trả về app thật và cross-origin isolated (`check-deploy.sh` 5 route). **Dòng exit gate nặng nhất đo được trên chain:** epoch #2 cắt ngang giữa lượt scan (cursor 1/2) rồi **ví khác** — không keeper, không owner, chỉ có ETH — chạy tiếp tới Settled, không bước nào lặp, seed rút đúng một lần. **Bug thật:** `decryptWithRetry` chưa bao giờ có tác dụng (cùng body → cùng `requestId` → cùng câu trả lời hỏng); cái đổi được kết quả là **tập handle**, và đổi nó miễn phí vì không nằm trong payload EIP-712 → `decryptTargets` tách từng handle, mở được một phần, phần còn lại **ở lại ẩn** chứ không thành `0`. `kms-probe.ts` chạy `userDecrypt` trong Node đóng câu hỏi "lỗi của web hay của hạ tầng" — và lật luôn quirk #47. Cùng đó: 4 deployment fail trên Vercel với 4 nguyên nhân khác nhau, trong đó một deployment fail **vẫn trả HTTP 200**. **Chưa ✅** vì vòng tiền bằng tay từ public URL vẫn là việc của người, và `main` còn ở Day 6 nên production alias đang là deployment ERROR. Chi tiết `docs/handoffs/DAY_09_HANDOFF.md` |
 
 **Red rule:** Day 1 chưa có live user-decrypt / Day 2 chưa có withdrawAll
 invariant / Day 4 draw cần plaintext total / Day 5 chưa full cycle / Day 8 chưa

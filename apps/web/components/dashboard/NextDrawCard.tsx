@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback } from "react";
-import { pendingWork, type PotError, type PotState } from "@payday-pot/sdk";
+import type { PotError, PotState } from "@payday-pot/sdk";
 
 import { Card, CardHeader, PublicBadge } from "@/components/ui/Card";
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SEPOLIA_CHAIN_ID } from "@/lib/chain/rpc";
+import { depositsClosed, keeperState } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount, formatCountdown } from "@/lib/format";
 import { potReadsStore, refreshPotReads, type DeploymentStatus } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
@@ -93,7 +95,11 @@ function Empty({
 function Live({ state, now }: { state: PotState; now: number | null }) {
   const nowSeconds = now === null ? null : BigInt(Math.floor(now / 1000));
   const secondsLeft = nowSeconds === null ? null : Number(state.end - nowSeconds);
-  const work = nowSeconds === null ? null : pendingWork(state, nowSeconds);
+  // Cùng một hàm mà Draw Room dùng, không phải bản sao của cùng luật. Hai màn
+  // hình nói khác nhau về "đang chờ việc gì" là kiểu sai không ai thấy: card
+  // này giục bấm trong khi phòng kia nói bị pause chặn, và người dùng tin cái
+  // nào cũng thua.
+  const keeper = keeperState(state, nowSeconds);
 
   return (
     <div>
@@ -114,12 +120,12 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
         <div>
           <dt className="text-fg-muted text-[13px]">Deposits close in</dt>
           <dd className="tabular mt-1 text-[18px] font-semibold">
-            {secondsLeft === null ? (
+            {secondsLeft === null || nowSeconds === null ? (
               <Skeleton className="h-[18px] w-[100px]" />
-            ) : secondsLeft > 0 ? (
-              formatCountdown(secondsLeft)
-            ) : (
+            ) : depositsClosed(state, nowSeconds) ? (
               "Closed"
+            ) : (
+              formatCountdown(secondsLeft)
             )}
           </dd>
           <dd className="text-fg-muted mt-1 text-[12px]">{formatAbsolute(state.end)}</dd>
@@ -134,15 +140,33 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
       <div className="border-border-default mt-4 border-t pt-4">
         <p className="text-fg-muted text-[13px]">Stage</p>
         <p className="mt-1 text-[15px] font-medium">{PHASE_LABEL[state.phase]}</p>
-        {work && work.kind !== "none" ? (
+        {keeper.kind === "ready" ? (
           <p className="text-fg-muted mt-1.5 max-w-[52ch] text-[13px] leading-relaxed">
-            {WORK_COPY[work.kind]}{" "}
-            {work.kind === "snapshot" || work.kind === "select"
-              ? `${work.done} of ${work.total} done.`
-              : ""}{" "}
-            Anyone can run it — it is not gated on an operator.
+            {keeper.detail}
+            {keeper.progress ? ` ${keeper.progress.done} of ${keeper.progress.total} done.` : ""} Anyone can run it —
+            it is not gated on an operator.
           </p>
         ) : null}
+
+        {/*
+          Câu trên nói "ai chạy cũng được" — nên phải có đường tới chỗ chạy nó,
+          nếu không thì đó là một lời mời dẫn vào tường. Nhãn lấy đúng từ
+          `keeper.label`, tức là đúng chữ trên cái nút trong phòng: người dùng
+          đọc "Freeze the next batch" ở đây rồi thấy đúng "Freeze the next
+          batch" ở kia thì không phải đoán mình có tới đúng chỗ không.
+          Không có việc (đang đếm ngược, hoặc bị pause chặn) thì link vẫn còn
+          nhưng không hứa hẹn gì — phòng vẫn xem được, và lý do pause đã nằm ở
+          khối dưới.
+        */}
+        <Link
+          href="/app/draws/current"
+          data-testid="dashboard-draw-link"
+          data-keeper={keeper.kind}
+          className="rounded-control border-border-default hover:bg-subtle mt-3 inline-flex items-center gap-2 border px-4 py-2.5 text-[14px] font-medium transition-colors duration-(--duration-hover)"
+        >
+          {keeper.kind === "ready" ? `${keeper.label} in the draw room` : "Open the draw room"}
+          <span aria-hidden="true">→</span>
+        </Link>
       </div>
 
       {state.paused ? (
@@ -160,12 +184,4 @@ const PHASE_LABEL: Record<PotState["phase"], string> = {
   Snapshotting: "Closing — weights are being frozen",
   Drawing: "Drawing — the winner is being picked",
   Settled: "Settled — waiting for the next round to open",
-};
-
-const WORK_COPY: Record<string, string> = {
-  "begin-snapshot": "The clock ran out, so this round is ready to be closed.",
-  snapshot: "Weights are being frozen in batches.",
-  "request-random": "Randomness has not been drawn for this round yet.",
-  select: "The pool is being scanned for the winner.",
-  "start-new-epoch": "This round is finished and a new one can be opened.",
 };

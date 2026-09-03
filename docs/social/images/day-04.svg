@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="hatch" width="14" height="14" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="14" stroke="#3a3a38" stroke-width="1.15" opacity="0.45"/>
+    </pattern>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahl" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#8aa832" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round; }
+    .cy-t  { fill:none; stroke:#0FB9D6; stroke-width:2.2; stroke-linecap:round; }
+    .lime  { fill:#C6F04B; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
+
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
+
+  <!-- ===== title ===== -->
+  <g filter="url(#marker)">
+    <path d="M86 108 L556 96 L560 142 L88 152 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="92" y="140" class="title" font-size="66" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="96" y="186" class="hand" font-size="30" fill="#3d3d39">day 4 — the draw: one winner, nobody can see who</text>
+  <text x="96" y="222" class="note" font-size="22">one command: pnpm demo:day4</text>
+  <g filter="url(#rough2)">
+    <path d="M88 240 C 240 236, 430 244, 620 238" class="ink-t" opacity="0.5"/>
+  </g>
+
+  <!-- ===== test tally ===== -->
+  <g filter="url(#rough2)">
+    <path d="M1150 48 L1550 44 L1552 280 L1152 284 Z" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="1174" y="88" class="hand" font-size="25">103 tests green</text>
+  <g class="note" font-size="19">
+    <text x="1174" y="126">8 — day-1 stack spike</text>
+    <text x="1174" y="154">30 — money in / money out</text>
+    <text x="1174" y="182">1 — 30 random ops, replayed</text>
+    <text x="1174" y="210">12 — compute budget per tx</text>
+    <text x="1174" y="238">26 — time-weight, frozen at payday</text>
+    <text x="1174" y="266">26 — the draw (new today)</text>
+  </g>
+
+  <!-- ===== random locked once ===== -->
+  <g filter="url(#rough)">
+    <circle cx="170" cy="352" r="38" class="ink"/>
+  </g>
+  <text x="170" y="368" class="title" font-size="42" text-anchor="middle">?</text>
+  <text x="232" y="340" class="hand" font-size="29">one random number,</text>
+  <text x="232" y="376" class="hand" font-size="29">locked once per epoch</text>
+  <text x="118" y="432" class="hand" font-size="26" fill="#4a4a46">ask for a second one → refused</text>
+  <g filter="url(#rough2)">
+    <path d="M114 424 L484 419" class="ink-t" opacity="0.65"/>
+  </g>
+
+  <!-- ===== the ticket lands in one slot ===== -->
+  <path d="M428 430 C 432 452, 427 468, 430 486" class="cy" marker-end="url(#ah)"/>
+  <text x="580" y="458" class="hand" font-size="26">the ticket lands in exactly one slot</text>
+
+  <!-- ===== cumulative bar of frozen weights ===== -->
+  <g filter="url(#rough)">
+    <rect x="180" y="492" width="90" height="68" fill="#C6F04B" fill-opacity="0.26" stroke="#1c1c1a" stroke-width="2.6"/>
+    <rect x="270" y="492" width="270" height="68" fill="#C6F04B" fill-opacity="0.26" stroke="#1c1c1a" stroke-width="2.6"/>
+    <rect x="540" y="492" width="540" height="68" fill="#C6F04B" fill-opacity="0.26" stroke="#1c1c1a" stroke-width="2.6"/>
+  </g>
+  <rect x="180" y="492" width="900" height="68" fill="url(#hatch)" stroke="none" opacity="0.5"/>
+  <g filter="url(#rough2)">
+    <rect x="270" y="492" width="270" height="68" fill="#C6F04B" fill-opacity="0.72" stroke="#8aa832" stroke-width="4"/>
+  </g>
+  <g fill="#0FB9D6" opacity="0.92">
+    <circle cx="204" cy="526" r="7.5"/><circle cx="238" cy="526" r="7.5"/>
+    <circle cx="306" cy="526" r="7.5"/><circle cx="352" cy="526" r="7.5"/><circle cx="398" cy="526" r="7.5"/><circle cx="444" cy="526" r="7.5"/>
+    <circle cx="580" cy="526" r="7.5"/><circle cx="640" cy="526" r="7.5"/><circle cx="700" cy="526" r="7.5"/>
+    <circle cx="760" cy="526" r="7.5"/><circle cx="820" cy="526" r="7.5"/><circle cx="880" cy="526" r="7.5"/>
+  </g>
+  <text x="180" y="604" class="hand" font-size="27">each slot = one saver's frozen weight, encrypted</text>
+  <text x="180" y="644" class="hand" font-size="27">no division, no branching — same 7 steps for everyone, win or lose</text>
+
+  <!-- ===== monte carlo ===== -->
+  <text x="1180" y="332" class="hand" font-size="24">64 fresh epochs, weights 1:3:6</text>
+  <g class="hand" font-size="24">
+    <text x="1180" y="382">1×</text><text x="1180" y="430">3×</text><text x="1180" y="478">6×</text>
+  </g>
+  <g filter="url(#rough2)">
+    <rect x="1222" y="362" width="36" height="24" fill="#C6F04B" fill-opacity="0.75" stroke="#1c1c1a" stroke-width="2"/>
+    <rect x="1222" y="410" width="156" height="24" fill="#C6F04B" fill-opacity="0.75" stroke="#1c1c1a" stroke-width="2"/>
+    <rect x="1222" y="458" width="192" height="24" fill="#C6F04B" fill-opacity="0.75" stroke="#1c1c1a" stroke-width="2"/>
+  </g>
+  <g class="ink-t" stroke-dasharray="5 5" opacity="0.85">
+    <path d="M1260 356 L1260 392"/><path d="M1337 404 L1337 440"/><path d="M1452 452 L1452 488"/>
+  </g>
+  <g class="note" font-size="20">
+    <text x="1480" y="382">6</text><text x="1480" y="430">26</text><text x="1480" y="478">32</text>
+  </g>
+  <text x="1180" y="518" class="note" font-size="20">dashed = what the weights predict</text>
+
+  <!-- ===== winner flag locked ===== -->
+  <g filter="url(#rough)">
+    <rect x="150" y="712" width="76" height="62" class="ink"/>
+    <path d="M166 712 C 166 674, 210 674, 210 712" class="ink"/>
+  </g>
+  <circle cx="188" cy="740" r="7" fill="#1c1c1a"/>
+  <text x="250" y="712" class="hand" font-size="27">who won stays readable by</text>
+  <text x="250" y="748" class="hand" font-size="27">the contract only — not the</text>
+  <text x="250" y="784" class="hand" font-size="27">employer, not me, not the winner</text>
+  <text x="150" y="836" class="note" font-size="22">prize amount is still 0 — funding is tomorrow</text>
+
+  <!-- ===== withdraw between batches ===== -->
+  <g filter="url(#rough)">
+    <rect x="706" y="690" width="124" height="56" class="ink"/>
+    <rect x="946" y="690" width="124" height="56" class="ink"/>
+  </g>
+  <text x="768" y="726" class="hand" font-size="24" text-anchor="middle">batch 1</text>
+  <text x="1008" y="726" class="hand" font-size="24" text-anchor="middle">batch 2</text>
+  <g class="ink-t" stroke-dasharray="8 8" opacity="0.7">
+    <path d="M830 718 L946 718"/>
+  </g>
+  <g filter="url(#rough)">
+    <path d="M888 730 L888 792" class="cy" marker-end="url(#ah)"/>
+  </g>
+  <text x="700" y="828" class="hand" font-size="25">withdraw everything in between →</text>
+  <text x="700" y="860" class="hand" font-size="25">the winner doesn't change</text>
+
+  <!-- ===== cost ===== -->
+  <g class="note" font-size="23" text-anchor="end">
+    <text x="1540" y="666">the pricey step — turning randomness</text>
+    <text x="1540" y="696">into a ticket — runs once per epoch</text>
+    <text x="1540" y="742">22 savers per tx, measured →</text>
+    <text x="1540" y="772">a full pool of 32 in 2 tx, anyone may push</text>
+  </g>
+
+  <text x="1428" y="878" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1544" y="878" class="title" font-size="26" text-anchor="end" opacity="0.85" letter-spacing="2">ZAMA</text>
+</svg>

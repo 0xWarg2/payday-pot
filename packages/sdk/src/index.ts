@@ -9,12 +9,14 @@ export {
   ALL_FOREIGN_ERROR_SPECS,
   FOREIGN_ERROR_ABI,
   classifyError,
+  toPotError,
 } from "./errors.js";
 
 export {
   type AccountState,
   type EncryptedHandle,
   type EpochPhase,
+  type EpochView,
   type PendingWork,
   type PotConfig,
   type PotState,
@@ -26,6 +28,33 @@ export {
   pendingWork,
   phaseFromUint8,
   readAccount,
+  readCurrentEpochId,
+  readEpoch,
   readPotConfig,
   readPotState,
 } from "./pot.js";
+
+export {
+  type DepositFacts,
+  type DrawStep,
+  type DrawStepAction,
+  type EncryptedAmount,
+  type FundBlock,
+  type FundFacts,
+  capHeadroom,
+  drawStepFor,
+  preflightDeposit,
+  preflightFundPrize,
+  sendBeginSnapshot,
+  sendClaim,
+  sendDefundPrize,
+  sendDeposit,
+  sendDrawStep,
+  sendFundPrize,
+  sendRequestRandom,
+  sendSelectBatch,
+  sendSnapshotBatch,
+  sendStartNewEpoch,
+  sendWithdraw,
+  sendWithdrawAll,
+} from "./actions.js";

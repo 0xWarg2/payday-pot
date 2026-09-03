@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { PotError } from "@payday-pot/sdk";
+import { toPotError, type PotError } from "@payday-pot/sdk";
 
 import { ShieldWarning } from "@/components/onboarding/ShieldWarning";
 import { Button } from "@/components/ui/Button";
@@ -72,7 +72,7 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
     try {
       await fn();
     } catch (e) {
-      setError(e as PotError);
+      setError(toPotError(e));
     } finally {
       setBusy(null);
     }

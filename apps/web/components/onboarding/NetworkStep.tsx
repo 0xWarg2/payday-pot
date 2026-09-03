@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PotError } from "@payday-pot/sdk";
+import { toPotError, type PotError } from "@payday-pot/sdk";
 
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Button } from "@/components/ui/Button";
@@ -42,7 +42,7 @@ export function NetworkStep() {
     try {
       await switchToSepolia();
     } catch (e) {
-      setError(e as PotError);
+      setError(toPotError(e));
     } finally {
       setBusy(false);
     }

@@ -15,7 +15,7 @@ Nguồn sự thật về version pins, quirks, và Decision D2. Mọi ngày sau 
 | `encrypted-types` | **0.0.4** | |
 | Solidity | **0.8.27**, optimizer 800, evmVersion **cancun** | |
 | Node / pnpm | v24.5.0 / 11.22.0 (corepack) | pnpm 11: `onlyBuiltDependencies` phải nằm trong `pnpm-workspace.yaml` (keccak, secp256k1, sharp) |
-| next / react / ethers | 15.5.6 / 19.2.4 / 6.15.0 | |
+| next / react / ethers | 15.5.25 / 19.2.4 / 6.15.0 | 15.5.6 → 15.5.25 ở Day 9: Vercel TỪ CHỐI serve build có Next dễ bị CVE-2025-66478 (quirk 56) |
 
 ## 2. Decision D2 — Đường deposit/withdraw (CHỐT)
 
@@ -212,3 +212,357 @@ FHEVM RNG (`FHE.randEuint64`) hiện là **PRNG mockup** theo roadmap Zama tại
     thật. Cùng một nhầm lẫn ở tầng sản phẩm là bug đã sửa ở Day 6 (xem
     EXECUTION_PLAN Day 6): *chưa đọc* là trạng thái thứ tư, không được mượn UI
     của ba trạng thái kia.
+
+## 10. Quirks luồng tiền trong browser (Day 7 — 27/08/2026)
+
+30. **ethers BỌC mã lỗi của ví lại.** Một `4001` (user bấm Cancel/Reject) đi ra
+    ngoài dưới lớp `code: "UNKNOWN_ERROR"` với bản gốc nằm ở `error` hoặc
+    `info.error`. `classifyError` cũ chỉ đọc mã ngoài cùng ⇒ **mọi** lần user từ
+    chối đều rơi vào nhánh `unknown` và app nói "Something went wrong" cho một
+    việc người dùng vừa cố ý làm. Fix: `errorCodesOf` đi đệ quy qua
+    `info`/`error`/`cause`/`data` và khớp theo tập mã, không theo mã ngoài cùng.
+
+31. **Ví stub trong e2e phải chuyển cả `error.data`, không chỉ `message`.** Đó là
+    revert data, và là thứ duy nhất cho phép gọi tên custom error của contract.
+    Bỏ nó đi thì mọi lỗi onchain đều thành "Something went wrong" và test lỗi
+    onchain kiểm sai nhánh — nhìn xanh mà không chứng minh gì.
+
+32. **Cast `e as PotError` ở tầng component = màn hình trắng.** Cái ném ra trong
+    một handler không nhất thiết là lỗi của chain: một `TypeError` do state chưa
+    nạp xong ném ra ở đúng chỗ đó, và `ErrorPanel` đọc `error.action.kind` —
+    `Error` không có `action`. Đường duy nhất được phép đi vào UI là
+    `toPotError()`: PotError thật thì giữ nguyên, còn lại qua `classifyError`.
+
+33. **Ví CI (không có vị thế) revert ngay ở `eth_estimateGas`, trước khi ví mở
+    ra.** Nghĩa là không diễn được "user bấm Reject" bằng deposit/withdraw trong
+    CI — tx chết trước bước ký. Đường duy nhất còn đúng nghĩa là faucet (mint
+    token mock, không phụ thuộc số dư). Ghi lại để đừng "sửa" test bằng cách nới
+    assertion.
+
+34. **Địa chỉ pot cho proof lấy từ manifest, không từ `reads.config`.**
+    `reads.config` là kết quả của một lần đọc RPC có thể chưa xong hoặc đã hỏng;
+    một luồng rút tiền không được phụ thuộc vào cái poll đó (`reads.config!` là
+    nguồn của crash 'kind' nói ở #32).
+
+## 11. Quirks Draw Room + probe cUSDC live (Day 8 — 29/08/2026)
+
+35. **`finalizeUnwrap` trên cUSDC live chỉ có ĐÚNG MỘT chữ ký:
+    `finalizeUnwrap(bytes32,uint64,bytes)`.** Probe read-only (eth_call, không
+    khoá, không gas) vào `0x7c5BF43B…3639` ngày 29/08: biến thể
+    `finalizeUnwrap(bytes32,uint64,bytes[])` kiểu FHEVM-oracle **không tồn tại**,
+    biến thể `uint256` cũng không. Chữ ký đang pin trong `CUSDC_ABI` là đúng —
+    đừng "sửa" nó theo docs của một version khác.
+
+36. **requestId lạ revert bằng custom error `0xd1630f8e` =
+    `InvalidUnwrapRequest(bytes32)`.** Đây là bản lề của R1: một unwrap đã được
+    người khác finalize xong thì lần gọi thứ hai không im lặng thành công, nó
+    revert — và taxonomy phải đọc revert đó thành *"cái này xong rồi"* chứ không
+    phải *"thất bại"*. `packages/sdk/src/errors.ts` đã map sẵn
+    (`code: "unwrap-request-gone"`, `retryable: false`), giờ có test pin selector.
+
+37. **Còn đúng một ẩn số của R1: nội dung tham số `signatures`.** Gần như chắc là
+    `decryptionProof` từ `publicDecrypt()`, nhưng không xác minh được nếu không
+    có một unwrap ĐANG TREO trên ví có tiền. Vì vậy nút *Resume finalize* chưa
+    ship — CLAUDE.md cấm dựng abstraction FHE/ERC-7984 trước khi verify, và
+    ERROR_RECOVERY_MATRIX cấm nút dẫn vào ngõ cụt. Banner hiện tại đưa 3 đường
+    đi thật (Etherscan · giới hạn đã biết · hỏi lại chain) nên không ai kẹt.
+
+38. **Stub RPC trong Playwright phải dùng `route.fetch()`, không dùng `fetch()`
+    của Node.** `fetch` global trong route handler chạy ở tầng Node, đi ra IPv6
+    và treo 10s rồi `ConnectTimeoutError` khi tới publicnode. `route.fetch({
+    postData })` đi bằng network stack của browser nên vào thẳng. Và body
+    JSON-RPC có thể là **mảng** (ethers batch `batchMaxCount: 10`) — phải tách
+    ra, chỉ dàn dựng đúng lời gọi mình quan tâm, phần còn lại forward lên rồi
+    ghép lại theo `id`. Match URL bằng regex, không bằng chuỗi (URL thật có thể
+    mang thêm `/`).
+
+39. **`keeper-progress` / `claim-open-review` chỉ tồn tại ở đúng phase.** Vòng
+    đang Open thì không có cursor để khoe, chưa settle thì không có nút claim.
+    Test và demo phải rẽ nhánh theo `count()` — assert cứng thì đỏ tuỳ giờ chạy,
+    còn nới assertion thì mất luôn ý nghĩa. Nhánh "không có" vẫn phải chứng minh
+    một điều: chỗ đó **không được để trống**, phải nói ra lý do.
+
+40. **`node demo/build-mp4.mjs` mặc định ghi `payday-pot-day7.mp4`.** Chạy
+    không tham số sau khi quay Day 8 sẽ ĐÈ file reel Day 7 bằng nội dung Day 8
+    (thư mục `demo-results/` gitignored nên git không cứu). Script giờ nhận
+    tham số ngày: `node demo/build-mp4.mjs day8`. Và kể cả khi tên file đúng,
+    `demo-results/` vẫn bị **xoá sạch đầu mỗi lần chạy** — hai reel không sống
+    cùng nhau ở đó được. Reel định nộp copy sang `apps/web/demo-reels/`
+    (gitignored, nằm ngoài đường xoá).
+
+41. **`timeout` mặc định của Playwright là 30s và nó ĐÈ mọi `READ_TIMEOUT` dài
+    hơn trong file.** `draw.spec.ts` chờ `draw-timeline` với 60s, nhưng test
+    chết ở giây thứ 30 nên con số 60s chưa bao giờ có tác dụng. Nó xanh suốt vì
+    route đã compile sẵn từ lần chạy trước; chỉ lần chạy nguội (xoá `.next` →
+    Next compile `/app/draws/current` + một vòng đọc Sepolia thật) mới lòi ra, và
+    lòi ở **test đầu tiên** nên trông y như lỗi sản phẩm. Đã
+    `test.describe.configure({ timeout: 120_000 })` cho cả file. Quy tắc: hằng
+    số `*_TIMEOUT` trong file phải nhỏ hơn timeout của test, nếu không nó là số
+    trang trí.
+
+42. **Relayer sập giữa suite đọc thành "lỗi luồng tiền".** Màn review của
+    withdraw chỉ dựng được sau khi relayer mã hoá xong; relayer chết thì app đi
+    đúng nhánh **R7** (input còn nguyên, chưa gửi gì) — hành vi ĐÚNG, có test
+    riêng. Nhưng test "bấm ký hai lần" thì đỏ vì lý do chẳng liên quan đến nó.
+    Cách xử lý: chờ `dialog.or(relayerDown)` rồi `test.skip()` **có lý do**, chứ
+    không nới assertion. Xanh giả tệ hơn đỏ.
+
+43. **Chạy demo CÓ MÀN HÌNH chết cửa sổ giữa chừng — quay reel thì luôn
+    `DEMO_HEADLESS=1`.** `pnpm demo:day8` mặc định headed (config chỉ headless
+    khi `DEMO_HEADLESS=1`). Một lần chạy 30/08 đứt ở clip 3:
+    `page.waitForTimeout: Target page, context or browser has been closed` tại
+    `narrate.ts:69` — đúng dòng thuyết minh ĐẦU TIÊN của clip, tức trang đã chết
+    trước khi có assert nào chạy. Không assert nào fail; `mode: "serial"` nên 2
+    clip sau "did not run". Chạy lại headless: **5/5 xanh, 4.1 phút**. Cách đọc
+    lỗi này: `waitForTimeout` ném "target closed" là **cửa sổ chết**, không phải
+    sản phẩm sai — `page.evaluate` ngay trên nó có `.catch(() => {})` nên nuốt
+    mất nguyên nhân thật. Và vì run fail thì `build-mp4.mjs` không chạy, trong
+    khi `demo-results/` đã bị xoá sạch từ đầu run → **mất luôn reel cũ ở đó**.
+    Reel nộp nằm ở `apps/web/demo-reels/` chính vì vậy (xem #40).
+
+## 12. Quirks đóng R1 + relayer ngoài browser (Day 9 — 02/09/2026)
+
+44. **Tham số thứ ba của `finalizeUnwrap` là `decryptionProof` của
+    `publicDecrypt()` — hết ẩn số (#37 đóng).** Xác nhận hai đường độc lập.
+    (a) Source OZ `@openzeppelin/confidential-contracts@0.5.3`
+    `token/ERC7984/extensions/ERC7984ERC20Wrapper.sol`: tham số tên đúng là
+    `decryptionProof`, và contract **tự** dựng `cleartexts = abi.encode(uint64)`
+    rồi `FHE.checkSignatures(handles, cleartexts, decryptionProof)` — nên chỉ
+    truyền **số** cho tham số `uint64`, không truyền `abiEncodedClearValues`.
+    (b) Chạy thật trên Sepolia 02/09: `unwrap` → `publicDecrypt([requestId])` →
+    `finalizeUnwrap(requestId, clearValue, decryptionProof)` mined thành công.
+    Đối chiếu thêm: `abi.encode(["uint64"], [clearValue])` **khớp từng byte** với
+    `abiEncodedClearValues` mà relayer trả về.
+
+45. **`unwrap` KHÔNG cần ACL để decrypt — wrapper tự
+    `FHE.makePubliclyDecryptable` lên handle số đã burn.** Đó là lý do bước hai
+    permissionless được (ví nào cũng finalize hộ được) và lý do không cần chữ ký
+    EIP-712 thứ hai. Hệ quả cho privacy: **exit là chỗ duy nhất một số tiền
+    thôi confidential** — nói thẳng trong UI, đừng để judge tự phát hiện.
+    Và `requestId` **chính là** handle đó (#23) nên nó vẫn không có việc gì phải
+    nằm trong localStorage/URL/analytics.
+
+46. **`unwrap` vượt số dư KHÔNG revert — nó clamp về encrypted zero rồi
+    `finalizeUnwrap` chuyển 0.** Gặp thật lúc probe: unwrap 1 USDC từ ví có 0
+    cUSDC tạo request bình thường, finalize thành công, chuyển 0. Cùng ngữ nghĩa
+    clamp với deposit (non-negotiable #2) nhưng ở biên unwrap. Hệ quả UI: nút
+    hoàn tất **phải báo số thật**, kể cả 0 — một dấu tích xanh không kèm số ở đây
+    là app nói dối về một giao dịch thành công.
+
+47. **~~`userDecrypt` của relayer-sdk KHÔNG chạy được ngoài browser
+    (`node-tkms@0.12.8`)~~ — SAI ở phần kết luận, xem #60.** Triệu chứng ghi
+    dưới đây là thật và vẫn đúng, nhưng "Node không chạy được" thì không: Day 9
+    `kms-probe.ts` chạy `userDecrypt` **trong Node** và có lần xong 3/3 (quirk
+    #60). Cùng một script, cùng một máy, vài phút sau lại hỏng 3/3. Nên đây
+    không phải giới hạn của binding Node — nó là cùng một sự cố hạ tầng mà
+    browser cũng dính. Giữ nguyên phần mô tả để thấy vì sao kết luận cũ trông
+    vững: lúc đó mọi lần thử trong Node đều hỏng.
+
+    Mọi lời gọi từ Node **hôm 01/09** chết trong WASM:
+    `core/service/src/client/user_decryption_wasm.rs:412:44 … Gao decoding
+    failure … n=13, deg=4, #shares=9`. Đã loại trừ mọi giả thuyết phía server:
+    handle mới tinh và handle 6 ngày tuổi, một handle và nhiều handle, một
+    contract và nhiều contract — đều chết như nhau; **`publicDecrypt` trên cùng
+    relayer đó thành công** và proof của nó được contract nhận (#44), nên KMS
+    khoẻ. Kết luận **lúc đó**: lỗi ở binding Node của tkms — hợp lý với dữ liệu
+    có trong tay, và sai. Đọc #60 trước khi trích dòng này.
+    `publicDecrypt` thì chạy tốt ở Node — đủ cho script vận hành R1.
+
+48. **`eth_getLogs` ở publicnode chặn đúng 50.000 block; Infura chặn thấp hơn.**
+    Đo thật 02/09: 100k → `exceed maximum block range: 50000`, 50k → OK. ≈6,9
+    ngày Sepolia trong một request. Vì vậy `UNWRAP_LOOKBACK_BLOCKS = 50_000` là
+    con số đo được chứ không phải chọn cho tròn, và giới hạn "unwrap treo cũ hơn
+    ~7 ngày thì banner không thấy" phải ghi ở KNOWN_LIMITATIONS thay vì phân
+    trang ngược vô hạn lúc mount.
+
+---
+
+## 13. Quirks RC lên Sepolia (Day 9 — 02/09/2026)
+
+49. **`@nomicfoundation/hardhat-verify@2.1.3` dùng shape config v2, KHÔNG phải
+    của Hardhat 3.** Context7 trả docs Hardhat 3 (`defineConfig`, khối
+    `verify: { etherscan: … }`) cho một repo Hardhat 2.29.0 — sai hoàn toàn và
+    trông rất giống đúng. Nguồn thật là `types.d.ts` +
+    `internal/type-extensions.d.ts` của chính bản đã cài: ba key **top-level**
+    `etherscan`, `blockscout`, `sourcify`. Bài học chung: version pin nào mà
+    Context7 không phân biệt được major thì đọc `.d.ts` trong `node_modules`,
+    nó không bao giờ nói về một version khác.
+
+50. **Blockscout Sepolia không cần API key, và nó tự propagate sang Sourcify.**
+    `internal/blockscout.chain-config.js` đã có sẵn `eth-sepolia`
+    (`https://eth-sepolia.blockscout.com/api`). Đây là đường verify duy nhất
+    không đòi tạo account. Kết quả đo trên RC: Sourcify v2 trả
+    `creationMatch=match` + `runtimeMatch=match` — **full match, kể cả với
+    `bytecodeHash: "none"`** (dự đoán ban đầu của tôi là partial; sai). Kiểm:
+    `curl https://sourcify.dev/server/v2/contract/11155111/<address>`
+
+51. **Provider Sourcify của plugin là DEAD CODE — nó vẫn gọi API v1.** Client
+    trong 2.1.3 gọi `${apiUrl}/check-all-by-addresses`, endpoint Sourcify đã bỏ;
+    giờ trả HTML 404 nên lỗi hiện ra là `Unexpected token '<', "<!DOCTYPE "…`,
+    tức là trông như lỗi mạng chứ không như "endpoint không còn tồn tại". Vẫn để
+    `enabled: true` có chủ ý: thà lệnh verify nói nó không chạy được, hơn là im
+    lặng bỏ qua một provider mà mình tưởng đang chạy.
+
+52. **Task `verify` chạy MỌI provider đang bật, và một provider bật mà thiếu key
+    sẽ fail CẢ lệnh** — kéo theo hai provider đang chạy được cũng không báo cáo
+    gì. Vì vậy `etherscan.enabled: ETHERSCAN_API_KEY !== ""` là bắt buộc chứ
+    không phải cho gọn. Kèm theo: **không gọi được subtask từ CLI** —
+    `npx hardhat verify:blockscout` chết bằng `HHE3`/`HH312`; chỉ chạy task cha
+    `verify`, còn chọn provider thì bằng `enabled`.
+
+53. **pnpm 11 XOÁ `onlyBuiltDependencies`, thay bằng `allowBuilds` (map → bool).**
+    Cùng lúc xoá `neverBuiltDependencies`, `ignoredBuiltDependencies`,
+    `onlyBuiltDependenciesFile`, `ignoreDepScripts`. Nguy hiểm ở chỗ **im lặng
+    trên máy dev**: `pnpm install` gặp `node_modules` dựng sẵn thì in "Already up
+    to date" và không đánh giá build script lần nào, nên một `allowBuilds` sai
+    kiểu (giá trị là chuỗi thay vì boolean) sống được 8 ngày. Cold install đầu
+    tiên — trên Vercel — fail cả lệnh bằng `ERR_PNPM_IGNORED_BUILDS`.
+    Cách reproduce cold install trong 5 giây, không phá `node_modules` đang chạy:
+    copy đúng 6 file manifest (root `package.json`, `pnpm-workspace.yaml`,
+    `pnpm-lock.yaml`, và `package.json` của 4 workspace) sang thư mục trống rồi
+    `pnpm install --frozen-lockfile`.
+
+54. **~~Relayer không phục vụ hai `userDecrypt` song song của cùng một ví.~~
+    SAI — nguyên nhân thật là #58.** Quirk này viết ngày 02/09 từ một tương quan:
+    với `--workers=2`, hai test reveal cạnh nhau treo ở `data-state="hidden"`
+    tới hết 120s, trong khi ba test reveal chạy lẻ xanh trong 11–27s. Kết luận
+    "relayer không chịu request song song" khớp với dữ liệu đang có và **vẫn
+    sai**. Bác bỏ ngày 03/09 bằng một lần chạy `--workers=1` (tuần tự, một
+    worker, một ví): hai test reveal vẫn đỏ, và trace cho thấy relayer trả
+    `POST /v2/user-decrypt` → 202 rồi `GET /v2/user-decrypt/<id>` → 200 trong
+    809ms. Không có gì song song, và relayer không từ chối gì cả — thất bại xảy
+    ra **sau** khi nó trả lời, ở tầng dựng lại share phía client (#58).
+
+    Giữ lại nguyên văn kết luận sai vì cái bẫy đáng ghi hơn cả kết luận: `hidden`
+    là state mặc định của "chưa biết gì", nên MỌI cách reveal chết đều hiện ra
+    y hệt nhau, và một tương quan với `--workers` là thứ đầu tiên đập vào mắt.
+    Việc phải làm là đọc chuỗi `cause` chứ không phải đọc lịch chạy test.
+    `mode: "default"` vẫn giữ (tuần tự dễ đọc log hơn), nhưng nó không phải fix
+    của bất cứ thứ gì.
+
+55. **Vercel bật `ssoProtection` cho project mới, phạm vi `all_except_custom_domains`.**
+    Nghĩa là mọi URL `*.vercel.app` — kể cả production alias — nằm sau màn hình
+    đăng nhập Vercel. Judge mở link sẽ thấy login, không thấy sản phẩm, và không
+    có gì trong build log nói ra điều đó. Phải tắt tường minh và kiểm bằng một
+    request không cookie (`curl -I` → 200, không phải 401/307 sang
+    `vercel.com/sso`).
+
+56. **Vercel TỪ CHỐI serve deployment có Next.js trong danh sách CVE của họ.**
+    Không phải cảnh báo — `readyState: ERROR`, `errorCode:
+    VULNERABLE_NEXTJS_VERSION`, `errorStep: "direct:build"`, link
+    `vercel.link/CVE-2025-66478`. Build log của nó **kết thúc bằng "Build
+    Completed"** rồi "Deploying outputs...", nên đọc log thôi sẽ tưởng là xanh;
+    chỉ `readyState` nói thật. Next 15.5.6 (pin từ Day 1) nằm trong danh sách đó
+    → **buộc phải phá pin**: 15.5.6 → **15.5.25** (dist-tag `backport` = bản
+    15.5.x cuối). `pnpm audit` sau khi bump: 0 advisory cho `next`. Đây là ngoại
+    lệ có lý do cho hard rule "version pin", và lý do là chủ nhà không cho ở.
+
+57. **Một deployment fail vẫn trả HTTP 200.** Vercel serve trang "Deployment has
+    failed" của chính nó ở mọi path, kèm `x-matched-path: /[[...slug]]` và CSP
+    của `instant-preview-site.vercel.app`. Nên `curl -o /dev/null -w %{http_code}`
+    → `200` **không chứng minh gì cả**; suýt ghi vào scorecard là "public URL
+    sống". Cách kiểm đúng, và là cách duy nhất tự phát hiện được:
+    - `readyState` phải là `READY` (không phải `ERROR`), và
+    - body phải chứa nội dung của mình (`<title>` thật), và
+    - **`cross-origin-opener-policy`/`cross-origin-embedder-policy` phải có mặt**
+      — trang lỗi của Vercel không có chúng, mà relayer-sdk thì không chạy được
+      nếu thiếu. Chính chỗ thiếu hai header này làm lộ ra là trang không phải
+      của mình.
+
+58. **KMS threshold trả về một bộ share KHÔNG dựng lại được, ở tỉ lệ ~1/3
+    request — và `@zama-fhe/relayer-sdk` che mất nguyên nhân.** Đây là quirk
+    đắt nhất của Day 9, và là nguyên nhân thật của #54.
+
+    Triệu chứng: `reveal` chết. Relayer trả `POST /v2/user-decrypt` → 202,
+    `GET /v2/user-decrypt/<id>` → 200 với body `{"status":"succeeded", "result":
+    {"result":[{"payload":"29000000…"}]}}` — tức nó **đã trả lời đầy đủ**. Rồi
+    WASM phía client ném ra. Payload của lần chết và lần chạy được có cấu trúc
+    byte giống hệt nhau ở mọi field độ dài, nên nhìn network tab sẽ không bao
+    giờ thấy khác biệt.
+
+    Lỗi thật, đọc được sau khi đi theo chuỗi `cause`:
+
+    ```
+    Error in core/service/src/client/user_decryption_wasm.rs:412:44:
+      Error reconstructing all blocks:
+      Error in core/threshold/src/algebra/poly.rs:699:20:
+      Gao decoding failure: Allowed at most 0 errors but xgcd factor degree
+      indicates 1.. n=13, deg=4, #shares=9, block_shares=9, recovery_errors=0
+    ```
+
+    Committee 13 party, polynomial bậc 4, client nhận 9 share — và **một share
+    không nhất quán**. Ở tỉ lệ 9 share cho bậc 4, Reed-Solomon còn đủ chỗ để
+    PHÁT HIỆN một lỗi nhưng không đủ để SỬA, nên nó fail cứng thay vì sửa. Lỗi
+    nằm hoàn toàn ở hạ tầng KMS testnet; không có gì trong repo này sửa được.
+
+    **Vì sao khó tìm:** SDK bọc *mọi* thất bại của bước decrypt lại thành đúng
+    một câu — `throw new Error("An error occured during decryption", { cause: st })`
+    (đúng, "occured" một chữ r, đừng grep bằng chính tả đúng). `console.error(e)`
+    của trình duyệt **không** đi theo `cause`, nên thứ duy nhất ra console là câu
+    ấy; và `classifyError` cũng chỉ đọc `e.message`, nên nó rơi vào nhánh
+    `unknown` → `row: null` → panel "Something went wrong". Hành động chủ lực của
+    sản phẩm chết ở một dead end, đúng tiêu chí "handle errors gracefully".
+
+    **Đã làm:** (1) `causeChain()` dẹt chuỗi `cause` thành một dòng, log đúng một
+    chỗ trong `catch` của `revealHandles`; (2) `messageChainOf()` trong taxonomy
+    đọc cả chuỗi `cause` cho **đúng nhánh này** — không đổi `messageOf` chung, vì
+    một `cause` tình cờ chứa chữ "network" đủ để kéo một lỗi hợp đồng sang nhánh
+    RPC; (3) code mới `decryption-incomplete` → **R7**, retryable, copy nói thẳng
+    "answered with an incomplete result… nothing was sent"; (4) gọi lại — nhưng
+    **không** phải gọi lại y nguyên, xem **#60**: giả thiết "mỗi request lấy một
+    bộ share mới" là SAI, và #60 là phép đo đã bác nó. Điều duy nhất của #58 còn
+    đứng nguyên: chữ ký EIP-712 ký lên public key của keypair phiên + cửa sổ hiệu
+    lực, **không** ký lên request — nên hỏi lại (kiểu nào) cũng không cần chữ ký
+    thứ hai. Chỉ xử lý đúng họ lỗi này; mọi lỗi khác ném ra ngay.
+
+59. **Trang `/app/draws/current` không có `<h1>` nào trong cả năm trạng thái
+    chưa-đọc-được-chain.** Tên phòng là `Round N` và N đọc từ chain, nên trước
+    khi đọc xong — và trong `loading`/`not-deployed`/`mismatch`/`not-found`/
+    `error` — heading cấp 1 duy nhất của trang không tồn tại; `DrawNotice` render
+    title của nó bằng `<p class="font-semibold">`, trông y như heading nhưng
+    không phải. Screen reader không nói được đây là trang gì, và triệu chứng chỉ
+    hiện khi RPC chậm hoặc chết, tức đúng lúc người dùng cần biết mình đang ở đâu
+    nhất. E2E bắt được đúng **một lần trên 79 test** và trông như flaky. Fix:
+    `<h1>Draw room</h1>` luôn có, và **không** điền số vòng vào đó (một `Round 0`
+    bịa ra tệ hơn là không có số); pin bằng một test chặn thật RPC
+    (`route.abort()`) rồi assert đúng một `<h1>` không chứa chữ "round".
+
+60. **Hỏi lại y nguyên KHÔNG cứu được #58 — nhưng đổi tập handle thì cứu được.**
+    Đây là chỗ #58 đoán sai và phép đo bác lại, giữ nguyên ở đây vì nó là cái bẫy
+    đắt nhất của cả hai ngày: `decryptWithRetry` gọi lại **cùng một request** 3
+    lần và cả 3 lần đều chết ở đúng một chỗ (`n=13, deg=4, #shares=9` không đổi
+    một chữ). Trace Day 9 nói vì sao: ba POST `/v2/user-decrypt` liên tiếp cùng
+    body (`content-length: 2596` cả ba) nhận về **cùng một `requestId`**
+    `7dab9f00-d7ad-4c86-b633-d675431f9ac7` → cùng một câu trả lời hỏng. Phiên
+    mới (keypair khác, `start` khác, tức body khác) cũng vẫn hỏng 3/3.
+
+    Đo bằng `packages/contracts/scripts/kms-probe.ts` — chạy trong **Node**,
+    ngoài toàn bộ hạ tầng web (không Next build, không WASM path riêng, không
+    COOP/COEP): với `A` = principal, `B` = twabArea, `C` = pendingPrize, cùng một
+    thời điểm, 3 lần mỗi ca —
+
+    | request | kết quả |
+    |---|---|
+    | `[C]`, `[C,A]` | xong 3/3 |
+    | `[A]`, `[B]`, `[A,B]`, `[B,A]`, `[A,C]`, `[A,B,C]`, `[C,B,A]` | hỏng 3/3 |
+
+    …và **nửa giờ trước đó** `[A,B]` với `[A,B,C]` lại xong 10/10 trong khi `[A]`
+    hỏng 10/10. Nên nó không phải một handle "xấu" cố định, cũng không phải kích
+    thước batch: nó **dịch chuyển theo thời gian** và phụ thuộc **tập handle**.
+    Việc probe trong Node cũng hỏng y hệt là bằng chứng đóng lại câu hỏi "lỗi của
+    web hay của hạ tầng".
+
+    Fix: `decryptTargets` thử cả batch một lần, và khi hỏng thì **tách thành từng
+    handle** thay vì hỏi lại y nguyên — miễn phí, vì tập handle không nằm trong
+    payload EIP-712 nên không sinh chữ ký thứ hai. Mở được 2/3 giá trị vẫn tốt
+    hơn một bức tường; handle không mở được thì **ở lại trạng thái ẩn** (chỉ
+    những key có trong `values` được `commitReveals` ghi) nên không có đường nào
+    biến nó thành `0` (non-negotiable #8), và card hiện panel R7 nói giá trị nào
+    còn đóng.
+
+    Kèm một hệ quả cho test: e2e reveal trước đây chỉ chờ `revealed`, nên KMS từ
+    chối và app hỏng **đỏ y hệt nhau** sau 120s với đúng một thông tin "vẫn
+    hidden" — tức là buộc tội code của mình cho sự cố hạ tầng, và làm regression
+    thật sau này lẫn vào nhiễu. Giờ `ErrorPanel` render `data-code`/`data-row`,
+    và `revealPosition` đua `revealed` với panel: `decryption-incomplete` →
+    `test.skip()` có lý do đọc được, mọi code khác → đỏ kèm code thật.

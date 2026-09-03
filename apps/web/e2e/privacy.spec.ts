@@ -33,9 +33,36 @@ async function revealPosition(page: Page): Promise<Locator> {
   await expect(value).toHaveAttribute("data-state", "hidden");
 
   await button.click();
+
   // Relayer thật: nạp WASM, sinh keypair, ký, rồi userDecrypt. Chậm, và chậm là
   // bình thường — nhưng nó phải xong, không được đứng ở spinner.
-  await expect(value).toHaveAttribute("data-state", "revealed", { timeout: 120_000 });
+  //
+  // Đua `revealed` với panel R7 chứ không chỉ chờ `revealed`: khi committee KMS
+  // của Zama trả về bộ share không dựng lại được (COMPATIBILITY_NOTES #58, #60
+  // — đo được cả trong Node, ngoài mọi thứ của web), reveal thất bại và `hidden`
+  // là trạng thái nó rơi về. Chỉ chờ `revealed` thì test hết 120s rồi đỏ với
+  // đúng một thông tin "vẫn hidden" — tức là **buộc tội code của mình** cho một
+  // sự cố hạ tầng, và tệ hơn: một regression thật sau này cũng đỏ y hệt, lẫn
+  // vào nhiễu. Nên: R7 → skip có lý do đọc được; mọi thứ khác → đỏ.
+  const panel = page.getByTestId("error-panel");
+  await Promise.race([
+    expect(value).toHaveAttribute("data-state", "revealed", { timeout: 120_000 }),
+    panel.waitFor({ state: "visible", timeout: 120_000 }).catch(() => undefined),
+  ]);
+
+  if ((await value.getAttribute("data-state")) !== "revealed") {
+    const code = (await panel.count()) > 0 ? await panel.first().getAttribute("data-code") : null;
+    test.skip(
+      code === "decryption-incomplete",
+      "Zama KMS trả về bộ share không dựng lại được (R7) — reveal không chạy được lúc này, " +
+        "không phải lỗi của app. Xem COMPATIBILITY_NOTES #58/#60.",
+    );
+    // Không phải R7: để nó đỏ, và đỏ kèm code thật.
+    expect(value, `reveal không xong và panel báo code=${code ?? "(không có panel)"}`).toHaveAttribute(
+      "data-state",
+      "revealed",
+    );
+  }
   return value;
 }
 
@@ -97,7 +124,23 @@ test.describe("reveal session", () => {
   // Mặc định 30s của Playwright cắt ngang giữa chừng — và triệu chứng của nó
   // ("Received: hidden") trông y hệt một reveal hỏng, nên đây không phải nới
   // lỏng test mà là để nó đo đúng thứ nó định đo.
-  test.describe.configure({ timeout: 180_000 });
+  //
+  // `mode: "default"` = tuần tự trong MỘT worker, ghi đè `fullyParallel` của
+  // config. Lý do là để log đọc được: ba test reveal chạy chồng nhau thì không
+  // phân biệt được request nào của test nào. `serial` thì sai hẳn — nó biến một
+  // test đỏ thành ba test skip, tức là giấu đi đúng hai assertion về rò rỉ giữa
+  // hai ví trên cùng một máy.
+  //
+  // Chỗ này TỪNG ghi rằng relayer không phục vụ hai `userDecrypt` song song của
+  // cùng một ví. Điều đó **sai**, và cách nó sai đáng ghi lại: kết luận đến từ
+  // một tương quan thật (với `--workers=2`, hai test reveal cạnh nhau treo ở
+  // `hidden` hết 120s; ba test reveal chạy lẻ xanh trong 11–27s) nhưng một lần
+  // chạy `--workers=1` vẫn đỏ, và trace cho thấy relayer trả 202 rồi 200 trong
+  // 809ms. Nguyên nhân thật nằm sau câu trả lời của relayer: KMS đôi khi gửi về
+  // một bộ share không dựng lại được (COMPATIBILITY_NOTES #58), tỉ lệ ~1/3, và
+  // `hidden` là state mặc định của "chưa biết gì" nên MỌI cách reveal chết đều
+  // hiện ra y hệt nhau. Đừng suy ra nguyên nhân từ lịch chạy test; đọc `cause`.
+  test.describe.configure({ mode: "default", timeout: 180_000 });
 
   test("a fresh wallet is told nothing is there — not that it holds zero", async ({ page }) => {
     // Persona 1 của exit gate. Ví ngẫu nhiên chưa từng gửi ⇒ mọi handle là

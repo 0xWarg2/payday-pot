@@ -12,11 +12,31 @@ import { TxCenter } from "@/components/tx/TxCenter";
 const NAV = [
   { href: "/app", label: "Dashboard" },
   { href: "/app/savings", label: "Savings" },
+  { href: "/app/draws/current", label: "Draw room" },
   { href: "/employer", label: "Sponsor" },
 ] as const;
 
+/**
+ * Chỉ tô sáng mục khớp DÀI NHẤT.
+ *
+ * Kiểm từng mục kiểu `pathname.startsWith(href)` làm "Dashboard" (`/app`) sáng
+ * trên mọi trang `/app/*` — đứng ở Draw Room thì cả hai mục cùng sáng và
+ * `aria-current="page"` xuất hiện hai lần, tức là trình đọc màn hình được bảo
+ * rằng người dùng đang ở hai nơi cùng lúc. Prefix phải cắt ở dấu `/` để
+ * `/app/draws` không nhận `/app/drawsomething` là con của nó.
+ */
+function activeHref(pathname: string): string | null {
+  let best: string | null = null;
+  for (const { href } of NAV) {
+    const hit = pathname === href || pathname.startsWith(`${href}/`);
+    if (hit && (best === null || href.length > best.length)) best = href;
+  }
+  return best;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const current = activeHref(pathname);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -34,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <nav aria-label="Main" className="flex items-center gap-1 overflow-x-auto">
             {NAV.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = current === item.href;
               return (
                 <Link
                   key={item.href}

@@ -12,7 +12,7 @@
  * errors gracefully".
  */
 
-import { ALL_FOREIGN_ERROR_SPECS, classifyError } from "@payday-pot/sdk";
+import { ALL_FOREIGN_ERROR_SPECS, classifyError, toPotError } from "@payday-pot/sdk";
 import { describe, expect, it } from "vitest";
 
 import { classifyReadError } from "@/lib/pot/classify-read-error";
@@ -87,5 +87,93 @@ describe("recovery actions the brief names", () => {
     expect(spec?.row).toBe("R1");
     expect(spec?.retryable).toBe(false);
     expect(spec?.detail).toMatch(/already been finalized/i);
+  });
+});
+
+/**
+ * Hai hồi quy của Day 7, cả hai đều là lỗi làm trắng màn hình hoặc nói sai:
+ *
+ * 1. ethers BỌC lỗi ví lại. Một `4001` (user bấm Cancel) ra ngoài dưới lớp
+ *    `code: "UNKNOWN_ERROR"` với bản gốc nằm ở `error`/`info`. Chỉ đọc mã ngoài
+ *    cùng thì mọi lần user từ chối đều thành "Something went wrong" — app quy
+ *    một việc cố ý thành một sự cố.
+ *
+ * 2. Ở tầng component, cái ném ra không phải lúc nào cũng là lỗi của chain: một
+ *    `TypeError` do state chưa nạp xong ném ra ở đúng chỗ đó. Cast nó thành
+ *    `PotError` là cách thẳng nhất để đổi một lỗi nhỏ thành trang trắng, vì
+ *    `ErrorPanel` đọc `error.action.kind` và `Error` không có `action`.
+ */
+describe("lỗi bị bọc và lỗi không phải của chain", () => {
+  it("tìm ra 4001 dưới lớp bọc UNKNOWN_ERROR của ethers", () => {
+    const wrapped = {
+      code: "UNKNOWN_ERROR",
+      message: "could not coalesce error",
+      error: { code: 4001, message: "User denied transaction signature." },
+    };
+    const e = classifyError(wrapped);
+    expect(e.code).toBe("user-rejected");
+    expect(e.title).toMatch(/you cancelled/i);
+  });
+
+  it("tìm ra 4001 dù nó nằm sâu trong info.error", () => {
+    expect(classifyError({ code: "UNKNOWN_ERROR", info: { error: { code: 4001 } } }).code).toBe("user-rejected");
+  });
+
+  it("toPotError trả PotError nguyên vẹn và biến mọi thứ khác thành cái render được", () => {
+    const real = classifyError({ code: 4001 });
+    expect(toPotError(real)).toBe(real);
+
+    for (const junk of [new TypeError("Cannot read properties of null"), new RangeError("nope"), "boom", null, 7]) {
+      const e = toPotError(junk);
+      // Điều kiện duy nhất mà `ErrorPanel` cần để không sập.
+      expect(typeof e.action.kind).toBe("string");
+      expect(e.title.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * R1 — chốt lại bằng số liệu đọc từ chain thật, không bằng suy đoán ABI.
+ *
+ * Probe read-only 29/08 (`eth_call`, không tốn gas, không cần khoá) trên cUSDC
+ * live `0x7c5B…3639`:
+ *
+ *   finalizeUnwrap(bytes32,uint64,bytes)   → revert 0xd1630f8e + bytes32(0)
+ *   finalizeUnwrap(bytes32,uint64,bytes[]) → không có selector (missing revert data)
+ *   finalizeUnwrap(uint256,uint64,bytes)   → không có selector (revert rỗng)
+ *
+ * Hai điều được xác nhận: chữ ký hàm trong `CUSDC_ABI` đúng với bản đã deploy
+ * (biến thể `bytes[]` của FHEVM oracle KHÔNG phải cái đang chạy), và một
+ * requestId không tồn tại — tức "đã finalize xong rồi" — trả về một custom error
+ * **decode được**, chứ không phải một revert câm.
+ *
+ * Vì sao pin selector ở đây: nó là bản lề của tính idempotent trong R1. Bấm
+ * resume lần thứ hai phải ra "xong rồi", và cách duy nhất phân biệt nó với một
+ * lỗi thật là bốn byte này. ABI đổi tên field mà quên đổi ở đây thì test này đỏ.
+ */
+describe("R1 finalize resume, pinned to what the live wrapper actually answers", () => {
+  const INVALID_UNWRAP_REQUEST = "0xd1630f8e";
+
+  it("decodes the selector the live contract returned, into the R1 spec", () => {
+    const revert = `${INVALID_UNWRAP_REQUEST}${"00".repeat(32)}`;
+    const classified = toPotError({ data: revert });
+
+    expect(classified.row).toBe("R1");
+    expect(classified.code).toBe("unwrap-request-gone");
+    // Không phải "thất bại": người dùng bấm lần hai vì lần đầu trông như không
+    // ăn thua, và câu trả lời đúng là tiền đã về.
+    expect(classified.retryable).toBe(false);
+    expect(classified.title).not.toMatch(/fail|error|wrong/i);
+  });
+
+  it("does not leak the request id into anything the user reads", () => {
+    // `unwrapRequestId` trên bản live CHÍNH LÀ ciphertext handle của số đã burn
+    // (quirk #23). Nó ở trong revert data là chuyện của chain; nó đi vào câu
+    // tiếng Anh trên màn hình thì là một handle bị publish.
+    const requestId = "d2".repeat(32);
+    const classified = toPotError({ data: `${INVALID_UNWRAP_REQUEST}${requestId}` });
+
+    expect(`${classified.title} ${classified.detail}`).not.toContain(requestId);
+    expect(`${classified.title} ${classified.detail}`).not.toMatch(/0x[0-9a-f]{8}/i);
   });
 });

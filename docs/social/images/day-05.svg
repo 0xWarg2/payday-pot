@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="3"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <filter id="marker" x="-15%" y="-25%" width="130%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <marker id="ah" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#0FB9D6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ahk" viewBox="0 0 12 12" refX="7" refY="6" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#1c1c1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ink   { fill:none; stroke:#1c1c1a; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+    .ink-t { fill:none; stroke:#1c1c1a; stroke-width:1.7; stroke-linecap:round; }
+    .cy    { fill:none; stroke:#0FB9D6; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; }
+    .cy-t  { fill:none; stroke:#0FB9D6; stroke-width:2.2; stroke-linecap:round; }
+    .lime  { fill:#C6F04B; }
+    .title { font-family:"Marker Felt","Bradley Hand","Comic Sans MS",cursive; fill:#141412; }
+    .hand  { font-family:"Bradley Hand","Noteworthy","Comic Sans MS",cursive; fill:#1c1c1a; }
+    .note  { font-family:"Noteworthy","Bradley Hand","Comic Sans MS",cursive; fill:#4a4a46; }
+  </style>
+
+  <rect width="1600" height="900" fill="#F7F3E7"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.13" style="mix-blend-mode:multiply"/>
+  <rect width="1600" height="900" fill="none" stroke="#d8d2bf" stroke-width="10"/>
+
+  <!-- ===== title ===== -->
+  <g filter="url(#marker)">
+    <path d="M86 108 L556 96 L560 142 L88 152 Z" class="lime" opacity="0.62"/>
+  </g>
+  <text x="92" y="140" class="title" font-size="66" letter-spacing="1.5">PAYDAY POT</text>
+  <text x="96" y="186" class="hand" font-size="30" fill="#3d3d39">day 5 — the loop closes, end to end</text>
+  <text x="96" y="222" class="note" font-size="22">one command: pnpm demo:day5</text>
+  <g filter="url(#rough2)">
+    <path d="M88 240 C 240 236, 400 244, 560 238" class="ink-t" opacity="0.5"/>
+  </g>
+
+  <!-- ===== test tally ===== -->
+  <g filter="url(#rough2)">
+    <path d="M1150 48 L1550 44 L1552 300 L1152 304 Z" class="ink-t" opacity="0.6"/>
+  </g>
+  <text x="1174" y="88" class="hand" font-size="25">150 tests green</text>
+  <g class="note" font-size="19">
+    <text x="1174" y="124">12 — stack spikes</text>
+    <text x="1174" y="150">30 — money in / money out</text>
+    <text x="1174" y="176">26 — time-weight, frozen at payday</text>
+    <text x="1174" y="202">26 — the draw</text>
+    <text x="1174" y="228">38 — prize, claim, next round (new)</text>
+    <text x="1174" y="254">17 — cost per tx</text>
+    <text x="1174" y="280">1 — fuzz: solvency, read off chain</text>
+  </g>
+
+  <!-- ===== sealed carry note ===== -->
+  <g filter="url(#rough2)">
+    <rect x="628" y="256" width="44" height="30" class="ink-t"/>
+    <path d="M628 256 L650 274 L672 256" class="ink-t"/>
+  </g>
+  <g class="note" font-size="21">
+    <text x="690" y="266">no winner? the prize rolls forward, sealed —</text>
+    <text x="690" y="294">nobody can read whether there was one</text>
+  </g>
+
+  <!-- ===== the loop ===== -->
+  <g filter="url(#rough)">
+    <rect x="150" y="334" width="112" height="52" class="ink"/>
+    <rect x="318" y="334" width="112" height="52" class="ink"/>
+    <rect x="486" y="334" width="112" height="52" class="ink"/>
+    <rect x="654" y="334" width="112" height="52" class="ink"/>
+    <rect x="822" y="334" width="112" height="52" class="ink"/>
+    <rect x="990" y="334" width="112" height="52" class="ink"/>
+  </g>
+  <g class="hand" font-size="25" text-anchor="middle">
+    <text x="206" y="368">fund</text>
+    <text x="374" y="368">save</text>
+    <text x="542" y="368">freeze</text>
+    <text x="710" y="368">draw</text>
+    <text x="878" y="368">settle</text>
+    <text x="1046" y="368">claim</text>
+  </g>
+  <g class="cy" marker-end="url(#ah)">
+    <path d="M268 358 C 284 362, 292 358, 310 361"/>
+    <path d="M436 358 C 452 362, 460 358, 478 361"/>
+    <path d="M604 358 C 620 362, 628 358, 646 361"/>
+    <path d="M772 358 C 788 362, 796 358, 814 361"/>
+    <path d="M940 358 C 956 362, 964 358, 982 361"/>
+  </g>
+  <path d="M1046 392 C 1050 486, 620 512, 244 482 C 214 474, 205 440, 206 400" class="cy" marker-end="url(#ah)"/>
+  <text x="628" y="534" class="hand" font-size="26" text-anchor="middle">next round — same pot, weights reset, prize carried</text>
+
+  <g class="note" font-size="22">
+    <text x="1180" y="404">green ≠ ran: my first fuzz loop</text>
+    <text x="1180" y="436">passed in 2.3s with every defund</text>
+    <text x="1180" y="468">landing on the revert branch —</text>
+    <text x="1180" y="500">counters now assert each one fires</text>
+  </g>
+
+  <!-- ===== the rug window i shipped ===== -->
+  <text x="150" y="600" class="hand" font-size="27">red-teamed my own contract and found one:</text>
+  <text x="150" y="638" class="hand" font-size="26" fill="#3d3d39">the employer could still pull the prize back after</text>
+  <text x="150" y="672" class="hand" font-size="26" fill="#3d3d39">weights froze — when no saver could leave anymore</text>
+  <g filter="url(#marker)">
+    <path d="M142 692 L744 686 L746 724 L144 730 Z" class="lime" opacity="0.55"/>
+  </g>
+  <text x="150" y="718" class="hand" font-size="25">rule now: the prize may change only while</text>
+  <text x="150" y="756" class="hand" font-size="25">a saver can still change their deposit</text>
+  <text x="150" y="806" class="note" font-size="22">still local only — public testnet is day 9</text>
+
+  <!-- ===== identical claim receipts ===== -->
+  <g filter="url(#rough)">
+    <rect x="860" y="586" width="252" height="152" class="ink"/>
+    <rect x="1188" y="586" width="252" height="152" class="ink"/>
+  </g>
+  <text x="986" y="620" class="hand" font-size="24" text-anchor="middle">the winner claims</text>
+  <text x="1314" y="620" class="hand" font-size="24" text-anchor="middle">anyone else claims</text>
+  <g filter="url(#rough2)">
+    <path d="M878 632 L1094 629 M1206 632 L1422 629" class="ink-t" opacity="0.45"/>
+  </g>
+  <g class="note" font-size="21" text-anchor="middle">
+    <text x="986" y="664">748,032</text><text x="986" y="694">369,000</text><text x="986" y="724">396,250</text>
+    <text x="1314" y="664">748,032</text><text x="1314" y="694">369,000</text><text x="1314" y="724">396,250</text>
+  </g>
+  <text x="1150" y="678" class="title" font-size="38" text-anchor="middle">=</text>
+  <text x="1150" y="764" class="note" font-size="20" text-anchor="middle">compute · depth · gas</text>
+  <text x="860" y="800" class="hand" font-size="25">same cost, to the digit — the receipt</text>
+  <text x="860" y="834" class="hand" font-size="25">cannot tell you who won</text>
+
+  <text x="1428" y="878" class="note" font-size="20" text-anchor="end" opacity="0.8">built with</text>
+  <text x="1544" y="878" class="title" font-size="26" text-anchor="end" opacity="0.85" letter-spacing="2">ZAMA</text>
+</svg>

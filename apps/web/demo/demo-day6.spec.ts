@@ -136,7 +136,7 @@ test.describe("PayDay Pot — Day 6 EOD demo", () => {
     if (!wallet.funded) {
       info("E2E_MNEMONIC chưa set → bỏ qua phần reveal.");
       info("Cố tình không giả lập: một reveal giả không chứng minh được gì.");
-      info('Chạy lại với:  E2E_MNEMONIC="$(cd ../../packages/contracts && npx hardhat vars get MNEMONIC)" pnpm demo:day6');
+      info("Chạy `pnpm demo:day6` từ ROOT repo — script ở đó tự nạp mnemonic.");
       test.skip();
       return;
     }

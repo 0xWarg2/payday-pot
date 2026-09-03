@@ -62,18 +62,29 @@ export interface PotConfig {
   participantCap: number;
 }
 
-/** Trạng thái công khai của epoch hiện tại — cái UI poll. */
-export interface PotState {
+/**
+ * Phần công khai của MỘT vòng, đọc được cho vòng bất kỳ — kể cả vòng đã xong.
+ *
+ * Tách khỏi `PotState` vì Draw Room của một vòng cũ cần đúng những trường này
+ * và không cần (không được tin) `paused`/`participantCount`, vốn là trạng thái
+ * TOÀN CỤC của lúc đọc chứ không phải của vòng đó. Trộn hai thứ lại là cách một
+ * trang lịch sử bắt đầu kể chuyện hiện tại.
+ */
+export interface EpochView {
   epochId: bigint;
   start: bigint;
   end: bigint;
   phase: EpochPhase;
-  paused: boolean;
-  participantCount: number;
   /** uint64 plaintext, cố ý công khai (PRIVACY §1) — tiền của employer, không phải của user. */
   prizeAmount: bigint;
   snapshot: { cursor: number; total: number };
   draw: { drawn: boolean; cursor: number; total: number };
+}
+
+/** Trạng thái công khai của epoch hiện tại — cái UI poll. */
+export interface PotState extends EpochView {
+  paused: boolean;
+  participantCount: number;
 }
 
 /** Phần của một ví — toàn handle, chưa decrypt. */
@@ -122,12 +133,17 @@ export async function readPotConfig(pot: Contract): Promise<PotConfig> {
   };
 }
 
-export async function readPotState(pot: Contract): Promise<PotState> {
-  const epochId = (await pot["currentEpochId"]!()) as bigint;
-  const [info, paused, count, prizeAmount, snap, draw] = await Promise.all([
+/**
+ * Một vòng bất kỳ theo id.
+ *
+ * CẢNH BÁO cho chỗ gọi: một `epochId` chưa tồn tại KHÔNG revert — mapping trả
+ * struct rỗng, và struct rỗng đọc ra `phase: "Open"`, `start: 0`, `end: 0`.
+ * Nghĩa là "vòng 99" trông y hệt một vòng đang mở nhận tiền. So với
+ * `currentEpochId` trước khi tin bất cứ thứ gì ở đây.
+ */
+export async function readEpoch(pot: Contract, epochId: bigint): Promise<EpochView> {
+  const [info, prizeAmount, snap, draw] = await Promise.all([
     pot["epochInfo"]!(epochId) as Promise<[bigint, bigint, bigint]>,
-    pot["paused"]!() as Promise<boolean>,
-    pot["participantCount"]!() as Promise<bigint>,
     pot["prizeAmountOf"]!(epochId) as Promise<bigint>,
     pot["snapshotProgress"]!(epochId) as Promise<[bigint, bigint]>,
     pot["drawProgress"]!(epochId) as Promise<[boolean, bigint, bigint]>,
@@ -137,12 +153,25 @@ export async function readPotState(pot: Contract): Promise<PotState> {
     start: info[0],
     end: info[1],
     phase: phaseFromUint8(info[2]),
-    paused,
-    participantCount: Number(count),
     prizeAmount,
     snapshot: { cursor: Number(snap[0]), total: Number(snap[1]) },
     draw: { drawn: draw[0], cursor: Number(draw[1]), total: Number(draw[2]) },
   };
+}
+
+export async function readPotState(pot: Contract): Promise<PotState> {
+  const epochId = (await pot["currentEpochId"]!()) as bigint;
+  const [epoch, paused, count] = await Promise.all([
+    readEpoch(pot, epochId),
+    pot["paused"]!() as Promise<boolean>,
+    pot["participantCount"]!() as Promise<bigint>,
+  ]);
+  return { ...epoch, paused, participantCount: Number(count) };
+}
+
+/** Id vòng đang chạy. Tách ra vì Draw Room cần nó để biết mình đang xem quá khứ hay hiện tại. */
+export async function readCurrentEpochId(pot: Contract): Promise<bigint> {
+  return (await pot["currentEpochId"]!()) as bigint;
 }
 
 export async function readAccount(pot: Contract, user: string): Promise<AccountState> {

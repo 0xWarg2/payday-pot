@@ -12,6 +12,15 @@ export interface SendOptions {
   action: TxAction;
   /** Epoch liên quan — công khai, được phép ghi vào tx center. */
   epochId?: bigint;
+  /**
+   * Gọi ngay khi có hash, TRƯỚC `wait()`.
+   *
+   * Cần vì máy trạng thái ở `lib/savings/machine.ts` phân biệt "đang chờ bạn
+   * ký" với "đã lên chain, đang chờ block" — hai việc mà người đang nhìn màn
+   * hình cảm nhận rất khác nhau, và chỉ có hash mới chia được chúng. Không thay
+   * thế cho tx center: `recordTx` vẫn chạy ở đây, độc lập với callback này.
+   */
+  onHash?: (txHash: string) => void;
 }
 
 /**
@@ -47,6 +56,7 @@ export async function sendTx(
       ...(options.epochId === undefined ? {} : { epochId: options.epochId.toString() }),
       createdAt: Date.now(),
     });
+    options.onHash?.(response.hash);
 
     const receipt = await response.wait();
     if (!receipt) throw new Error("The transaction was replaced before it was mined");
