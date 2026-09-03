@@ -12,7 +12,7 @@ Built with [Zama](https://zama.ai) FHEVM on Ethereum Sepolia.
 
 | | |
 |---|---|
-| **Live app** | _see `Demo website` in the submission — deployed from `main`_ |
+| **Live app** | **https://payday-pot-vuitinhvl7xs-projects.vercel.app** — deployed from `main`, no login |
 | **Contract** | [`0x792c77D9A2052ED03aaB6B392364c3e17f52a035`](https://eth-sepolia.blockscout.com/address/0x792c77D9A2052ED03aaB6B392364c3e17f52a035#code) — verified source |
 | **Sourcify** | [full match](https://repo.sourcify.dev/11155111/0x792c77D9A2052ED03aaB6B392364c3e17f52a035) (`creationMatch=match`, `runtimeMatch=match`) |
 | **Token** | cUSDCMock [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://eth-sepolia.blockscout.com/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) — Zama's official ERC-7984 wrapper |

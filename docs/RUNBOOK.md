@@ -286,6 +286,24 @@ Ba thứ đã cắn ở Day 9, theo đúng thứ tự gặp:
 | `Can't resolve '@payday-pot/sdk'` | Root Directory `apps/web` → `pnpm run build` không dựng workspace dep | `apps/web/vercel.json` → `pnpm --filter @payday-pot/web... build` |
 | `VULNERABLE_NEXTJS_VERSION` | Vercel từ chối serve Next có CVE; build log vẫn in "Build Completed" | Next 15.5.6 → 15.5.25 (quirk 56) |
 
+Sau khi deployment xanh, **chạy cả bộ e2e vào chính URL đó**:
+
+```bash
+cd apps/web
+E2E_BASE_URL=https://<host> E2E_MNEMONIC="$(cd ../../packages/contracts && npx hardhat vars get MNEMONIC)" \
+  npx playwright test
+```
+
+`E2E_BASE_URL` tắt luôn `webServer` trong config — dựng server local rồi vẫn gọi
+ra ngoài chỉ tổ tốn 3 phút build và tạo ảo giác đang test bản local. Đây là cách
+kiểm dòng exit gate *"full cycle từ public URL"* bằng bộ test thay vì bằng một
+lần bấm tay rồi ghi "đã kiểm". RC 03/09: **77 xanh / 3 skipped**.
+
+Và một cái bẫy nữa của cùng họ: trong lúc deployment còn **BUILDING**, alias vẫn
+trả **200**. Lần chạy `check-deploy.sh` đầu tiên ra 404 + no-COOP trên cả 5
+route, lần thứ hai (20 giây sau) ra OK. Nên đừng đọc một lần 200 là xong — đọc
+đủ ba điều kiện.
+
 Deployment protection: project mới bật `ssoProtection` phạm vi
 `all_except_custom_domains`, tức mọi `*.vercel.app` nằm sau login Vercel — judge
 mở link sẽ thấy màn hình đăng nhập và **không có gì trong build log nói ra điều

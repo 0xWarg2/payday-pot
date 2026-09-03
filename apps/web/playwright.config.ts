@@ -6,6 +6,16 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const PORT = Number(process.env["E2E_PORT"] ?? 3100);
 
+/**
+ * `E2E_BASE_URL` trỏ cả suite vào một deployment đã public thay vì build cục
+ * bộ — đó là cách duy nhất kiểm dòng exit gate "full cycle từ public URL" bằng
+ * chính bộ test, thay vì bằng một lần bấm tay rồi ghi "đã kiểm".
+ *
+ * Khi có nó thì **không** dựng webServer: dựng lên rồi vẫn gọi ra ngoài chỉ
+ * tổ tốn 3 phút build và tạo ảo giác là mình đang test bản local.
+ */
+const EXTERNAL = process.env["E2E_BASE_URL"];
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -13,7 +23,7 @@ export default defineConfig({
   retries: process.env["CI"] ? 2 : 0,
   reporter: process.env["CI"] ? "github" : "list",
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL: EXTERNAL ?? `http://127.0.0.1:${PORT}`,
     trace: "on-first-retry",
   },
   projects: [
@@ -27,18 +37,22 @@ export default defineConfig({
       testMatch: /shell\.spec\.ts/,
     },
   ],
-  webServer: {
-    // `next build && next start` chứ không phải `next dev`: relayer SDK chỉ
-    // được chứng minh chạy trong production build (spike Day 1), và COOP/COEP
-    // là thứ dễ khác nhau giữa dev và prod nhất.
-    command: `pnpm build && pnpm start --port ${PORT}`,
-    url: `http://127.0.0.1:${PORT}`,
-    reuseExistingServer: !process.env["CI"],
-    timeout: 180_000,
-    // Build ra thư mục RIÊNG. Cổng riêng thôi thì chưa đủ tách: hai tiến trình
-    // Next khác nhau vẫn ghi đè chunk của nhau nếu cùng `distDir`, và hậu quả
-    // rơi vào dev server chứ không vào e2e — nó phục vụ 404 cho chunk client và
-    // trang chết lặng ở skeleton mà không có lỗi nào nói vì sao.
-    env: { NEXT_DIST_DIR: ".next-e2e" },
-  },
+  ...(EXTERNAL
+    ? {}
+    : {
+        webServer: {
+          // `next build && next start` chứ không phải `next dev`: relayer SDK chỉ
+          // được chứng minh chạy trong production build (spike Day 1), và COOP/COEP
+          // là thứ dễ khác nhau giữa dev và prod nhất.
+          command: `pnpm build && pnpm start --port ${PORT}`,
+          url: `http://127.0.0.1:${PORT}`,
+          reuseExistingServer: !process.env["CI"],
+          timeout: 180_000,
+          // Build ra thư mục RIÊNG. Cổng riêng thôi thì chưa đủ tách: hai tiến trình
+          // Next khác nhau vẫn ghi đè chunk của nhau nếu cùng `distDir`, và hậu quả
+          // rơi vào dev server chứ không vào e2e — nó phục vụ 404 cho chunk client và
+          // trang chết lặng ở skeleton mà không có lỗi nào nói vì sao.
+          env: { NEXT_DIST_DIR: ".next-e2e" },
+        },
+      }),
 });
