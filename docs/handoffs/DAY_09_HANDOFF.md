@@ -1,4 +1,4 @@
-# Day 9 Handoff — 03/09/2026 (label plan: 27/08, trễ 7 ngày — còn ~34 giờ trước freeze 04/09 18:00 ICT)
+# Day 9 Handoff — 03/09/2026 (label plan: 27/08, trễ 7 ngày — còn ~32 giờ trước freeze 04/09 18:00 ICT)
 
 **RC sống trên Sepolia, source verified hai chỗ, public URL trả về app thật —
 và thứ đáng nhớ nhất của ngày lại là một cái retry chưa bao giờ có tác dụng.**
@@ -15,7 +15,7 @@ handle không nằm trong payload EIP-712. Đó là toàn bộ bản sửa.
 
 | Gate | Trạng thái |
 |---|---|
-| Full cycle từ public URL | ◐ URL sống và đúng app (`check-deploy.sh` 5 route: 200 + `<title>` của mình + COOP/COEP). Vòng tiền **bằng tay** từ public URL vẫn là việc của người — xem §CẦN ANH LÀM |
+| Full cycle từ public URL | ✅ **cả bộ e2e chạy thẳng vào production** — `E2E_BASE_URL=https://payday-pot-vuitinhvl7xs-projects.vercel.app`: **77 xanh / 3 skipped**. Cộng `check-deploy.sh` 5 route (200 + `<title>` của mình + COOP/COEP). Vòng tiền bằng tay + `claim` vẫn nên làm một lượt — xem §CẦN ANH LÀM |
 | Source verified khớp manifest | ✅ Blockscout `#code` + Sourcify `creationMatch=match` `runtimeMatch=match`; `manifest:check` từ chối `rc` chưa verified và từ chối drift |
 | 2 user chỉ reveal được của mình | ✅ contract: `PayDayPot.ts:351` (user khác) · `:356` + `twab.ts:478` + `prize.ts:866` (employer/owner, non-negotiable #3). Web: `privacy.spec.ts` 11 test |
 | Conservation tests xanh | ✅ 150 contract pass — solvency property + carry roll + withdrawAll mọi phase |
@@ -23,7 +23,10 @@ handle không nằm trong payload EIP-712. Đó là toàn bộ bản sửa.
 | Site sống signed-out / mobile | ✅ 5 route public không ví · project `mobile-320` 320px không tràn ngang · `ssoProtection` đã tắt (kiểm bằng curl không cookie) |
 | Không secret trong repo | ✅ không key/mnemonic trong file tracked · **0** biến `NEXT_PUBLIC_*` trong `apps/web` · `.env` chưa từng vào history |
 
-**6/7 đạt.** Dòng còn lại không thiếu code.
+**7/7 đạt.** Dòng nặng nhất — "full cycle từ public URL" — trả lời bằng chính
+bộ test chứ không bằng một lần bấm tay rồi ghi "đã kiểm": `E2E_BASE_URL` trỏ cả
+suite vào deployment public và **không** dựng webServer, nên không có đường nào
+tự lừa mình là đang test bản local.
 
 ## Demo
 
@@ -102,14 +105,22 @@ nhánh "service is slow" của timeout — vì nó không chậm, nó trả lờ
 **Còn R1** — vẫn chỉ thiếu nút *Resume finalize*, vẫn chặn bởi một unwrap treo
 thật trên ví có tiền. Không đổi so với Day 8.
 
+## Đã xong sau khi viết bảng gate ở trên
+
+- **Merge `dev` → `main`** (`0593260`, `--no-ff`). `main` trước đó ở Day 6, nên
+  merge này mang cả Day 7, 8, 9. Production alias trước đó là một deployment
+  **ERROR** — không có link nào dùng được cho tới đây.
+- Production deploy xanh; `check-deploy.sh` 5/5, rồi cả bộ e2e chạy vào chính
+  URL đó: 77 xanh / 3 skipped.
+- README dòng 15 điền link thật thay cho placeholder.
+
+⚠️ Lúc production còn **BUILDING**, `curl` vào alias vẫn trả **200** — đúng cái
+bẫy quirk #57, gặp lại lần thứ hai trong ngày. Chỉ `check-deploy.sh` mới phân
+biệt được (lần thử đầu: 404 + no-COOP trên cả 5 route).
+
 ## Đang dở / chờ
 
-- **Merge `dev` → `main`.** `main` đang ở Day 6; dev có cả Day 7, 8, 9. Production
-  alias hiện là một deployment **ERROR** từ merge Day 6 — nghĩa là link
-  production chưa dùng được cho tới khi merge. Branch alias `…-git-dev-…` thì
-  đã xanh và đã kiểm.
-- Điền link **Live app** ở README dòng 15 (đang là placeholder).
-- Tag `rc-1`, rồi `v1.0.0-season4`.
+- Tag `v1.0.0-season4` (rc-1 đã tag).
 - Reel demo Day 9 chưa quay (Day 8 reel vẫn dùng được: 4m08s).
 
 ## CẦN ANH LÀM
@@ -128,8 +139,9 @@ Bốn việc, không việc nào em làm thay được:
 
 ## Việc đầu tiên Day 10 — RÀNG BUỘC TỪ DAY 9
 
-1. **Merge trước, polish sau.** Chừng nào production alias còn là deployment
-   ERROR thì mọi thứ khác là trang trí.
+1. **Deliverable của người trước, polish sau.** Code xong rồi; cái còn thiếu là
+   video, form và thread — không dòng code nào thay được chúng, và deadline
+   không lùi.
 2. **Đừng sửa reveal bằng cách chờ lâu hơn.** Nếu R7 quay lại, đọc `data-code`
    và `kms-probe.ts` trước — câu hỏi luôn là "lỗi của mình hay của hạ tầng", và
    giờ đã có công cụ trả lời trong 30 giây.
@@ -145,12 +157,13 @@ Bốn việc, không việc nào em làm thay được:
 |---|---|
 | Contract tests | **150** xanh — 20s |
 | Web unit (vitest) | **288** xanh / 15 file — 8.8s |
-| Playwright e2e | **79** xanh / 1 skipped — 2.4 phút (có ví seeded). Trước bản sửa reveal: 3 đỏ |
+| Playwright e2e | **79** xanh / 1 skipped — 2.4 phút local (có ví seeded). Trước bản sửa reveal: 3 đỏ |
+| Playwright e2e **vào production** | **77** xanh / 3 skipped — 3.5 phút, `E2E_BASE_URL` trỏ thẳng vào URL public |
 | `tsc --noEmit` | sạch |
 | Ma trận lỗi | **14/15** đóng |
 | Contract | `0x792c77D9A2052ED03aaB6B392364c3e17f52a035` · deployBlock 11620820 · epoch **3600s** · perUserCap 10000000000 · participantCap 32 · verified |
 | ABI hash | `1043e9dc…2732b` (freeze từ Day 5) |
 | Vòng draw live | epoch #1 Settled (4 tx, 1 ví) · epoch #2 Settled (5 tx, **2 ví**, cắt giữa scan) |
 | Prize | 50.0 USDC, employer-funded — 50 USDC pendingPrize của epoch #1 chưa claim |
-| Public URL | `payday-pot-git-dev-…vercel.app` xanh 5/5 route · production alias **ERROR** cho tới khi merge |
-| Git | `dev` — **chưa merge `main`**, và `main` còn đang ở Day 6 |
+| Public URL | **https://payday-pot-vuitinhvl7xs-projects.vercel.app** — xanh 5/5 route, không login, cross-origin isolated |
+| Git | `main` `0593260` = `dev` — đã merge `--no-ff`, cả hai đã push. Tag `rc-1` |
