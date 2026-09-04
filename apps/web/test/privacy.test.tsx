@@ -28,6 +28,7 @@ import {
   type StorageKey,
   writeJson,
 } from "@/lib/storage";
+import { CHAIN_HISTORY_SERVER_SNAPSHOT, chainHistoryStore } from "@/lib/tx/chain-history";
 import { TX_SERVER_SNAPSHOT, recordTx, txStore } from "@/lib/tx/store";
 import { WALLET_SERVER_SNAPSHOT, walletStore } from "@/lib/wallet/store";
 
@@ -178,6 +179,7 @@ describe("server-snapshot-is-masked", () => {
     ["wallet", walletStore, WALLET_SERVER_SNAPSHOT],
     ["reveal", revealStore, REVEAL_SERVER_SNAPSHOT],
     ["tx", txStore, TX_SERVER_SNAPSHOT],
+    ["chainHistory", chainHistoryStore, CHAIN_HISTORY_SERVER_SNAPSHOT],
     ["potReads", potReadsStore, POT_READS_SERVER_SNAPSHOT],
   ] as const;
 

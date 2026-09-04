@@ -77,6 +77,17 @@ export function depositsClosed(view: EpochView, now: bigint | null): boolean {
   return view.phase !== "Open" || (now !== null && now >= view.end);
 }
 
+/**
+ * Nhãn giai đoạn dùng chung cho dashboard và draw room. Một bản, không hai:
+ * hai chỗ từng nói hai câu khác nhau cho cùng một `phase` onchain.
+ */
+export const PHASE_LABEL: Record<EpochView["phase"], string> = {
+  Open: "Open — deposits still count",
+  Snapshotting: "Closing — weights freezing",
+  Drawing: "Drawing — scanning the pool",
+  Settled: "Settled — result sealed",
+};
+
 export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
   const closed = depositsClosed(view, now);
   const snapshotProgress = { done: view.snapshot.cursor, total: view.snapshot.total };
@@ -91,18 +102,14 @@ export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
     {
       id: "open",
       label: STAGE_LABEL.open,
-      detail: closed
-        ? "Deposits for this round are closed."
-        : "Deposits still count toward this round's weight.",
+      detail: closed ? "Deposits are closed." : "Deposits still count toward this round.",
       status: closed ? "done" : "active",
       progress: null,
     },
     {
       id: "snapshot",
       label: STAGE_LABEL.snapshot,
-      detail: emptyPool
-        ? "Nobody was saving when the round closed."
-        : "Each saver's time-weighted balance is frozen, in batches.",
+      detail: emptyPool ? "Nobody was saving when the round closed." : "Every saver's weight is frozen, in batches.",
       status: stageStatus(view, "snapshot", closed),
       progress: emptyPool ? null : snapshotProgress,
     },
@@ -112,17 +119,15 @@ export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
       detail: emptyPool
         ? "No seed was needed."
         : view.draw.drawn
-          ? "The seed for this round is drawn and locked. It cannot be redrawn."
-          : "One random seed, once, for this round.",
+          ? "Drawn and locked. It cannot be redrawn."
+          : "One random seed, once.",
       status: stageStatus(view, "random", closed),
       progress: null,
     },
     {
       id: "select",
       label: STAGE_LABEL.select,
-      detail: emptyPool
-        ? "There was nobody to scan."
-        : "Every saver is checked against the seed — the same work for each one.",
+      detail: emptyPool ? "There was nobody to scan." : "Every saver checked against the seed, the same work each.",
       status: stageStatus(view, "select", closed),
       progress: emptyPool ? null : selectProgress,
     },
@@ -133,8 +138,8 @@ export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
         view.phase === "Settled"
           ? emptyPool
             ? "The prize rolled over to the next round."
-            : "The result is on chain and encrypted. Only its owner can read it."
-          : "The result is sealed when the scan finishes.",
+            : "On chain, encrypted. Only its owner can read it."
+          : "Sealed when the scan finishes.",
       status: view.phase === "Settled" ? "done" : "upcoming",
       progress: null,
     },
@@ -183,11 +188,11 @@ const STEP_LABEL: Record<DrawStep["action"], string> = {
 };
 
 const STEP_DETAIL: Record<DrawStep["action"], string> = {
-  "begin-snapshot": "The clock ran out. Closing the round freezes who is in it.",
-  snapshot: "Freezing runs in batches so a full pool fits inside the gas limit.",
-  "request-random": "One seed, once. There is no way to draw it again for this round.",
-  select: "Scanning runs in batches. Whoever sends the next one continues from the cursor on chain.",
-  "start-new-epoch": "This round is finished. The next one starts empty, with the prize carried over.",
+  "begin-snapshot": "The clock ran out. Closing freezes who is in the round.",
+  snapshot: "Batches keep a full pool inside the gas limit.",
+  "request-random": "One seed, once. It cannot be drawn again.",
+  select: "Whoever sends the next batch continues from the cursor on chain.",
+  "start-new-epoch": "The next round starts empty, with the prize carried over.",
 };
 
 /**
@@ -214,8 +219,7 @@ export function keeperState(state: PotState, now: bigint | null): KeeperState {
     return {
       kind: "blocked-paused",
       label: STEP_LABEL["request-random"],
-      detail:
-        "New rounds are paused, so the seed cannot be drawn yet. Withdrawing and claiming are unaffected — pause never holds anyone's money.",
+      detail: "New rounds are paused, so the seed waits. Withdrawing and claiming are unaffected.",
     };
   }
 

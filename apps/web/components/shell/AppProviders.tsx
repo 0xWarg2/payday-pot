@@ -9,6 +9,7 @@ import { POLL_INTERVAL_MS, refreshPotReads } from "@/lib/pot/reads";
 import { installRevealGuards } from "@/lib/reveal/guards";
 import { useStore } from "@/lib/store/external-store";
 import { loadTxRecords } from "@/lib/tx/store";
+import { refreshChainHistory } from "@/lib/tx/chain-history";
 import { reconcileTxStatuses } from "@/lib/tx/watch";
 import { restoreWallet, watchWallet } from "@/lib/wallet/connect";
 import { walletStore } from "@/lib/wallet/store";
@@ -45,6 +46,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
       if (cancelled) return;
       void refreshPotReads(address, SEPOLIA_CHAIN_ID);
       void reconcileTxStatuses();
+      // Lần đầu quét từ deployBlock; các vòng sau chỉ phần block mới (rẻ).
+      void refreshChainHistory(address);
     };
 
     // Lần đọc ĐẦU chạy vô điều kiện; chỉ vòng lặp mới nhìn `visibilityState`.

@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useCallback } from "react";
 import type { PotError, PotState } from "@payday-pot/sdk";
 
-import { Card, CardHeader, PublicBadge } from "@/components/ui/Card";
+import { CountUp } from "@/components/motion/CountUp";
+import { Card, CardHeader, PrizeBadge, PublicBadge } from "@/components/ui/Card";
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SEPOLIA_CHAIN_ID } from "@/lib/chain/rpc";
-import { depositsClosed, keeperState } from "@/lib/draw/room";
+import { PHASE_LABEL, depositsClosed, keeperState } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount, formatCountdown } from "@/lib/format";
 import { potReadsStore, refreshPotReads, type DeploymentStatus } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
@@ -35,10 +36,9 @@ export function NextDrawCard() {
   const retry = useCallback(() => void refreshPotReads(address, SEPOLIA_CHAIN_ID), [address]);
 
   return (
-    <Card className="h-full">
+    <Card spot="prize" className="elev-2 h-full">
       <CardHeader
         title={state ? `Round ${state.epochId}` : "This round"}
-        hint="Everything on this card is public on chain."
         action={<PublicBadge />}
       />
 
@@ -103,23 +103,27 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
 
   return (
     <div>
-      <p className="text-fg-muted text-[13px]">Prize for this round</p>
+      <p className="text-fg-muted flex flex-wrap items-center gap-2 text-small">
+        Prize <PrizeBadge />
+      </p>
       <p className="mt-2">
-        <span className="tabular text-[32px] leading-none font-semibold tracking-tight sm:text-[36px]">
-          {formatAmount(state.prizeAmount)}
-        </span>
-        <span className="text-fg-muted ml-2 text-[15px]">USDC</span>
+        <CountUp
+          value={state.prizeAmount}
+          format={formatAmount}
+          className="tabular text-[32px] leading-none font-semibold tracking-tight sm:text-[36px]"
+        />
+        <span className="text-fg-muted ml-2 text-body">USDC</span>
       </p>
       {state.prizeAmount === 0n ? (
-        <p className="text-fg-muted mt-2 text-[13px] leading-relaxed">
-          No sponsor has funded this round yet. Deposits still earn weight, and nothing is at risk either way.
+        <p className="text-fg-muted mt-2 text-small leading-relaxed">
+          Not funded yet. Deposits still earn weight; nothing is at risk.
         </p>
       ) : null}
 
       <dl className="border-border-default mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t pt-4">
         <div>
-          <dt className="text-fg-muted text-[13px]">Deposits close in</dt>
-          <dd className="tabular mt-1 text-[18px] font-semibold">
+          <dt className="text-fg-muted text-small">Deposits close in</dt>
+          <dd className="tabular mt-1 font-mono text-[18px] font-semibold">
             {secondsLeft === null || nowSeconds === null ? (
               <Skeleton className="h-[18px] w-[100px]" />
             ) : depositsClosed(state, nowSeconds) ? (
@@ -128,23 +132,23 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
               formatCountdown(secondsLeft)
             )}
           </dd>
-          <dd className="text-fg-muted mt-1 text-[12px]">{formatAbsolute(state.end)}</dd>
+          <dd className="text-fg-muted mt-1 text-caption">{formatAbsolute(state.end)}</dd>
         </div>
         <div>
-          <dt className="text-fg-muted text-[13px]">Savers in this round</dt>
-          <dd className="tabular mt-1 text-[18px] font-semibold">{state.participantCount}</dd>
-          <dd className="text-fg-muted mt-1 text-[12px]">Addresses are public; balances are not.</dd>
+          <dt className="text-fg-muted text-small">Savers</dt>
+          <dd className="tabular mt-1 text-[18px] font-semibold">
+            <CountUp value={state.participantCount} />
+          </dd>
         </div>
       </dl>
 
       <div className="border-border-default mt-4 border-t pt-4">
-        <p className="text-fg-muted text-[13px]">Stage</p>
-        <p className="mt-1 text-[15px] font-medium">{PHASE_LABEL[state.phase]}</p>
+        <p className="text-fg-muted text-small">Stage</p>
+        <p className="mt-1 text-body font-medium">{PHASE_LABEL[state.phase]}</p>
         {keeper.kind === "ready" ? (
-          <p className="text-fg-muted mt-1.5 max-w-[52ch] text-[13px] leading-relaxed">
+          <p className="text-fg-muted mt-1.5 max-w-[52ch] text-small leading-relaxed">
             {keeper.detail}
-            {keeper.progress ? ` ${keeper.progress.done} of ${keeper.progress.total} done.` : ""} Anyone can run it —
-            it is not gated on an operator.
+            {keeper.progress ? ` ${keeper.progress.done} of ${keeper.progress.total} done.` : ""} Anyone can run it.
           </p>
         ) : null}
 
@@ -170,18 +174,10 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
       </div>
 
       {state.paused ? (
-        <p className="border-warning/40 bg-warning/5 rounded-card text-fg-muted mt-4 border p-3 text-[13px] leading-relaxed">
-          <span className="text-fg font-semibold">New rounds are paused.</span> Withdrawing and claiming keep working —
-          pause can never hold your money.
+        <p className="border-warning/40 bg-warning/5 rounded-card text-fg-muted mt-4 border p-3 text-small leading-relaxed">
+          <span className="text-fg font-semibold">New rounds are paused.</span> Withdrawing and claiming still work.
         </p>
       ) : null}
     </div>
   );
 }
-
-const PHASE_LABEL: Record<PotState["phase"], string> = {
-  Open: "Open — deposits count toward this round",
-  Snapshotting: "Closing — weights are being frozen",
-  Drawing: "Drawing — the winner is being picked",
-  Settled: "Settled — waiting for the next round to open",
-};

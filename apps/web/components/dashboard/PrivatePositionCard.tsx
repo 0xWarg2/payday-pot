@@ -5,6 +5,7 @@ import { HIDDEN_HANDLE, type PotError } from "@payday-pot/sdk";
 
 import { ConfidentialValue, RevealPhaseLine } from "@/components/privacy/ConfidentialValue";
 import { Button } from "@/components/ui/Button";
+import { Tilt } from "@/components/ui/Tilt";
 import { Card, CardHeader, EncryptedBadge } from "@/components/ui/Card";
 import { ErrorPanel, NoticeBanner } from "@/components/ui/ErrorPanel";
 import { SEPOLIA_CHAIN_ID } from "@/lib/chain/rpc";
@@ -61,24 +62,24 @@ export function PrivatePositionCard() {
     : [];
 
   return (
-    <Card className="h-full">
+    <Tilt className="h-full">
+      <Card spot="privacy" className="elev-2 h-full">
       <CardHeader
         title="Your position"
-        hint="Only this wallet can read these. The pool operator cannot."
         action={<EncryptedBadge />}
       />
 
-      <p className="text-fg-muted text-[13px]">Savings in the pool</p>
+      <p className="text-fg-muted text-small">Savings</p>
       <p className="mt-2">
         <ConfidentialValue view={principalView} label="Your savings" />
         {principalView.kind === "revealed" ? (
-          <span className="text-fg-muted ml-2 text-[15px] font-normal">USDC</span>
+          <span className="text-fg-muted ml-2 text-body font-normal">USDC</span>
         ) : null}
       </p>
 
       {prizeView.kind !== "unavailable" ? (
         <div className="border-border-default mt-5 border-t pt-4">
-          <p className="text-fg-muted text-[13px]">Winnings waiting to be claimed</p>
+          <p className="text-fg-muted text-small">Winnings to claim</p>
           <p className="mt-1.5">
             <ConfidentialValue view={prizeView} label="Your winnings" size="md" />
             {prizeView.kind === "revealed" ? (
@@ -92,7 +93,7 @@ export function PrivatePositionCard() {
         {!connected ? (
           <Connect />
         ) : reads.deployment !== "ready" ? (
-          <p className="text-fg-muted text-[13px] leading-relaxed">
+          <p className="text-fg-muted text-small leading-relaxed">
             There is no pool on chain in this build yet, so there is nothing encrypted to open.
           </p>
         ) : account === null ? (
@@ -106,14 +107,14 @@ export function PrivatePositionCard() {
             <Button variant="secondary" onClick={hide}>
               Hide
             </Button>
-            <p className="text-fg-muted text-[13px]">Visible in this tab only, and not for long.</p>
+            <p className="text-fg-muted text-small">This tab only, for a few minutes.</p>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <Button loading={busy} onClick={() => void reveal(targets)}>
               Reveal my position
             </Button>
-            <p className="text-fg-muted text-[13px]">One signature opens all three.</p>
+            <p className="text-fg-muted text-small">One signature opens all three.</p>
           </div>
         )}
       </div>
@@ -136,7 +137,8 @@ export function PrivatePositionCard() {
           )}
         </div>
       ) : null}
-    </Card>
+      </Card>
+    </Tilt>
   );
 }
 
@@ -144,7 +146,7 @@ function Connect() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Button onClick={() => void connectWallet().catch(() => {})}>Connect wallet</Button>
-      <p className="text-fg-muted text-[13px]">Reading your own balance needs your signature.</p>
+      <p className="text-fg-muted text-small">Needs your signature.</p>
     </div>
   );
 }
@@ -168,7 +170,7 @@ function PositionUnknown({ error, onRetry }: { error: PotError | null; onRetry: 
   // không phải một nút giả vờ sửa được thứ nó không sửa được.
   if (error) return <ErrorPanel error={error} handlers={{ retry: onRetry }} />;
   return (
-    <p className="text-fg-muted text-[13px] leading-relaxed" data-testid="position-loading">
+    <p className="text-fg-muted text-small leading-relaxed" data-testid="position-loading">
       Reading your position from the chain…
     </p>
   );
@@ -180,12 +182,12 @@ function NothingYet() {
       <Link
         data-cta
         href="/app/savings"
-        className="rounded-control bg-action text-on-action inline-flex items-center px-5 text-[15px] font-medium"
+        className="rounded-control bg-action text-on-action inline-flex items-center px-5 text-body font-medium"
       >
         Make your first deposit
       </Link>
-      <p className="text-fg-muted max-w-[38ch] text-[13px] leading-relaxed">
-        Nothing is stored for this wallet yet — that is different from holding zero.
+      <p className="text-fg-muted max-w-[38ch] text-small leading-relaxed">
+        Nothing is stored for this wallet yet — not the same as zero.
       </p>
     </div>
   );

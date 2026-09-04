@@ -60,7 +60,7 @@ export async function sendTx(
 
     const receipt = await response.wait();
     if (!receipt) throw new Error("The transaction was replaced before it was mined");
-    setTxStatus(response.hash, receipt.status === 1 ? "success" : "reverted");
+    setTxStatus(response.hash, receipt.status === 1 ? "success" : "reverted", receipt.blockNumber);
     return receipt;
   } catch (e) {
     if (hash) setTxStatus(hash, "unknown");

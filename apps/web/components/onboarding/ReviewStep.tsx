@@ -39,8 +39,7 @@ export function ReviewStep({
   return (
     <div>
       <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
-        Nothing is sent when you finish here. You join the pool with your first deposit — this is just the last chance
-        to check that everything below is what you meant.
+        Nothing is sent here. You join with your first deposit — check the lines below first.
       </p>
 
       <dl className="mt-6 flex flex-col">
@@ -52,7 +51,7 @@ export function ReviewStep({
           label="Address"
           value={wallet.address ? shortAddress(wallet.address) : "Not connected"}
           mono
-          note="Switch accounts in your wallet and this page follows along."
+          note="Switch accounts in your wallet; this page follows."
         />
         <Row label="Network" value="Ethereum Sepolia · test money only" />
         <Row
@@ -63,19 +62,19 @@ export function ReviewStep({
         <Row
           label="Shielded USDC"
           value={shielded ? "Present — amount encrypted" : "None yet"}
-          note={shielded ? undefined : "Deposits need shielded USDC. You can do this later from the dashboard."}
+          note={shielded ? undefined : "Deposits need shielded USDC. You can do this later."}
           onEdit={() => onEdit("assets")}
         />
         <Row
           label="Approved for the shielded token"
           value={assets.allowance === null ? "—" : `${formatAmount(assets.allowance)} USDC`}
-          note="An allowance on the public test token. It gives no access to anything encrypted."
+          note="On the public test token. Grants no access to anything encrypted."
           onEdit={() => onEdit("assets")}
         />
         <Row
           label="Privacy disclosure"
           value="Read and accepted"
-          note="Amounts encrypted; address, timing and transaction graph public."
+          note="Amounts encrypted; address and timing public."
           onEdit={() => onEdit("consent")}
         />
       </dl>

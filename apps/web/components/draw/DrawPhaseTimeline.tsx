@@ -39,8 +39,14 @@ const STATUS_WORD: Record<DrawStage["status"], string> = {
 };
 
 function StageDot({ status }: { status: DrawStage["status"] }) {
+  // Trung tính, không cyan: cyan trong phòng này chỉ có một nghĩa là "encrypted",
+  // và một mốc đã xong không phải là một giá trị mã hoá.
   const fill =
-    status === "done" ? "bg-privacy" : status === "active" ? "bg-draw-violet" : "bg-draw-border";
+    status === "done"
+      ? "bg-draw-fg-muted"
+      : status === "active"
+        ? "bg-draw-fg ring-draw-fg/25 ring-2"
+        : "border-draw-border-strong border bg-transparent";
   return (
     <span aria-hidden="true" className="mt-1.5 flex flex-col items-center gap-1">
       <span className={`size-2.5 rounded-full ${fill}`} />
@@ -68,9 +74,12 @@ function Progress({ done, total }: { done: number; total: number }) {
         aria-valuemin={0}
         aria-valuemax={total}
         aria-label="Savers processed"
-        className="bg-draw-border mt-1.5 h-1 w-full overflow-hidden rounded-full"
+        className="bg-draw-border-strong mt-1.5 h-1.5 w-full overflow-hidden rounded-full"
       >
-        <div className="bg-privacy h-full rounded-full" style={{ width: `${ratio * 100}%` }} />
+        <div
+          className="bg-draw-fg/80 h-full rounded-full transition-[width] duration-(--duration-panel) ease-(--ease-ui)"
+          style={{ width: `${ratio * 100}%` }}
+        />
       </div>
     </div>
   );

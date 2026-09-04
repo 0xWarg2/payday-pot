@@ -2,7 +2,7 @@
 
 import { ConfidentialValue } from "@/components/privacy/ConfidentialValue";
 import { Card, CardHeader, EncryptedBadge } from "@/components/ui/Card";
-import { formatAmount, formatRelativeTime } from "@/lib/format";
+import { formatAmount } from "@/lib/format";
 import { potReadsStore } from "@/lib/pot/reads";
 import { averageBalance, twabAreaView } from "@/lib/pot/twab";
 import { useConfidentialView } from "@/lib/reveal/use-reveal";
@@ -49,14 +49,14 @@ export function TwabCard() {
   const status = state === null ? null : STATUS[state.phase];
 
   return (
-    <Card className="h-full">
+    <Card spot="privacy" className="elev-1 h-full">
       <CardHeader
-        title="Your weight in the draw"
+        title="Your weight"
         hint={status ? `${status.label} — ${status.detail}` : undefined}
         action={<EncryptedBadge />}
       />
 
-      <p className="text-fg-muted text-[13px]">Average balance this round</p>
+      <p className="text-fg-muted text-small">Average balance</p>
       <p className="mt-2">
         {areaView.kind === "revealed" ? (
           average === null ? (
@@ -74,25 +74,14 @@ export function TwabCard() {
         )}
       </p>
 
-      <p className="text-fg-muted mt-4 max-w-[46ch] text-[13px] leading-relaxed">
-        {areaView.kind === "revealed"
-          ? "Your odds are this number against the pool total. Money that sat here all round counts more than money that arrived yesterday."
-          : "Weight is balance multiplied by how long it stayed. It opens with the same signature as your position."}
-      </p>
-
-      {areaView.kind === "revealed" && account !== null && now !== null && account.lastCheckpoint > 0n ? (
-        <p className="text-fg-muted mt-2 text-[12px]">
-          Last recorded on chain {formatRelativeTime(Number(account.lastCheckpoint) * 1000, now)}; the figure above
-          extends it to right now.
-        </p>
-      ) : null}
+      <p className="text-fg-muted mt-4 text-caption">Balance × time. Same signature as your position.</p>
     </Card>
   );
 }
 
 const STATUS: Record<string, { label: string; detail: string }> = {
-  Open: { label: "Building", detail: "it grows every second your balance stays" },
-  Snapshotting: { label: "Freezing", detail: "weights are being locked for this round" },
-  Drawing: { label: "Locked", detail: "the draw is using this number now" },
-  Settled: { label: "Spent", detail: "it resets when the next round opens" },
+  Open: { label: "Building", detail: "grows while your balance stays" },
+  Snapshotting: { label: "Freezing", detail: "being locked for this round" },
+  Drawing: { label: "Locked", detail: "in use by the draw" },
+  Settled: { label: "Spent", detail: "resets next round" },
 };

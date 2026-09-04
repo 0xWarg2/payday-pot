@@ -1,14 +1,16 @@
 "use client";
 
 import { formatRelativeTime, shortHash } from "@/lib/format";
-import type { TxAction, TxRecord, TxStatus } from "@/lib/tx/store";
+import type { HistoryAction, HistoryItem } from "@/lib/tx/history";
+import type { TxRecord, TxStatus } from "@/lib/tx/store";
 
 export const EXPLORER = "https://sepolia.etherscan.io";
 
-const ACTION_LABELS: Record<TxAction, string> = {
+const ACTION_LABELS: Record<HistoryAction, string> = {
   "faucet-mint": "Got test USDC",
   approve: "Approved the wrapper",
   wrap: "Shielded USDC",
+  register: "Joined the round",
   deposit: "Deposited",
   "finalize-unwrap": "Finished an unwrap",
   claim: "Claimed",
@@ -28,20 +30,49 @@ const STATUS_COPY: Record<TxStatus, { label: string; dot: string }> = {
   unknown: { label: "Unknown", dot: "bg-border-default" },
 };
 
+/** Một record của trình duyệt, chưa gộp với chain — cho TxCenter. */
+export function localItem(record: TxRecord, status: TxStatus, blockNumber?: number): HistoryItem {
+  return {
+    txHash: record.txHash,
+    action: record.action,
+    epochId: record.epochId,
+    createdAt: record.createdAt,
+    blockNumber,
+    status,
+    source: "browser",
+  };
+}
+
 /**
- * Một dòng lịch sử: việc gì, lúc nào, hash nào. KHÔNG có số tiền — không phải
- * vì quên, mà vì lịch sử là thứ người ta hay chụp màn hình gửi đi (§11.4). Số
- * tiền chỉ sống ở position card, sau một chữ ký, trong năm phút.
+ * Một dòng lịch sử: việc gì, lúc nào (hoặc block nào), hash nào. KHÔNG có số
+ * tiền — không phải vì quên, mà vì lịch sử là thứ người ta hay chụp màn hình
+ * gửi đi (§11.4). Số tiền chỉ sống ở position card, sau một chữ ký, trong năm phút.
+ *
+ * Hàng đọc từ chain không có "lúc mấy giờ" (lấy timestamp là thêm một RPC mỗi
+ * hàng) nên in số block; hàng từ trình duyệt in thời gian tương đối như cũ.
  */
-export function TxRow({ record, status, now }: { record: TxRecord; status: TxStatus; now: number | null }) {
-  const state = STATUS_COPY[status];
+export function TxRow({ item, now }: { item: HistoryItem; now: number | null }) {
+  const state = STATUS_COPY[item.status];
+  const when =
+    item.createdAt !== undefined
+      ? now === null
+        ? ""
+        : formatRelativeTime(item.createdAt, now)
+      : item.blockNumber !== undefined
+        ? `block ${item.blockNumber.toLocaleString("en-US")}`
+        : "";
+  const round = item.epochId ? `round ${item.epochId}` : "";
   return (
     <li className="border-border-default flex items-center justify-between gap-3 border-b py-3 last:border-b-0">
       <div className="min-w-0">
-        <p className="truncate text-[14px] font-medium">{ACTION_LABELS[record.action]}</p>
+        <p className="truncate text-[14px] font-medium">{ACTION_LABELS[item.action]}</p>
         <p className="text-fg-muted text-[12px]">
-          {now === null ? "" : formatRelativeTime(record.createdAt, now)}
-          {record.epochId ? ` · round ${record.epochId}` : ""}
+          {[when, round].filter(Boolean).join(" · ")}
+          {item.source === "browser" ? (
+            <span className="font-mono text-[11px] tracking-[0.04em]"> · this browser</span>
+          ) : (
+            <span className="font-mono text-[11px] tracking-[0.04em]"> · on chain</span>
+          )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
@@ -50,12 +81,12 @@ export function TxRow({ record, status, now }: { record: TxRecord; status: TxSta
           {state.label}
         </span>
         <a
-          href={`${EXPLORER}/tx/${record.txHash}`}
+          href={`${EXPLORER}/tx/${item.txHash}`}
           target="_blank"
           rel="noreferrer"
           className="text-fg-muted font-mono text-[12px] underline underline-offset-4"
         >
-          {shortHash(record.txHash)}
+          {shortHash(item.txHash)}
         </a>
       </div>
     </li>

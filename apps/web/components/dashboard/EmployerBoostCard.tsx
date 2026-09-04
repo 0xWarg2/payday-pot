@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { CountUp } from "@/components/motion/CountUp";
 import { Card, CardHeader, PublicBadge } from "@/components/ui/Card";
 import { formatAmount, shortAddress } from "@/lib/format";
 import { potReadsStore } from "@/lib/pot/reads";
@@ -22,40 +23,34 @@ export function EmployerBoostCard() {
   const prize = reads.state?.prizeAmount ?? null;
 
   return (
-    <Card className="h-full">
-      <CardHeader
-        title="Where the prize comes from"
-        hint="Sponsored, not earned as yield."
-        action={<PublicBadge />}
-      />
-
-      <p className="text-fg-muted max-w-[56ch] text-[14px] leading-relaxed">
-        An employer funds the prize for each round out of their own pocket. Nobody&rsquo;s deposit is ever spent on it,
-        which is what makes losing a round cost you nothing.
-      </p>
-
-      <dl className="border-border-default mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2">
-        <div>
-          <dt className="text-fg-muted text-[13px]">Funded so far this round</dt>
-          <dd className="tabular mt-1 text-[18px] font-semibold">
-            {prize === null ? "—" : `${formatAmount(prize)} USDC`}
-          </dd>
+    <Card spot="prize" className="elev-1 h-full">
+      <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div className="min-w-0">
+          <CardHeader title="Prize sponsor" hint="Sponsored, not yield." action={<PublicBadge />} />
+          <Link href="/docs/prize-and-sponsors" className="link-draw text-[14px]">
+            Where the prize comes from →
+          </Link>
         </div>
-        <div>
-          <dt className="text-fg-muted text-[13px]">Sponsor</dt>
-          <dd className="mt-1 font-mono text-[14px]">
-            {config ? shortAddress(config.employer) : "—"}
-          </dd>
-        </div>
-      </dl>
 
-      <p className="text-fg-muted mt-4 max-w-[56ch] text-[13px] leading-relaxed">
-        The contract takes prize funding through an adapter interface, so a real yield source could pay the prize
-        instead. None is connected in this build.{" "}
-        <Link href="/docs/known-limitations" className="underline underline-offset-4">
-          What else is simulated
-        </Link>
-      </p>
+        <dl className="border-border-default grid grid-cols-2 gap-x-8 gap-y-3 border-t pt-4 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+          <div>
+            <dt className="text-fg-muted text-small">Funded this round</dt>
+            <dd className="tabular mt-1 text-[18px] font-semibold whitespace-nowrap">
+              {prize === null ? (
+                "—"
+              ) : (
+                <>
+                  <CountUp value={prize} format={formatAmount} /> USDC
+                </>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-fg-muted text-small">Sponsor</dt>
+            <dd className="mt-1 font-mono text-[14px]">{config ? shortAddress(config.employer) : "—"}</dd>
+          </div>
+        </dl>
+      </div>
     </Card>
   );
 }

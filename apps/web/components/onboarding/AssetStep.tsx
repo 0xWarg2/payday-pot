@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toPotError, type PotError } from "@payday-pot/sdk";
 
+import { GuideLink } from "@/components/onboarding/GuideLink";
 import { ShieldWarning } from "@/components/onboarding/ShieldWarning";
 import { Button } from "@/components/ui/Button";
 import { EncryptedBadge, PublicBadge } from "@/components/ui/Card";
@@ -90,8 +91,8 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div>
       <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
-        Deposits into the pool are encrypted, so they are made in a shielded token. Getting there is two public steps —
-        take some test USDC, then shield it — and after that every number is private.
+        Deposits are encrypted, so they use a shielded token. Two public steps first: get test USDC, then shield it.{" "}
+        <GuideLink href="/docs/get-started#steps" />
       </p>
 
       {assets.blocked ? (
@@ -109,7 +110,7 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-[15px] font-semibold tracking-tight">1. Test USDC in your wallet</h2>
-            <p className="text-fg-muted mt-1 text-[13px]">Mock tokens on Sepolia. They are worth nothing anywhere.</p>
+            <p className="text-fg-muted mt-1 text-[13px]">Play money on Sepolia.</p>
           </div>
           <PublicBadge>Public balance</PublicBadge>
         </div>
@@ -142,7 +143,7 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
           <div>
             <h2 className="text-[15px] font-semibold tracking-tight">2. Shield it</h2>
             <p className="text-fg-muted mt-1 text-[13px]">
-              Swaps test USDC for its confidential twin, one for one. This is the last public number.
+              One for one into its confidential twin. This is the last public number.
             </p>
           </div>
           <EncryptedBadge>Shielded balance</EncryptedBadge>
@@ -150,8 +151,8 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
 
         <p className="text-fg-muted mt-4 max-w-[64ch] text-[14px] leading-relaxed">
           {shielded
-            ? "You already hold shielded USDC. Its amount is encrypted — this page cannot read it, and neither can anyone else without your signature."
-            : "You have not shielded anything yet."}
+            ? "You already hold shielded USDC. Its amount is encrypted."
+            : "Nothing shielded yet."}
         </p>
 
         <div className="mt-5 max-w-[320px]">
@@ -211,9 +212,9 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
           )}
           <p className="text-fg-muted text-[13px]">
             {needsApproval
-              ? "Two signatures: first you allow the shielded token to take that amount, then you shield it."
+              ? "Two signatures: allow, then shield."
               : amountReady
-                ? "Already approved for this amount — one signature left."
+                ? "Already approved — one signature left."
                 : "Enter an amount to continue."}
           </p>
         </div>
@@ -226,7 +227,7 @@ export function AssetStep({ onContinue }: { onContinue: () => void }) {
         <p className="text-fg-muted mt-3 max-w-[62ch] text-[13px] leading-relaxed">
           {shielded
             ? "You are ready to make a deposit."
-            : "You can come back to this from the dashboard. Depositing needs shielded USDC, so nothing will work until you do."}
+            : "Come back from the dashboard any time. Deposits need shielded USDC."}
         </p>
       </div>
     </div>

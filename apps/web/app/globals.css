@@ -16,7 +16,9 @@
   --color-surface: #ffffff;
   --color-subtle: #f0eee6;
   --color-fg: #121514;
-  --color-fg-muted: #66706c;
+  --color-fg-muted: #5d6863;
+  /* fg-soft: chữ phụ CHỈ ở cỡ ≥17px (đạt AA large-text 3:1, không đạt 4.5) */
+  --color-fg-soft: #8a938f;
   --color-border-default: #ddd9cf;
 
   /* --- action: chartreuse = primary action, KHÔNG dùng làm trang trí --- */
@@ -35,33 +37,69 @@
   --color-warning: #a86812;
   --color-danger: #c93d3d;
 
+  /* --- prize: vàng = "tiền thưởng do nhà tài trợ nạp" ---
+   * Mượn từ palette Zama (#ffd208) nhưng chỉ đứng đúng một vai: số prize, badge
+   * "Sponsored", và lớp ánh sáng ở hero. KHÔNG BAO GIỜ làm nút — nút vàng là nút
+   * của Zama, và framing bắt buộc là "built with", không phải "sản phẩm Zama".
+   * Chartreuse vẫn độc quyền action, cyan vẫn độc quyền encrypted.
+   */
+  --color-prize: #ffd208;
+  --color-prize-mid: #ffe052;
+  --color-prize-light: #fff2b5;
+  --color-prize-soft: #fffbe6;
+
   /* --- Draw Room ---
    * Hai token chữ được thêm ở Day 8: token shell (`--color-fg`) là #121514,
    * gần như đen, nên bất kỳ chữ nào quên đổi màu trong phòng tối sẽ biến mất
    * hoàn toàn thay vì chỉ khó đọc — một lỗi không có triệu chứng nào ngoài
    * "chỗ đó trống". Đo trên `--color-draw-canvas`: fg ≈ 16:1, fg-muted ≈ 7.3:1,
    * cả hai qua AA (§7 QA).
+   *
+   * Luật hue trong phòng tối (04/09): cyan CHỈ nghĩa là "encrypted" (badge,
+   * orb). Tiến độ và trạng thái mốc dùng trung tính (`draw-fg`, `draw-fg-muted`,
+   * `draw-border*`). Cảnh báo dùng `draw-warning` (amber ≈9:1 trên surface) vì
+   * `--color-warning` của shell chỉ đạt ~4:1 trên nền tối. Không tím, không
+   * vàng prize trong phòng — cả hai đều không có nghĩa ở đây.
    */
   --color-draw-canvas: #06111e;
   --color-draw-surface: #0b1a2a;
-  --color-draw-border: #193047;
-  --color-draw-violet: #8b5cf6;
+  --color-draw-border: #1e3650;
+  --color-draw-border-strong: #27435f;
+  --color-draw-warning: #e0a84a;
   --color-draw-fg: #eaf2fb;
   --color-draw-fg-muted: #93a7bd;
 
   /* --- type ---
-   * §14.3 gọi tên "Geist Sans hoặc Inter fallback". Ở đây KHÔNG tải webfont:
-   * `next/font` sẽ thêm một lần fetch lúc build, và một build hỏng vì mạng vào
-   * đúng ngày freeze là cái giá quá đắt cho một khác biệt hình chữ. Stack dưới
-   * đây dùng Geist/Inter nếu máy người xem có sẵn, còn không thì rơi về font hệ
-   * thống — vốn là thứ giao diện quiet-luxury này trông vẫn đúng.
-   *
-   * Lưu ý lịch sử: bản trước trỏ vào `var(--font-geist-sans)` chưa từng được
-   * định nghĩa, khiến cả khai báo `font-family` invalid at computed-value time
-   * và body render bằng font mặc định của trình duyệt.
+   * Geist + Geist Mono tải qua `next/font/google` trong `app/layout.tsx`, gắn
+   * biến `--font-geist-*` lên `<html>`. Đọc qua `var(--x, fallback)` cố ý: nếu
+   * biến vắng (font không tải được lúc build) thì cả khai báo vẫn hợp lệ và rơi
+   * về Geist/Inter có sẵn trên máy, rồi font hệ thống — không lặp lại lỗi cũ
+   * `var(--font-geist-sans)` chưa định nghĩa làm body render font mặc định.
    */
-  --font-sans: Geist, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --font-sans: var(--font-geist-sans, Geist), Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono, ui-monospace), SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* --- thang chữ (04/09) ---
+   * Tám bậc, mỗi bậc kèm line-height. Component mới dùng `text-body`/`text-small`
+   * thay cho `text-[15px]`/`text-[13px]` rời rạc; bậc trùng px với class cũ nên
+   * đổi tên không đổi kích cỡ, chỉ chuẩn hoá leading.
+   */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-small: 13px;
+  --text-small--line-height: 18px;
+  --text-body: 15px;
+  --text-body--line-height: 24px;
+  --text-lead: 17px;
+  --text-lead--line-height: 26px;
+  --text-h3: 20px;
+  --text-h3--line-height: 26px;
+  --text-h2: 28px;
+  --text-h2--line-height: 32px;
+  --text-h1: 40px;
+  --text-h1--line-height: 44px;
+  --text-display: 52px;
+  --text-display--line-height: 56px;
 
   /* --- radius: control 12 · card 20 · sheet 24 (§14.4) --- */
   --radius-control: 12px;
@@ -72,11 +110,21 @@
   --ease-ui: cubic-bezier(0.2, 0, 0, 1);
   --duration-hover: 150ms;
   --duration-panel: 260ms;
+  /* chữ chuyển động (đợt 4): item vào 500ms, từ/lead 600ms, bậc 40ms/từ · 60ms/item */
+  --duration-enter: 500ms;
+  --duration-words: 600ms;
+  --stagger-word: 40ms;
+  --stagger-item: 60ms;
 }
 
 @layer base {
   html {
     color-scheme: light;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 
   body {
@@ -126,6 +174,497 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Depth kit — xem docs/UI_DEPTH_DIRECTION.md.
+ *
+ * Nguyên tắc chung: chiều sâu bằng ánh sáng và lớp, không bằng mesh. Mọi thứ ở
+ * đây là CSS thuần, chỉ animate `transform`/`opacity` (compositor-only), và
+ * không hiệu ứng nào nhận dữ liệu riêng tư — glow/spotlight/orb chỉ đọc được
+ * từ những gì ai cũng thấy.
+ */
+@layer components {
+  /* 01 · Soft-light glow (chữ ký thị giác của zama.org, làm lại bằng CSS).
+     Blob là div tròn có blur TĨNH — blur raster một lần; chuyển động là
+     transform nên không repaint. */
+  .glow-field {
+    position: absolute;
+    inset: -20%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .glow-field > span {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(56px);
+    opacity: 0.65;
+    will-change: transform;
+    animation: glow-drift 18s ease-in-out infinite alternate;
+  }
+  /* Vàng chỉ chiếm góc trên-phải: text ở nửa trái luôn nằm trên nền cream.
+     Nếu vàng tràn cả hero thì nó không còn là "ánh sáng của prize" mà là một
+     trang màu vàng — và đó là màu chủ của Zama, không phải của PayDay Pot. */
+  .glow-a {
+    left: 52%;
+    top: 0%;
+    width: 42%;
+    height: 62%;
+    background: var(--color-prize-light);
+  }
+  .glow-b {
+    left: 70%;
+    top: 22%;
+    width: 30%;
+    height: 44%;
+    background: var(--color-prize-mid);
+    animation-duration: 23s;
+    animation-delay: -6s;
+  }
+  .glow-c {
+    left: 44%;
+    top: 58%;
+    width: 26%;
+    height: 34%;
+    background: color-mix(in srgb, var(--color-action) 40%, var(--color-prize-soft));
+    animation-duration: 27s;
+    animation-delay: -12s;
+  }
+  .glow-d {
+    left: 80%;
+    top: 0%;
+    width: 22%;
+    height: 26%;
+    background: color-mix(in srgb, var(--color-privacy) 20%, transparent);
+    animation-duration: 31s;
+    animation-delay: -3s;
+  }
+  @keyframes glow-drift {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(6%, -5%, 0) scale(1.12);
+    }
+  }
+
+  /* 02 · Spotlight border theo con trỏ. Hue là NGỮ NGHĨA: cyan = card dữ liệu
+     mã hoá, vàng = card tiền thưởng/công khai, neutral = còn lại. Trạng thái
+     nghỉ (--spot-o: 0) không khác gì card thường. */
+  .spot {
+    position: relative;
+    --spot-x: 50%;
+    --spot-y: 50%;
+    --spot-o: 0;
+    --spot-hue: var(--color-privacy);
+  }
+  .spot[data-spot="prize"] {
+    --spot-hue: var(--color-prize);
+  }
+  .spot[data-spot="neutral"] {
+    --spot-hue: var(--color-fg-muted);
+  }
+  .spot::before,
+  .spot::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: var(--spot-o);
+    transition: opacity var(--duration-panel) var(--ease-ui);
+  }
+  /* Vòng viền: vẽ gradient lên toàn khối rồi mask chỉ chừa 1px ngoài. */
+  .spot::before {
+    inset: -1px;
+    padding: 1px;
+    background: radial-gradient(260px circle at var(--spot-x) var(--spot-y), var(--spot-hue), transparent 45%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  /* Vệt sáng nhạt bên trong. */
+  .spot::after {
+    inset: 0;
+    background: radial-gradient(
+      360px circle at var(--spot-x) var(--spot-y),
+      color-mix(in srgb, var(--spot-hue) 10%, transparent),
+      transparent 60%
+    );
+  }
+
+  /* 04 · Decrypt scramble — chỉ là kiểu chữ trong 500ms giữa •••••• và con số.
+     Glyph ngẫu nhiên, KHÔNG BAO GIỜ là chữ số giả. */
+  .scrambling {
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--color-fg) 65%, var(--color-privacy));
+  }
+  [data-surface="draw"] .scrambling {
+    color: color-mix(in srgb, var(--color-draw-fg) 65%, var(--color-privacy));
+  }
+
+  /* 05 · Orb khối cầu cho Draw Room. Vẫn tĩnh, vẫn chỉ nhận phase + progress. */
+  .orb-ring {
+    border-radius: 50%;
+    background: conic-gradient(
+      from -90deg,
+      var(--color-draw-fg) calc(var(--orb-p, 0) * 360deg),
+      var(--color-draw-border-strong) 0
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  }
+  .orb-sphere {
+    position: relative;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.55) 0, rgba(255, 255, 255, 0.12) 18%, transparent 36%),
+      radial-gradient(circle at 42% 44%, color-mix(in srgb, var(--color-privacy) 45%, transparent) 0, transparent 62%),
+      radial-gradient(circle at 50% 50%, var(--color-draw-border) 0, var(--color-draw-canvas) 78%);
+    box-shadow:
+      inset -14px -18px 30px rgba(0, 0, 0, 0.55),
+      inset 8px 10px 22px rgba(255, 255, 255, 0.08),
+      0 20px 40px -18px color-mix(in srgb, var(--color-privacy) 55%, transparent),
+      0 0 0 1px var(--color-draw-border);
+  }
+  .orb-sphere::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    top: 12%;
+    width: 34%;
+    height: 18%;
+    border-radius: 50%;
+    background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+    filter: blur(1px);
+    opacity: 0.6;
+  }
+
+  /* §14.5: glow là loop nên phải tắt hẳn, không chỉ rút ngắn. Spotlight là
+     phản hồi hover nên giữ, nhưng không có transition. */
+  @media (prefers-reduced-motion: reduce) {
+    .glow-field > span {
+      animation: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Depth kit — Tier B (chiều sâu thật: tầng, nghiêng, cuộn, đồng xu)
+ *
+ * Luật chung không đổi so với Tier A: chỉ transform/opacity/box-shadow, không
+ * backdrop-filter trên vùng lớn, không đọc dữ liệu riêng tư, DOM y hệt cho mọi
+ * người dùng. Reduced-motion tắt mọi thứ có chuyển động; `(hover: none)` không
+ * có tilt vì không có con trỏ để nghiêng theo.
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* #06 — tầng. Hai mức, bóng nhiều lớp pha từ chính màu chữ để không ngả xám
+     bẩn trên nền kem. Hover nâng 2px, chỉ transform. */
+  .elev-1 {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-fg) 4%, transparent),
+      0 6px 16px -8px color-mix(in srgb, var(--color-fg) 10%, transparent);
+  }
+  .elev-2 {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-fg) 5%, transparent),
+      0 10px 24px -10px color-mix(in srgb, var(--color-fg) 14%, transparent),
+      0 24px 48px -24px color-mix(in srgb, var(--color-fg) 12%, transparent);
+  }
+  /* Phòng tối: bóng đen thuần + một sợi sáng ở mép trên để thẻ tách khỏi canvas. */
+  .elev-draw {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 14px 32px -20px rgba(0, 0, 0, 0.9);
+  }
+  .bento > * > * {
+    transition: transform var(--duration-hover) var(--ease-ui);
+  }
+  @media (hover: hover) {
+    .bento > * > *:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* #07 — nghiêng theo con trỏ. Component `Tilt` set --rx/--ry (≤ 6°);
+     `.tilt-layer` nổi lên một chút theo trục Z để có thị sai giữa nội dung và
+     nền thẻ. Không hover ⇒ về 0 với transition chậm hơn để không "bật". */
+  .tilt {
+    --rx: 0deg;
+    --ry: 0deg;
+    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+    transform-style: preserve-3d;
+    transition: transform 160ms var(--ease-ui);
+    will-change: transform;
+  }
+  .tilt.is-resting {
+    transition-duration: 420ms;
+  }
+  .tilt-layer {
+    transform: translateZ(var(--tz, 18px));
+  }
+
+  /* #08 — cuộn tới thì nổi lên. Chỉ khi trình duyệt có scroll-driven
+     animation; không có thì section đứng yên như trước, không có trạng thái
+     "ẩn chờ JS". */
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: rise-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0.2;
+      transform: perspective(900px) translateY(24px) rotateX(4deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* #09 — đồng xu. Một đĩa 6 lớp cạnh + 2 mặt, xếp theo Z, quay quanh Y.
+     Vàng ở đây là *prize*: cùng ba token prize/prize-mid/prize-light đã dùng
+     cho badge và glow, không thêm màu nào. */
+  .coin-stage {
+    --size: 168px;
+    /* Độ dày = 2 × --half. Rìa là các đĩa phẳng xếp cách --gap; cách 1px thì lúc
+       quay ngang (90°) các đường chiếu chồng lên nhau thành một vành đặc — cách
+       1.5px đã ra sọc moiré, cách 2px ra vài sợi chỉ. */
+    --half: 11px;
+    --gap: 1px;
+    position: relative;
+    width: var(--size);
+    height: var(--size);
+    margin-inline: auto;
+    perspective: 900px;
+  }
+  .coin {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    animation: coin-spin 14s linear infinite;
+  }
+  .coin-face,
+  .coin-edge {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+  /* Chỉ hai mặt được ẩn mặt sau. Rìa phải nhìn thấy từ cả hai phía — nếu không
+     nửa vòng 90°→270° chỉ còn mặt sau phẳng, độ dày biến mất đúng 7 giây. */
+  .coin-face {
+    backface-visibility: hidden;
+  }
+  .coin-face {
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: calc(var(--size) * 0.42);
+    font-weight: 600;
+    color: color-mix(in srgb, var(--color-fg) 78%, var(--color-prize));
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0.15) 22%, transparent 45%),
+      radial-gradient(circle at 50% 50%, var(--color-prize-mid) 0, var(--color-prize) 62%, color-mix(in srgb, var(--color-prize) 70%, var(--color-fg)) 100%);
+    box-shadow:
+      inset 0 0 0 calc(var(--size) * 0.045) var(--color-prize-light),
+      inset 0 0 0 calc(var(--size) * 0.055) color-mix(in srgb, var(--color-prize) 80%, var(--color-fg)),
+      inset -8px -10px 22px rgba(0, 0, 0, 0.16);
+  }
+  .coin-face-front {
+    transform: translateZ(var(--half));
+  }
+  .coin-face-back {
+    transform: rotateY(180deg) translateZ(var(--half));
+  }
+  .coin-edge {
+    /* --i: vị trí theo Z (1 = sát mặt trước). --shade: độ sáng, đối xứng qua
+       tâm (1,2,3,3,2,1) để nhìn từ mặt nào rìa cũng tối dần vào giữa. */
+    background: color-mix(in srgb, var(--color-prize) calc(86% - var(--shade) * 2%), var(--color-fg));
+    transform: translateZ(calc(var(--half) - var(--i) * var(--gap)));
+  }
+  .coin-shadow {
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    bottom: -14%;
+    height: 10%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-fg) 22%, transparent) 0, transparent 70%);
+    animation: coin-shadow 14s linear infinite;
+  }
+  /* Đồng xu quay quanh trục nào cũng có hai lúc đúng 90° mỗi vòng, khi mặt
+     phẳng của nó chứa trục nhìn và chiếu ra đường thẳng — xu thật cũng vậy.
+     Lúc đó chỉ còn vành; vành phải đủ dày và đủ đặc (xem --half/--gap). */
+  @keyframes coin-spin {
+    from {
+      transform: rotateX(8deg) rotateY(0deg);
+    }
+    to {
+      transform: rotateX(8deg) rotateY(360deg);
+    }
+  }
+  @keyframes coin-shadow {
+    0%,
+    100% {
+      transform: scaleX(1);
+    }
+    25%,
+    75% {
+      transform: scaleX(0.3);
+    }
+    50% {
+      transform: scaleX(1);
+    }
+  }
+
+  /* Khối vào theo bậc, một lần khi tải. `both` giữ trạng thái cuối.
+   * `.hero-in` (landing, 700ms/90ms) và `.enter` (thẻ dashboard, 500ms/60ms,
+   * chỉ 10px) dùng chung keyframe; chỉ opacity + transform nên compositor-only. */
+  .hero-in {
+    animation: enter-in 700ms var(--ease-ui) both;
+    animation-delay: calc(var(--n, 0) * 90ms);
+  }
+  .enter {
+    --enter-y: 10px;
+    animation: enter-in 500ms var(--ease-ui) both;
+    animation-delay: calc(var(--n, 0) * 60ms);
+  }
+  @keyframes enter-in {
+    from {
+      opacity: 0;
+      transform: translateY(var(--enter-y, 14px));
+    }
+  }
+  /* Phòng tối: chỉ mờ vào 300ms, không bậc, không dịch — phòng phải đứng yên. */
+  .draw-in {
+    animation: draw-in 300ms var(--ease-ui) both;
+  }
+  @keyframes draw-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /*
+   * Chữ chuyển động (đợt 4) — xem docs/UI_DEPTH_DIRECTION.md.
+   *
+   * Năm class, một luật: trạng thái mặc định (không JS, không attribute) là
+   * NHÌN THẤY và chạy animation lúc mount. `<InView>` chỉ thêm một chốt:
+   * `[data-in="false"]` giữ con ẩn cho tới khi section vào viewport; đổi sang
+   * `"true"` là `animation-name` đi từ `none` về keyframe ⇒ animation chạy
+   * đúng lúc người dùng cuộn tới. Server HTML không có attr nên progressive.
+   *
+   * Không class nào ở đây được dùng cho giá trị confidential: chữ mã hoá chỉ
+   * có scramble trong `ConfidentialValue`, và số ẩn không bao giờ "đếm".
+   */
+  .word {
+    display: inline-block;
+    animation: word-in var(--duration-words) var(--ease-ui) both;
+    animation-delay: calc(min(var(--n, 0), 8) * var(--stagger-word));
+  }
+  /* Phòng tối: từ chỉ mờ vào, không dịch — phòng phải đứng yên. */
+  .words-quiet .word {
+    --word-y: 0px;
+  }
+  @keyframes word-in {
+    from {
+      opacity: 0;
+      transform: translateY(var(--word-y, 0.35em));
+    }
+  }
+
+  .fade {
+    animation: fade-in var(--duration-words) var(--ease-ui) both;
+    animation-delay: calc(200ms + min(var(--n, 0), 6) * var(--stagger-item));
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .in-item {
+    --enter-y: 10px;
+    animation: enter-in var(--duration-enter) var(--ease-ui) both;
+    animation-delay: calc(min(var(--n, 0), 8) * var(--stagger-item));
+  }
+
+  /* Nhãn mono "gõ" ra: clip-path không đổi layout, steps(--ch) = 1 ký tự/bậc. */
+  .typed {
+    display: inline-block;
+    animation: typed-in 360ms steps(var(--ch, 8), end) 150ms backwards;
+  }
+  @keyframes typed-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* Gạch chân tự vẽ một lần; hết animation thì hover dày nét bằng transition. */
+  .link-draw {
+    text-decoration: none;
+    padding-bottom: 1px;
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 100% 1px;
+    transition: background-size var(--duration-hover) var(--ease-ui);
+    animation: underline-in 500ms var(--ease-ui) 350ms backwards;
+  }
+  .link-draw:hover {
+    background-size: 100% 2px;
+  }
+  @keyframes underline-in {
+    from {
+      background-size: 0 1px;
+    }
+  }
+
+  [data-in="false"] :is(.word, .fade, .in-item, .typed, .link-draw) {
+    animation: none;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .hero-in,
+    .enter,
+    .draw-in,
+    .word,
+    .fade,
+    .in-item,
+    .typed,
+    .link-draw {
+      animation: none;
+    }
+    [data-in="false"] :is(.word, .fade, .in-item, .typed, .link-draw) {
+      opacity: 1;
+    }
+    .coin,
+    .coin-shadow {
+      animation: none;
+    }
+    .coin {
+      transform: rotateX(8deg) rotateY(25deg);
+    }
+    .tilt {
+      transform: none;
+      transition: none;
+    }
+    .bento > * > *,
+    .bento > * > *:hover {
+      transform: none;
+      transition: none;
     }
   }
 }

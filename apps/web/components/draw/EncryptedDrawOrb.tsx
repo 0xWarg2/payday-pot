@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { EpochPhase } from "@payday-pot/sdk";
 
 /**
@@ -16,47 +17,25 @@ import type { EpochPhase } from "@payday-pot/sdk";
  * Không animation loop: `EXECUTION_PLAN` Day 8 nói orb tĩnh là đủ, và một vòng
  * xoay vô hạn trong lúc chờ block là thứ đầu tiên `prefers-reduced-motion` phải
  * gỡ bỏ — nên tốt nhất là đừng thêm vào để rồi phải gỡ.
+ *
+ * Day 10 (depth kit #05): đổi từ SVG phẳng sang khối cầu CSS — bốn lớp
+ * radial-gradient + inset shadow đọc như một quả cầu thuỷ tinh tối, vòng tiến
+ * độ là conic-gradient. Chữ ký hàm, aria, kích thước: giữ nguyên.
  */
 export function EncryptedDrawOrb({ phase, progress }: { phase: EpochPhase; progress: number }) {
   const clamped = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
-  // Vòng ngoài mở dần theo tiến độ. Dùng dasharray thay vì transform để không có
-  // gì chuyển động khi state không đổi.
-  const circumference = 2 * Math.PI * 52;
-  const arc = phase === "Open" ? 0 : circumference * clamped;
+  // Vòng ngoài mở dần theo tiến độ; ở "Open" chỉ có rãnh, để phần chưa xong có
+  // hình dạng. Không có gì chuyển động khi state không đổi.
+  const fill = phase === "Open" ? 0 : clamped;
 
   return (
-    <svg
+    <div
       aria-hidden="true"
-      viewBox="0 0 128 128"
-      className="size-[112px] shrink-0 sm:size-[128px]"
       role="presentation"
+      className="relative grid size-[112px] shrink-0 place-items-center sm:size-[128px]"
     >
-      <defs>
-        <radialGradient id="orb-core" cx="38%" cy="32%" r="72%">
-          <stop offset="0%" stopColor="var(--color-privacy)" stopOpacity="0.55" />
-          <stop offset="55%" stopColor="var(--color-draw-violet)" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="var(--color-draw-canvas)" stopOpacity="0.9" />
-        </radialGradient>
-      </defs>
-
-      <circle cx="64" cy="64" r="40" fill="url(#orb-core)" />
-      <circle cx="64" cy="64" r="40" fill="none" stroke="var(--color-draw-border)" strokeWidth="1" />
-
-      {/* Rãnh của vòng tiến độ — luôn hiện, để phần chưa xong có hình dạng. */}
-      <circle cx="64" cy="64" r="52" fill="none" stroke="var(--color-draw-border)" strokeWidth="2" />
-      {arc > 0 ? (
-        <circle
-          cx="64"
-          cy="64"
-          r="52"
-          fill="none"
-          stroke="var(--color-privacy)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={`${arc} ${circumference}`}
-          transform="rotate(-90 64 64)"
-        />
-      ) : null}
-    </svg>
+      <div className="orb-ring absolute inset-0" style={{ "--orb-p": fill } as CSSProperties} />
+      <div className="orb-sphere size-[80px] sm:size-[92px]" />
+    </div>
   );
 }

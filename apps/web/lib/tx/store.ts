@@ -51,6 +51,12 @@ export interface TxSnapshot {
   records: readonly TxRecord[];
   /** Chỉ sống trong bộ nhớ tab. */
   status: ReadonlyMap<string, TxStatus>;
+  /**
+   * Block đã mine, theo txHash — cũng CHỈ trong bộ nhớ tab. Có nó để hàng ghi
+   * từ trình duyệt và hàng đọc từ chain (`chain-history.ts`) sắp cùng một trục;
+   * không persist vì receipt trả lại nó miễn phí ở lần đối chiếu sau.
+   */
+  minedAt: ReadonlyMap<string, number>;
 }
 
 const TX_ACTIONS: readonly string[] = [
@@ -74,6 +80,7 @@ const MAX_RECORDS = 25;
 export const TX_SERVER_SNAPSHOT: TxSnapshot = Object.freeze({
   records: Object.freeze([]),
   status: new Map<string, TxStatus>(),
+  minedAt: new Map<string, number>(),
 });
 
 export const txStore = createExternalStore<TxSnapshot>(TX_SERVER_SNAPSHOT, TX_SERVER_SNAPSHOT);
@@ -100,7 +107,7 @@ registerValidator(STORAGE_KEYS.tx, isTxRecordArray);
 
 export function loadTxRecords(): void {
   const records = readJson(STORAGE_KEYS.tx, isTxRecordArray) ?? [];
-  txStore.set({ records, status: new Map() });
+  txStore.set({ records, status: new Map(), minedAt: new Map() });
 }
 
 export function recordTx(record: TxRecord): void {
@@ -110,16 +117,20 @@ export function recordTx(record: TxRecord): void {
     writeJson(STORAGE_KEYS.tx, records);
     const status = new Map(prev.status);
     status.set(record.txHash, "pending");
-    return { records, status };
+    return { ...prev, records, status };
   });
 }
 
-export function setTxStatus(txHash: string, next: TxStatus): void {
+export function setTxStatus(txHash: string, next: TxStatus, blockNumber?: number): void {
   txStore.set((prev) => {
-    if (prev.status.get(txHash) === next) return prev;
+    const sameBlock = blockNumber === undefined || prev.minedAt.get(txHash) === blockNumber;
+    if (prev.status.get(txHash) === next && sameBlock) return prev;
     const status = new Map(prev.status);
     status.set(txHash, next);
-    return { ...prev, status };
+    if (sameBlock) return { ...prev, status };
+    const minedAt = new Map(prev.minedAt);
+    minedAt.set(txHash, blockNumber);
+    return { ...prev, status, minedAt };
   });
 }
 

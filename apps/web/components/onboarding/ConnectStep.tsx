@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { GuideLink } from "@/components/onboarding/GuideLink";
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Button } from "@/components/ui/Button";
 import { connectWallet } from "@/lib/wallet/connect";
@@ -9,18 +10,9 @@ import { walletStore } from "@/lib/wallet/store";
 import { useStore } from "@/lib/store/external-store";
 
 const FACTS = [
-  {
-    title: "No account, no email, no password",
-    body: "Your wallet address is the whole of your identity here. There is nothing to sign up for and nothing to remember.",
-  },
-  {
-    title: "Connecting costs nothing",
-    body: "It sends no transaction and moves no funds. It only lets this page read which address you are.",
-  },
-  {
-    title: "You will be asked to sign later",
-    body: "Reading your own encrypted balance needs a typed-data signature (EIP-712) — a signature, not a transaction, so it still costs no gas. Every mainstream browser wallet supports it, and a wallet that does not will say so plainly instead of failing quietly.",
-  },
+  "No account, no email, no password",
+  "Connecting sends no transaction",
+  "Reading your balance later takes a signature, not gas",
 ] as const;
 
 export function ConnectStep() {
@@ -43,8 +35,7 @@ export function ConnectStep() {
     return (
       <div>
         <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
-          This browser has no wallet extension installed, so there is no address to connect. Install one, then reload
-          this page — you will land back on this step.
+          No wallet extension found. Install one and reload — you land back here.
         </p>
         <a
           data-cta
@@ -56,7 +47,7 @@ export function ConnectStep() {
           Get MetaMask
         </a>
         <p className="text-fg-muted mt-3 text-[13px]">
-          Any wallet that speaks EIP-1193 works. MetaMask is simply the one most people already have.
+          Any EIP-1193 wallet works. <GuideLink href="/docs/get-started#before-you-start" />
         </p>
       </div>
     );
@@ -65,17 +56,20 @@ export function ConnectStep() {
   return (
     <div>
       <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
-        Everything below happens on Ethereum Sepolia with test money. Nothing here can touch real funds.
+        Sepolia test money only. Nothing here touches real funds.
       </p>
 
-      <dl className="mt-6 flex flex-col gap-4">
+      <ul className="mt-5 flex flex-col gap-2">
         {FACTS.map((fact) => (
-          <div key={fact.title} className="border-border-default border-t pt-4">
-            <dt className="text-[15px] font-semibold tracking-tight">{fact.title}</dt>
-            <dd className="text-fg-muted mt-1 max-w-[64ch] text-[14px] leading-relaxed">{fact.body}</dd>
-          </div>
+          <li key={fact} className="text-fg-muted flex items-start gap-2.5 text-[14px] leading-relaxed">
+            <span aria-hidden="true" className="bg-fg-muted/60 mt-2 size-1 shrink-0 rounded-full" />
+            {fact}
+          </li>
         ))}
-      </dl>
+      </ul>
+      <p className="mt-3">
+        <GuideLink href="/docs/get-started#steps" />
+      </p>
 
       {wallet.error ? (
         <div className="mt-6">

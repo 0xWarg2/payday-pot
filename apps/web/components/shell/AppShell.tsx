@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { CoinMark } from "@/components/brand/CoinMark";
+
 import { NetworkBanner } from "./NetworkBanner";
 import { SdkHealth } from "./SdkHealth";
 import { WalletButton } from "./WalletButton";
@@ -14,6 +16,7 @@ const NAV = [
   { href: "/app/savings", label: "Savings" },
   { href: "/app/draws/current", label: "Draw room" },
   { href: "/employer", label: "Sponsor" },
+  { href: "/docs", label: "Docs" },
 ] as const;
 
 /**
@@ -49,7 +52,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header className="border-border-default bg-canvas/90 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1120px] items-center gap-4 px-4 py-3">
-          <Link href="/" className="text-[15px] font-semibold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-body font-semibold tracking-tight">
+            <CoinMark size={22} />
             PayDay Pot
           </Link>
           <nav aria-label="Main" className="flex items-center gap-1 overflow-x-auto">
@@ -61,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={`rounded-control inline-flex min-h-[44px] items-center px-3 text-[14px] font-medium whitespace-nowrap ${
-                    active ? "bg-subtle" : "text-fg-muted hover:bg-subtle"
+                    active ? "bg-subtle" : "text-fg-muted hover:bg-subtle hover:text-fg"
                   }`}
                 >
                   {item.label}
@@ -83,11 +87,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <footer className="border-border-default border-t">
-        <div className="text-fg-muted mx-auto flex w-full max-w-[1120px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-5 text-[12px]">
+        <div className="text-fg-muted mx-auto flex w-full max-w-[1120px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-5 text-caption">
           <span>Sepolia testnet · no real money</span>
           <span aria-hidden="true">·</span>
           <span>Amounts stay encrypted; addresses and timing are public</span>
-          <Link href="/docs/known-limitations" className="ml-auto underline underline-offset-4">
+          <Link href="/docs" className="ml-auto underline underline-offset-4">
+            Docs
+          </Link>
+          <Link href="/docs/known-limitations" className="underline underline-offset-4">
             Known limitations
           </Link>
         </div>

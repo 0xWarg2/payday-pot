@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useReducer, useRef } from "react";
 
+import { Words } from "@/components/motion/Words";
 import { AssetStep } from "@/components/onboarding/AssetStep";
 import { ConnectStep } from "@/components/onboarding/ConnectStep";
 import { ConsentStep } from "@/components/onboarding/ConsentStep";
@@ -104,13 +105,16 @@ export function OnboardingFlow() {
     >
       <Stepper current={step} countId={countId} />
 
+      {/* `key={step}`: remount để chữ chạy lại mỗi bước; ref gắn vào node mới trong
+          commit, trước effect focus ở trên, nên focus vẫn về đúng h1. */}
       <h1
+        key={step}
         ref={headingRef}
         tabIndex={-1}
         aria-describedby={countId}
         className="mt-5 text-[30px] leading-tight font-semibold tracking-tight outline-none sm:text-[38px]"
       >
-        {STEP_LABELS[step]}
+        <Words>{STEP_LABELS[step]}</Words>
       </h1>
 
       <div className="mt-6">

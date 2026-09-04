@@ -241,7 +241,10 @@ test.describe("employer page", () => {
     await page.goto("/employer");
 
     // RoleGate có thể chắn: nó là một cách xem, nên luôn có đường đi tiếp.
+    // Gate dựng sau hydrate (NoSsr) — chờ hoặc nút chuyển vai, hoặc chính notice,
+    // thay vì hỏi "nút có đang hiện không" đúng một lần khi trang còn là fallback.
     const proceed = page.getByRole("button", { name: /sponsor|continue|view/i }).first();
+    await proceed.or(page.getByText(/cannot see who won/i)).first().waitFor({ timeout: 30_000 });
     if (await proceed.isVisible().catch(() => false)) await proceed.click();
 
     await expect(page.getByText(/cannot see who won/i)).toBeVisible({ timeout: 30_000 });

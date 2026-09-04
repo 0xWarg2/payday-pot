@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { HIDDEN_HANDLE } from "@payday-pot/sdk";
 
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -26,23 +26,25 @@ export function QuickActions() {
   // phải nghe ra là không biết, chứ không được thu về thành "không có".
   const claim =
     reads.account === null
-      ? "Winnings show up here once a round has been drawn and settled."
+      ? "After a round settles."
       : reads.account.pendingPrize === HIDDEN_HANDLE
-        ? "Nothing has been settled to this wallet yet. It appears here after a round is drawn."
-        : "You have a claimable balance recorded. Its amount is encrypted — reveal your position to see it.";
+        ? "Nothing settled to this wallet yet."
+        : "Recorded — reveal to see it.";
 
   return (
-    <Card className="h-full">
-      <CardHeader title="What you can do" hint="Every one of these is a transaction you sign yourself." />
+    <Card className="elev-1 h-full">
+      <CardHeader title="Actions" />
 
       <ul className="flex flex-col gap-2">
-        <Action href="/app/savings" primary title="Deposit" detail="Adds to your savings and starts earning weight." />
+        <Action n={0} href="/app/savings" primary title="Deposit" detail="Earns weight right away." />
         <Action
+          n={1}
           href="/app/savings#withdraw"
           title="Withdraw everything"
-          detail="Works in every stage of every round, including while a draw is running or the pool is paused."
+          detail="Any time, even while paused."
         />
         <Action
+          n={2}
           href="/app/savings#claim"
           title="Claim your winnings"
           detail={claim}
@@ -53,26 +55,28 @@ export function QuickActions() {
 }
 
 function Action({
+  n,
   href,
   title,
   detail,
   primary = false,
 }: {
+  n: number;
   href: string;
   title: string;
   detail: ReactNode;
   primary?: boolean;
 }) {
   return (
-    <li>
+    <li className="in-item" style={{ "--n": n } as CSSProperties}>
       <Link
         href={href}
         className={`rounded-control flex flex-col justify-center gap-0.5 px-4 py-3 transition-colors duration-(--duration-hover) ${
           primary ? "bg-action text-on-action hover:bg-action-hover" : "border-border-default border hover:bg-subtle"
         }`}
       >
-        <span className="text-[15px] font-medium">{title}</span>
-        <span className={`text-[12px] leading-relaxed ${primary ? "opacity-80" : "text-fg-muted"}`}>{detail}</span>
+        <span className="text-body font-medium">{title}</span>
+        <span className={`text-caption leading-relaxed ${primary ? "opacity-80" : "text-fg-muted"}`}>{detail}</span>
       </Link>
     </li>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CoinMark } from "@/components/brand/CoinMark";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { AppProviders } from "@/components/shell/AppProviders";
 import { TxCenter } from "@/components/tx/TxCenter";
@@ -26,7 +27,8 @@ export default function OnboardingPage() {
     <AppProviders>
       <div className="mx-auto w-full max-w-[880px] px-4 pb-24">
         <header className="border-border-default flex items-center justify-between border-b py-4">
-          <Link href="/" className="text-[15px] font-semibold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            <CoinMark size={20} />
             PayDay Pot
           </Link>
           <Link href="/" className="text-fg-muted hover:text-fg text-[13px] underline underline-offset-4">

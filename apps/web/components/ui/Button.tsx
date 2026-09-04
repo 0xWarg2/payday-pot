@@ -26,7 +26,8 @@ const VARIANTS: Record<ButtonSurface, Record<Variant, string>> = {
   },
   draw: {
     primary: "bg-action text-on-action hover:bg-action-hover active:bg-action-active",
-    secondary: "bg-draw-surface text-draw-fg border-draw-border hover:bg-draw-border/60 border",
+    // Fill sáng hơn thẻ chứa nó: nút phụ cùng màu thẻ thì không còn là nút.
+    secondary: "bg-draw-border/40 text-draw-fg border-draw-border-strong hover:bg-draw-border border",
     ghost: "text-draw-fg-muted hover:text-draw-fg hover:bg-draw-border/40 bg-transparent",
     // `--color-danger` trên nền phòng tối chỉ đạt ~3.4:1, dưới ngưỡng chữ AA.
     // Viền giữ màu để vẫn đọc ra là cảnh báo, chữ dùng màu sáng của phòng.

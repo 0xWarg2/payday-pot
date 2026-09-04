@@ -33,7 +33,7 @@ export async function reconcileTxStatuses(): Promise<void> {
           setTxStatus(record.txHash, "pending");
           return;
         }
-        setTxStatus(record.txHash, receipt.status === 1 ? "success" : "reverted");
+        setTxStatus(record.txHash, receipt.status === 1 ? "success" : "reverted", receipt.blockNumber);
       } catch {
         setTxStatus(record.txHash, "unknown");
       }
