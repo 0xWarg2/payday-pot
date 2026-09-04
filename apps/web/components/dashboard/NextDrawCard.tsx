@@ -9,7 +9,7 @@ import { Card, CardHeader, PrizeBadge, PublicBadge } from "@/components/ui/Card"
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SEPOLIA_CHAIN_ID } from "@/lib/chain/rpc";
-import { PHASE_LABEL, depositsClosed, keeperState } from "@/lib/draw/room";
+import { depositsClosed, keeperState, phaseLabel } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount, formatCountdown } from "@/lib/format";
 import { potReadsStore, refreshPotReads, type DeploymentStatus } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
@@ -144,7 +144,7 @@ function Live({ state, now }: { state: PotState; now: number | null }) {
 
       <div className="border-border-default mt-4 border-t pt-4">
         <p className="text-fg-muted text-small">Stage</p>
-        <p className="mt-1 text-body font-medium">{PHASE_LABEL[state.phase]}</p>
+        <p className="mt-1 text-body font-medium">{phaseLabel(state, nowSeconds)}</p>
         {keeper.kind === "ready" ? (
           <p className="text-fg-muted mt-1.5 max-w-[52ch] text-small leading-relaxed">
             {keeper.detail}
