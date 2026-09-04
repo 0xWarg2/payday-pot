@@ -308,3 +308,26 @@ Deployment protection: project mới bật `ssoProtection` phạm vi
 `all_except_custom_domains`, tức mọi `*.vercel.app` nằm sau login Vercel — judge
 mở link sẽ thấy màn hình đăng nhập và **không có gì trong build log nói ra điều
 đó**. Phải tắt tường minh rồi kiểm lại bằng script trên (nó chạy không cookie).
+
+## 12. Web deploy (Vercel)
+
+Project `payday-pot` trong team `vuitinhvl7x's projects`, **Root Directory
+`apps/web`**, framework Next.js, Node 24. `apps/web/vercel.json` đặt
+`installCommand: pnpm install --frozen-lockfile` và
+`buildCommand: pnpm --filter @payday-pot/web... build` (build `shared` + `sdk`
+rồi `web`). Không có env var trên Vercel: web chỉ đọc chain qua ví/RPC public
+và manifest `deployments/sepolia.json` đã commit.
+
+| Đường | Kết quả |
+|---|---|
+| Merge `dev` → `main` và push | Vercel (GitHub app, production branch `main`) build và **auto-deploy production**: `payday-pot.vercel.app`, `payday-pot-vuitinhvl7xs-projects.vercel.app` |
+| Push `dev` (hoặc bất kỳ branch khác) | Preview deploy, URL riêng theo commit, không đụng production |
+| Từ máy, working tree hiện tại | `vercel deploy --prod --yes` ở repo root (đã `vercel link`, `.vercel/` gitignored) — deploy đúng file đang có, kể cả chưa commit |
+
+Kiểm sau deploy: `vercel ls payday-pot` xem trạng thái; production URL phải trả
+`<link rel="icon" href="/icon.svg">` và header COOP/COEP (relayer-sdk WASM).
+Rollback: `vercel rollback <url>` hoặc "Promote to Production" trên dashboard.
+
+Logo: `apps/web/components/brand/CoinMark.tsx` (SVG cùng hình với `HeroCoin`),
+favicon `app/icon.svg`, `app/apple-icon.png` và `app/opengraph-image.png` render
+từ cùng SVG (Next tự sinh `<link>`/`og:image`).

@@ -21,13 +21,12 @@ export function ShieldWarning() {
         <div>
           <p className="text-[15px] font-semibold tracking-tight">This one amount will be public</p>
           <p className="text-fg-muted mt-1.5 max-w-[64ch] text-[14px] leading-relaxed">
-            Shielding is the doorway into the encrypted side, and the doorway itself is in the open: the amount in the
-            box above goes into the transaction as plain text and stays readable on chain forever. Everything after
-            this — what you deposit, your balance, your odds, your winnings — is encrypted.
+            The amount above goes into the transaction in plain text and stays on chain forever. Everything after it —
+            deposit, balance, odds, winnings — is encrypted.
           </p>
           <p className="text-fg-muted mt-3 max-w-[64ch] text-[14px] leading-relaxed">
-            You can shield more than you plan to deposit. Shield a round number, deposit whatever you like out of it,
-            and the public number stops saying anything about your position in the pool.
+            Shield a round number and deposit whatever you like from it; the public number then says nothing about
+            your position.
           </p>
         </div>
       </div>

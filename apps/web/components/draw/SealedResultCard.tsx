@@ -118,7 +118,7 @@ function Sealed({
     <>
       <p className="text-draw-fg-muted text-[13px]">Unclaimed winnings</p>
       <p className="mt-2">
-        <ConfidentialValue view={view} label="Your unclaimed winnings" />
+        <ConfidentialValue view={view} label="Your unclaimed winnings" surface="draw" />
         {view.kind === "revealed" ? (
           <span className="text-draw-fg-muted ml-2 text-[15px] font-normal">USDC</span>
         ) : null}
@@ -129,7 +129,7 @@ function Sealed({
 
       <div className="mt-5">
         {flight ? (
-          <RevealPhaseLine phase={flight.phase} />
+          <RevealPhaseLine phase={flight.phase} surface="draw" />
         ) : view.kind === "revealed" ? (
           <div className="flex flex-wrap items-center gap-3">
             <DrawButton variant="secondary" onClick={onHide}>

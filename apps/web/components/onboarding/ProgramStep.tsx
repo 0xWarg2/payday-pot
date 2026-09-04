@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { NotDeployedCard } from "@/components/guards/NotDeployedCard";
+import { GuideLink } from "@/components/onboarding/GuideLink";
 import { Button } from "@/components/ui/Button";
 import { EncryptedBadge, PublicBadge } from "@/components/ui/Card";
 import { formatAbsolute, formatAmount, shortAddress } from "@/lib/format";
@@ -33,7 +34,7 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
             Look through the rest of the setup
           </Button>
           <p className="text-fg-muted mt-3 max-w-[62ch] text-[13px] leading-relaxed">
-            You can read every remaining step, but no deposit is possible until the pool is live on Sepolia.
+            No deposit is possible until the pool is live on Sepolia.
           </p>
         </div>
       </div>
@@ -46,16 +47,15 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div>
       <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
-        There is nothing to sign here and nothing to join. You become a participant at the moment your first deposit
-        lands — this page is only so you know what you are walking into first.
+        Nothing to sign here — you join with your first deposit. This is what you are walking into.{" "}
+        <GuideLink href="/docs/how-it-works" />
       </p>
 
       {account?.registered ? (
         <div className="border-privacy/30 bg-privacy-subtle rounded-card mt-6 border p-5">
           <p className="text-[15px] font-medium">This address is already in the pool.</p>
           <p className="text-fg-muted mt-1 max-w-[60ch] text-[14px] leading-relaxed">
-            Nothing will be created twice. Finish the remaining steps if you want to read them, or go straight to your
-            dashboard.
+            Nothing is created twice. Read on, or go to your dashboard.
           </p>
           <Link
             data-cta
@@ -73,7 +73,7 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
         <Fact
           label="Prize this round"
           value={state ? `${formatAmount(state.prizeAmount)} USDC` : "—"}
-          note="Funded by the sponsor, not taken from deposits."
+          note="Funded by the sponsor, not from deposits."
         />
         <Fact
           label="Round ends"
@@ -83,7 +83,7 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
         <Fact
           label="Most one person can hold"
           value={config ? `${formatAmount(config.perUserCap)} USDC` : "—"}
-          note="A cap the contract enforces, so the arithmetic cannot overflow."
+          note="Enforced by the contract."
         />
         <Fact
           label="Room in the pool"
@@ -94,7 +94,7 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
       <div className="border-border-default mt-8 border-t pt-5">
         <div className="flex flex-wrap items-center gap-2">
           <PublicBadge>Public</PublicBadge>
-          <span className="text-fg-muted text-[13px]">Everything on this screen is readable by anyone.</span>
+          <span className="text-fg-muted text-[13px]">Everything on this screen is public.</span>
         </div>
         <dl className="mt-4 flex flex-col gap-2">
           <Address label="Pool contract" value={config?.address} />
@@ -103,9 +103,7 @@ export function ProgramStep({ onContinue }: { onContinue: () => void }) {
         </dl>
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <EncryptedBadge>Encrypted</EncryptedBadge>
-          <span className="text-fg-muted text-[13px]">
-            Your balance, your odds and your winnings — none of which appear above, or anywhere else, in the clear.
-          </span>
+          <span className="text-fg-muted text-[13px]">Your balance, odds and winnings never appear in the clear.</span>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store/external-store";
 import { txRecordsFor, txStore } from "@/lib/tx/store";
 import { useNow } from "@/lib/use-now";
 import { NoSsr } from "@/components/privacy/NoSsr";
-import { TxRow } from "./TxRow";
+import { TxRow, localItem } from "./TxRow";
 
 /**
  * Trung tâm giao dịch — mọi tx app này từng gửi từ trình duyệt của bạn.
@@ -48,8 +48,7 @@ function TxCenterInner() {
             {records.map((record) => (
               <TxRow
                 key={record.txHash}
-                record={record}
-                status={snapshot.status.get(record.txHash) ?? "unknown"}
+                item={localItem(record, snapshot.status.get(record.txHash) ?? "unknown", snapshot.minedAt.get(record.txHash))}
                 now={now}
               />
             ))}

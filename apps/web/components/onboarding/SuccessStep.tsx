@@ -10,19 +10,19 @@ const CTA: Record<Role, { href: string; label: string; body: string }> = {
   employee: {
     href: "/app",
     label: "Make your first deposit",
-    body: "Your deposit is encrypted the moment it lands. From the dashboard you can reveal your own balance to yourself, and withdraw it in full at any time, in any phase of any round.",
+    body: "Your deposit is encrypted on arrival. Reveal it to yourself; withdraw in full any time.",
   },
   employer: {
     href: "/employer",
     label: "Fund a prize",
-    body: "You fund the prize for a round out of your own pocket. You will see the prize you funded and how many people are in the round — never any individual's balance, deposit or winnings.",
+    body: "You fund a round's prize. You see the pot and the head count, never a balance.",
   },
 };
 
 const NEXT = [
-  "Nothing here is worth real money, and nothing can be.",
-  "Your deposit is never spent on the prize, so losing a round costs you nothing.",
-  "Withdrawing works in every phase, including while a draw is running or the pool is paused.",
+  "Test money only.",
+  "Losing a round costs you nothing.",
+  "Withdraw in every phase, even while paused.",
 ] as const;
 
 export function SuccessStep({ role }: { role: Role }) {
@@ -36,8 +36,7 @@ export function SuccessStep({ role }: { role: Role }) {
 
       {!shielded && role === "employee" ? (
         <p className="text-fg-muted mt-4 max-w-[62ch] text-[14px] leading-relaxed">
-          One thing still outstanding: you have not shielded any USDC yet, so the deposit form will ask you to do that
-          first. It is two transactions and takes about a minute.
+          Not shielded yet — the deposit form will ask first. Two transactions, about a minute.
         </p>
       ) : null}
 
@@ -68,12 +67,10 @@ export function SuccessStep({ role }: { role: Role }) {
       </ul>
 
       <p className="text-fg-muted mt-6 max-w-[64ch] text-[13px] leading-relaxed">
-        The prize is sponsored, not earned as yield on your savings. The contract exposes an adapter interface so a real
-        yield source could fund it, but none is connected in this build —{" "}
+        The prize is sponsored, not earned as yield; the adapter for a real yield source is empty in this build.{" "}
         <Link href="/docs/known-limitations" className="underline underline-offset-4">
-          the full list of limitations
-        </Link>{" "}
-        says what else that means.
+          Known limitations →
+        </Link>
       </p>
     </div>
   );

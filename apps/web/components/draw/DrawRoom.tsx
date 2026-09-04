@@ -5,7 +5,7 @@ import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { toPotError, type PotError } from "@payday-pot/sdk";
 
 import { ClaimReviewDialog } from "./ClaimReviewDialog";
-import { DrawCard, DrawNotice } from "./DrawSurface";
+import { DrawButton, DrawCard, DrawNotice } from "./DrawSurface";
 import { DrawPhaseTimeline } from "./DrawPhaseTimeline";
 import { DrawRoomHeader } from "./DrawRoomHeader";
 import { FairnessReceipt } from "./FairnessReceipt";
@@ -301,12 +301,7 @@ function YourSide({ phase }: { phase: "Open" | "Snapshotting" | "Drawing" | "Set
           reading them needs your signature.
         </p>
         <div className="mt-4">
-          <button
-            onClick={() => void connectWallet().catch(() => {})}
-            className="rounded-control bg-action text-on-action focus-visible:outline-draw-fg inline-flex items-center px-5 text-[15px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            Connect wallet
-          </button>
+          <DrawButton onClick={() => void connectWallet().catch(() => {})}>Connect wallet</DrawButton>
         </div>
       </DrawCard>
     );

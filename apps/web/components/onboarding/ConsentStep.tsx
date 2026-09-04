@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/Button";
 import { EncryptedBadge, PublicBadge } from "@/components/ui/Card";
 
 const HIDDEN = [
-  "How much you deposit, and your balance at any moment",
-  "Your time-weighted average balance, which sets your odds",
+  "Your deposit and your balance",
+  "Your average balance, which sets your odds",
   "Whether you won a round",
-  "How much you won, until you choose to reveal it to yourself",
+  "How much you won",
 ] as const;
 
 /**
@@ -20,10 +20,10 @@ const HIDDEN = [
  */
 const PUBLIC = [
   "Your wallet address",
-  "The exact time of every action you take, forever",
-  "The transaction graph — which addresses funded yours, and which you funded",
-  "That you claimed a prize, and when. The amount stays encrypted; the claim itself does not",
-  "The prize for each round, how many people are in it, and every rule the pool follows",
+  "The time of every action, forever",
+  "The transaction graph — who funded you, whom you funded",
+  "That you claimed a prize, and when — not how much",
+  "The prize, the head count and the rules",
 ] as const;
 
 export function ConsentStep({ onAccept }: { onAccept: () => void }) {
@@ -34,8 +34,7 @@ export function ConsentStep({ onAccept }: { onAccept: () => void }) {
     <div>
       <p className="text-fg-muted max-w-[62ch] text-[16px] leading-relaxed">
         This pool keeps <span className="text-fg font-medium">amounts</span> confidential. It does not make you
-        anonymous. Those are different promises, and the gap between them is where people get hurt — so read the right
-        column before you agree to it.
+        anonymous. Read the right column before you agree.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -49,8 +48,7 @@ export function ConsentStep({ onAccept }: { onAccept: () => void }) {
             ))}
           </ul>
           <p className="text-fg-muted mt-5 text-[12px] leading-relaxed">
-            Only your address holds the permission to decrypt these. Not the sponsor, not whoever runs the draw, not
-            whoever deployed the contract.
+            Only your address can decrypt these. Not the sponsor, not the keeper, not the deployer.
           </p>
         </div>
 
@@ -64,8 +62,7 @@ export function ConsentStep({ onAccept }: { onAccept: () => void }) {
             ))}
           </ul>
           <p className="text-fg-muted mt-5 text-[12px] leading-relaxed">
-            Sepolia is a public chain and nothing here can change that. If being linked to this pool is itself the
-            problem, use an address that is not tied to you.
+            If being linked to this pool is the problem, use an address not tied to you.
           </p>
         </div>
       </div>
@@ -80,8 +77,7 @@ export function ConsentStep({ onAccept }: { onAccept: () => void }) {
             className="accent-action mt-0.5 size-[18px] shrink-0"
           />
           <span className="max-w-[64ch] text-[15px] leading-relaxed">
-            I have read both columns. I understand my address and the timing of my actions are public, and that
-            confidential here means amounts, not identity.
+            I have read both columns: my address and timing are public; confidential means amounts, not identity.
           </span>
         </label>
 
@@ -89,8 +85,8 @@ export function ConsentStep({ onAccept }: { onAccept: () => void }) {
           <Button disabled={!checked} onClick={onAccept}>
             I understand — continue
           </Button>
-          <Link href="/docs/known-limitations" className="text-fg-muted text-[13px] underline underline-offset-4">
-            Read the full limitations first
+          <Link href="/docs/privacy" className="text-fg-muted text-[13px] underline underline-offset-4">
+            Full privacy page →
           </Link>
         </div>
       </div>

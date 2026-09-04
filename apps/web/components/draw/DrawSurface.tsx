@@ -25,7 +25,7 @@ export function DrawCard({
   return (
     <Tag
       {...rest}
-      className={`border-draw-border bg-draw-surface rounded-card border p-5 sm:p-6 ${className}`}
+      className={`border-draw-border bg-draw-surface rounded-card elev-draw draw-in border p-5 sm:p-6 ${className}`}
     >
       {children}
     </Tag>
@@ -47,7 +47,7 @@ export function DrawCardHeader({ title, hint, action }: { title: ReactNode; hint
 /** Nhãn "công khai" — nhắc rằng cái gì đọc được từ ngoài thì ai cũng đọc được. */
 export function DrawPublicBadge({ children = "Public" }: { children?: ReactNode }) {
   return (
-    <span className="border-draw-border text-draw-fg-muted inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[12px] font-medium">
+    <span className="border-draw-border text-draw-fg-muted inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium tracking-[0.04em]">
       {children}
     </span>
   );
@@ -55,7 +55,7 @@ export function DrawPublicBadge({ children = "Public" }: { children?: ReactNode 
 
 export function DrawEncryptedBadge({ children = "Encrypted" }: { children?: ReactNode }) {
   return (
-    <span className="text-privacy inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-privacy)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-privacy)_12%,transparent)] px-2.5 py-1 text-[12px] font-medium">
+    <span className="text-privacy inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-privacy)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-privacy)_12%,transparent)] px-2.5 py-1 font-mono text-[11px] font-medium tracking-[0.04em]">
       <span aria-hidden="true" className="bg-privacy size-1.5 rounded-full" />
       {children}
     </span>
@@ -82,7 +82,7 @@ export function DrawNotice({
     tone === "privacy"
       ? "border-[color-mix(in_srgb,var(--color-privacy)_35%,transparent)]"
       : tone === "warning"
-        ? "border-[color-mix(in_srgb,var(--color-warning)_55%,transparent)]"
+        ? "border-[color-mix(in_srgb,var(--color-draw-warning)_55%,transparent)]"
         : "border-draw-border";
   return (
     <div {...rest} className={`rounded-card border ${border} bg-draw-canvas/60 p-4`}>

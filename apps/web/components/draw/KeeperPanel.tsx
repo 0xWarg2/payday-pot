@@ -68,7 +68,7 @@ export function KeeperPanel({ state, now }: { state: PotState; now: bigint | nul
     <DrawCard data-testid="keeper-panel">
       <DrawCardHeader
         title="Run this round"
-        hint="Every step below is permissionless. Any wallet can send it — the pool does not wait on an operator."
+        hint="Every step is permissionless — any wallet can send it."
         action={<DrawPublicBadge />}
       />
 

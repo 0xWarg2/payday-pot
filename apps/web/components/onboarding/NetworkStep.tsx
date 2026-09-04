@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toPotError, type PotError } from "@payday-pot/sdk";
 
+import { GuideLink } from "@/components/onboarding/GuideLink";
 import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { Button } from "@/components/ui/Button";
 import { SEPOLIA_CHAIN_ID, SEPOLIA_RPC } from "@/lib/chain/rpc";
@@ -55,7 +56,7 @@ export function NetworkStep() {
         <span className="text-fg font-medium">
           {wallet.chainId === null ? "an unknown network" : `chain ${wallet.chainId}`}
         </span>
-        . The pool only exists on Sepolia, so nothing you send from another network would reach it.
+        . The pool only exists on Sepolia.
       </p>
 
       {error ? (
@@ -73,14 +74,14 @@ export function NetworkStep() {
           Switch to Sepolia
         </Button>
         <p className="text-fg-muted mt-3 text-[13px]">
-          Your role and everything else you have filled in stays exactly where it is.
+          Your choices so far are kept. <GuideLink href="/docs/get-started#if-something-breaks" />
         </p>
       </div>
 
       <details className="border-border-default mt-8 border-t pt-5">
         <summary className="cursor-pointer text-[15px] font-medium">Add the network by hand instead</summary>
         <p className="text-fg-muted mt-3 max-w-[62ch] text-[14px] leading-relaxed">
-          Some wallets do not let a page add a network. Open your wallet&rsquo;s network settings and enter these.
+          If the button does nothing, enter these in your wallet&rsquo;s network settings.
         </p>
         <dl className="mt-4 flex flex-col gap-2">
           {MANUAL.map(([label, value]) => (

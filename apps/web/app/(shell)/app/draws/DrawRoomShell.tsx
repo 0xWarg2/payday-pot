@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
  */
 export function DrawRoomShell({ children }: { children: ReactNode }) {
   return (
-    <div className="draw-room rounded-card border-draw-border border p-5 sm:p-8" data-testid="draw-room">
+    <div className="draw-room rounded-card border-draw-border elev-2 border p-5 sm:p-8" data-testid="draw-room">
       {children}
     </div>
   );

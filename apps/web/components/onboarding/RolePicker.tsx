@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 
+import { GuideLink } from "@/components/onboarding/GuideLink";
 import { Button } from "@/components/ui/Button";
 import type { Role } from "@/lib/onboarding/role";
 
@@ -9,13 +10,13 @@ const ROLES: { value: Role; title: string; body: string; foot: string }[] = [
   {
     value: "employee",
     title: "I want to save",
-    body: "Deposit test USDC, keep the amount encrypted, and get a chance at the prize each round. Your deposit is never at risk and you can withdraw at any time.",
+    body: "Deposit, stay encrypted, maybe win. Withdraw any time.",
     foot: "Most people are here",
   },
   {
     value: "employer",
     title: "I want to sponsor a prize",
-    body: "Fund the prize for a round out of your own pocket. You can see the prize you funded and how many people are in the round — never anyone's balance.",
+    body: "Fund a round's prize. See the pot, never a balance.",
     foot: "For employers and community sponsors",
   },
 ];
@@ -80,7 +81,9 @@ export function RolePicker({ value, onSubmit }: { value: Role | null; onSubmit: 
         <Button type="submit" disabled={selected === null}>
           Continue
         </Button>
-        <p className="text-fg-muted mt-3 text-[13px]">You can switch between the two views at any time later.</p>
+        <p className="text-fg-muted mt-3 text-[13px]">
+          Switch views any time. <GuideLink href="/docs/get-started" />
+        </p>
       </div>
     </form>
   );

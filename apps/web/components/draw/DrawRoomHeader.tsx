@@ -1,16 +1,13 @@
 import Link from "next/link";
 import type { EpochView } from "@payday-pot/sdk";
 
+import { CountUp } from "@/components/motion/CountUp";
+import { Words } from "@/components/motion/Words";
+
 import { EncryptedDrawOrb } from "./EncryptedDrawOrb";
 import { DrawPublicBadge } from "./DrawSurface";
+import { PHASE_LABEL } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount } from "@/lib/format";
-
-const PHASE_LABEL: Record<EpochView["phase"], string> = {
-  Open: "Open — deposits count toward this round",
-  Snapshotting: "Closing — weights are being frozen",
-  Drawing: "Drawing — the pool is being scanned",
-  Settled: "Settled — the result is sealed",
-};
 
 /**
  * Đầu phòng: số vòng, giai đoạn, tiền giải, và một cái orb.
@@ -42,14 +39,16 @@ export function DrawRoomHeader({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[26px] font-semibold tracking-tight sm:text-[30px]">Round {view.epochId.toString()}</h1>
+          <h1 className="words-quiet text-[26px] font-semibold tracking-tight sm:text-[30px]">
+            <Words>{`Round ${view.epochId.toString()}`}</Words>
+          </h1>
           {isCurrent ? null : (
             <span className="border-draw-border text-draw-fg-muted rounded-full border px-2.5 py-1 text-[12px] font-medium">
               Past round
             </span>
           )}
           {paused && isCurrent ? (
-            <span className="border-warning/50 text-draw-fg rounded-full border px-2.5 py-1 text-[12px] font-medium">
+            <span className="border-draw-warning/60 text-draw-warning rounded-full border px-2.5 py-1 text-[12px] font-medium">
               New rounds paused
             </span>
           ) : null}
@@ -65,9 +64,11 @@ export function DrawRoomHeader({
               Sponsored prize <DrawPublicBadge />
             </p>
             <p className="mt-1">
-              <span className="tabular text-[28px] leading-none font-semibold tracking-tight">
-                {formatAmount(view.prizeAmount)}
-              </span>
+              <CountUp
+                value={view.prizeAmount}
+                format={formatAmount}
+                className="tabular text-[32px] leading-none font-semibold tracking-tight"
+              />
               <span className="text-draw-fg-muted ml-2 text-[15px]">USDC</span>
             </p>
           </div>
@@ -75,8 +76,7 @@ export function DrawRoomHeader({
         </div>
 
         <p className="text-draw-fg-muted mt-3 max-w-[64ch] text-[13px] leading-relaxed">
-          The prize is funded by an employer sponsor, not by yield the pool generated. Nobody&rsquo;s savings pay for it,
-          and nobody&rsquo;s savings are at risk in the draw.
+          Funded by an employer sponsor, not by yield — nobody&rsquo;s savings pay for it or are at risk.
         </p>
 
         {previous !== null ? (

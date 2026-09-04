@@ -22,6 +22,13 @@ test.describe("routes render without a wallet", () => {
     "/app/savings",
     "/app/draws/current",
     "/employer",
+    "/docs",
+    "/docs/get-started",
+    "/docs/how-it-works",
+    "/docs/prize-and-sponsors",
+    "/docs/privacy",
+    "/docs/draw-and-fairness",
+    "/docs/contracts",
     "/docs/known-limitations",
   ]) {
     test(`${path} answers 200 and shows a heading`, async ({ page }) => {
@@ -35,7 +42,18 @@ test.describe("routes render without a wallet", () => {
 test.describe("no horizontal overflow", () => {
   // Năm màn hình của sản phẩm, không phải ba: QA Day 8 đòi cả năm ở 320px, và
   // Draw Room là màn hình nhiều cột nhất nên là chỗ dễ tràn nhất.
-  for (const path of ["/", "/onboarding", "/app", "/app/savings", "/app/draws/current", "/employer"]) {
+  for (const path of [
+    "/",
+    "/onboarding",
+    "/app",
+    "/app/savings",
+    "/app/draws/current",
+    "/employer",
+    "/docs",
+    "/docs/get-started",
+    "/docs/contracts",
+    "/docs/known-limitations",
+  ]) {
     test(`${path} fits its viewport`, async ({ page }) => {
       await installWallet(page);
       await page.goto(path);
@@ -51,6 +69,26 @@ test.describe("no horizontal overflow", () => {
       );
     });
   }
+});
+
+test.describe("docs", () => {
+  test("the unwrap anchor still exists — PendingUnwrapBanner links straight to it", async ({ page }) => {
+    await page.goto("/docs/known-limitations#unwrap");
+    await expect(page.locator("#unwrap")).toBeVisible();
+    await expect(page.locator("#unwrap").getByRole("heading", { level: 2 })).toContainText(/unwrap/i);
+  });
+
+  test("the sidebar marks the current page", async ({ page }) => {
+    await page.goto("/docs/privacy");
+    const current = page.getByRole("navigation", { name: "Docs" }).locator('[aria-current="page"]');
+    // Ở 320px sidebar gập vào <details>; ở desktop nó là <nav>. Chỉ kiểm nav
+    // khi nó hiện, còn không thì kiểm menu gập mang đúng tên trang.
+    if (await current.isVisible()) {
+      await expect(current).toHaveText("What is hidden, and what is not");
+    } else {
+      await expect(page.getByText(/Docs menu/)).toContainText("What is hidden, and what is not");
+    }
+  });
 });
 
 test.describe("keyboard", () => {

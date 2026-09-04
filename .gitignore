@@ -42,3 +42,5 @@ apps/web/demo-reels/
 apps/web/playwright-report/
 apps/web/blob-report/
 apps/web/.playwright/
+.vercel
+.env*

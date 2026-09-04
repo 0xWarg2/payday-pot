@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="face" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffe052"/><stop offset="0.62" stop-color="#ffd208"/><stop offset="1" stop-color="#b8990c"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="32%" cy="28%" r="45%">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.85"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="33.2" cy="34.0" rx="26" ry="24" fill="#b8990c"/>
+  <ellipse cx="32.7" cy="33.3" rx="26" ry="24" fill="#b8990c"/>
+  <ellipse cx="32.1" cy="32.7" rx="26" ry="24" fill="#b8990c"/>
+  <ellipse cx="31.6" cy="32.0" rx="26" ry="24" fill="#b8990c"/>
+  <ellipse cx="31.1" cy="31.3" rx="26" ry="24" fill="#d0ac0a"/>
+  <ellipse cx="30.5" cy="30.7" rx="26" ry="24" fill="#d0ac0a"/>
+  <ellipse cx="30" cy="30" rx="26" ry="24" fill="url(#face)"/>
+  <ellipse cx="30" cy="30" rx="22.4" ry="20.6" fill="none" stroke="#fff2b5" stroke-width="2.6"/>
+  <ellipse cx="30" cy="30" rx="20.8" ry="19.1" fill="none" stroke="#d0ac0a" stroke-width="0.9"/>
+  <text x="30" y="30" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600" font-size="27" fill="#463f11">¢</text>
+  <ellipse cx="30" cy="30" rx="26" ry="24" fill="url(#shine)"/>
+</svg>

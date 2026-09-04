@@ -51,7 +51,7 @@ export function PrivateEntryCard({
         <div>
           <dt className="text-draw-fg-muted text-[13px]">Savings in the pool</dt>
           <dd className="mt-1.5">
-            <ConfidentialValue view={principal} label="Your savings" size="md" />
+            <ConfidentialValue view={principal} label="Your savings" size="md" surface="draw" />
             {principal.kind === "revealed" ? (
               <span className="text-draw-fg-muted ml-2 text-[14px] font-normal">USDC</span>
             ) : null}
@@ -60,7 +60,7 @@ export function PrivateEntryCard({
         <div>
           <dt className="text-draw-fg-muted text-[13px]">Weight in this round</dt>
           <dd className="mt-1.5">
-            <ConfidentialValue view={weight} label="Your weight" size="md" />
+            <ConfidentialValue view={weight} label="Your weight" size="md" surface="draw" />
           </dd>
         </div>
       </dl>
@@ -71,7 +71,7 @@ export function PrivateEntryCard({
             Nothing is stored for this wallet yet — which is not the same as holding zero.
           </p>
         ) : flight ? (
-          <RevealPhaseLine phase={flight.phase} />
+          <RevealPhaseLine phase={flight.phase} surface="draw" />
         ) : anyRevealed ? (
           <div className="flex flex-wrap items-center gap-3">
             <DrawButton variant="secondary" onClick={onHide}>
