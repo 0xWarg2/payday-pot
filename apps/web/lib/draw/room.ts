@@ -80,13 +80,33 @@ export function depositsClosed(view: EpochView, now: bigint | null): boolean {
 /**
  * Nhãn giai đoạn dùng chung cho dashboard và draw room. Một bản, không hai:
  * hai chỗ từng nói hai câu khác nhau cho cùng một `phase` onchain.
+ *
+ * Không export: `phase` một mình không đủ để đặt tên giai đoạn (xem
+ * `depositsClosed`). Mọi chỗ hiển thị đi qua `phaseLabel(view, now)`.
  */
-export const PHASE_LABEL: Record<EpochView["phase"], string> = {
+const PHASE_LABEL: Record<EpochView["phase"], string> = {
   Open: "Open — deposits still count",
   Snapshotting: "Closing — weights freezing",
   Drawing: "Drawing — scanning the pool",
   Settled: "Settled — result sealed",
 };
+
+/** Hết giờ, phase onchain vẫn Open vì chưa ai gọi `beginSnapshot()`. */
+const PHASE_LABEL_CLOSED_WAITING = "Closed — waiting to freeze weights";
+
+/**
+ * Câu subtitle của một vòng, khớp với `drawTimeline` từng chữ.
+ *
+ * Header từng in `PHASE_LABEL[phase]` thẳng, nên khoảng giữa lúc hết giờ và
+ * lúc keeper gọi `beginSnapshot()` nó nói "deposits still count" trong khi
+ * timeline ngay dưới nói "Deposits are closed." Cùng một màn hình, hai câu
+ * trái nhau — và deposit lúc đó revert thật (PayDayPot.sol:260). Cả hai giờ
+ * đọc cùng một `depositsClosed`, nên không thể lệch nhau nữa.
+ */
+export function phaseLabel(view: EpochView, now: bigint | null): string {
+  if (view.phase === "Open" && depositsClosed(view, now)) return PHASE_LABEL_CLOSED_WAITING;
+  return PHASE_LABEL[view.phase];
+}
 
 export function drawTimeline(view: EpochView, now: bigint | null): DrawStage[] {
   const closed = depositsClosed(view, now);

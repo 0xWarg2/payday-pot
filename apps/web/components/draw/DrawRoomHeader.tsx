@@ -6,7 +6,7 @@ import { Words } from "@/components/motion/Words";
 
 import { EncryptedDrawOrb } from "./EncryptedDrawOrb";
 import { DrawPublicBadge } from "./DrawSurface";
-import { PHASE_LABEL } from "@/lib/draw/room";
+import { depositsClosed, phaseLabel } from "@/lib/draw/room";
 import { formatAbsolute, formatAmount } from "@/lib/format";
 
 /**
@@ -24,14 +24,20 @@ import { formatAbsolute, formatAmount } from "@/lib/format";
  */
 export function DrawRoomHeader({
   view,
+  now,
   isCurrent,
   paused,
 }: {
   view: EpochView;
+  /** Giây unix của client, `null` trước khi mount — cùng nguồn với timeline bên dưới. */
+  now: bigint | null;
   isCurrent: boolean;
   paused: boolean;
 }) {
   const previous = view.epochId > 1n ? view.epochId - 1n : null;
+  // Cùng một hàm với mốc "Round open" trong timeline: subtitle và dòng
+  // "Deposits close/closed" không được phép kể một câu chuyện khác.
+  const closed = depositsClosed(view, now);
 
   return (
     <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -55,7 +61,7 @@ export function DrawRoomHeader({
         </div>
 
         <p className="text-draw-fg-muted mt-1 text-[15px]" data-testid="draw-phase">
-          {PHASE_LABEL[view.phase]}
+          {phaseLabel(view, now)}
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-3">
@@ -72,7 +78,9 @@ export function DrawRoomHeader({
               <span className="text-draw-fg-muted ml-2 text-[15px]">USDC</span>
             </p>
           </div>
-          <p className="text-draw-fg-muted text-[12px]">Deposits closed {formatAbsolute(view.end)}</p>
+          <p className="text-draw-fg-muted text-[12px]">
+            {closed ? "Deposits closed" : "Deposits close"} {formatAbsolute(view.end)}
+          </p>
         </div>
 
         <p className="text-draw-fg-muted mt-3 max-w-[64ch] text-[13px] leading-relaxed">

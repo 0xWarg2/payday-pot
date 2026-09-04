@@ -19,7 +19,7 @@ import { HIDDEN_HANDLE, MAX_BATCH_STEPS, type EpochView, type PotState } from "@
 
 import { KeeperPanel } from "@/components/draw/KeeperPanel";
 import { SealedResultCard } from "@/components/draw/SealedResultCard";
-import { claimGate, drawTimeline, keeperState, sealedResult, type DrawStageId } from "@/lib/draw/room";
+import { claimGate, drawTimeline, keeperState, phaseLabel, sealedResult, type DrawStageId } from "@/lib/draw/room";
 import type { ConfidentialView } from "@/lib/format";
 
 const START = 1_800_000_000n;
@@ -47,6 +47,43 @@ function statusOf(stages: ReturnType<typeof drawTimeline>, id: DrawStageId) {
 }
 
 /* ------------------------------------------------------------------ */
+
+describe("phaseLabel — subtitle nói cùng một câu với timeline", () => {
+  it("còn giờ: deposits still count", () => {
+    expect(phaseLabel(epoch(), END - 100n)).toBe("Open — deposits still count");
+  });
+
+  it("hết giờ mà phase vẫn Open: nói đã đóng, không nói 'deposits still count'", () => {
+    // Đây là bug thật trên màn hình: header "Open — deposits still count" ngay
+    // trên timeline "Round open · done / Deposits are closed." Deposit lúc này
+    // revert (PayDayPot.sol:260), nên câu đúng là câu của timeline.
+    expect(phaseLabel(epoch(), END)).toBe("Closed — waiting to freeze weights");
+    expect(phaseLabel(epoch(), END)).not.toMatch(/still count/);
+  });
+
+  it("`now === null` không kết luận đã đóng", () => {
+    expect(phaseLabel(epoch(), null)).toBe("Open — deposits still count");
+  });
+
+  it("các phase sau Open không phụ thuộc giờ", () => {
+    for (const now of [null, START, END + 10n]) {
+      expect(phaseLabel(epoch({ phase: "Snapshotting" }), now)).toBe("Closing — weights freezing");
+      expect(phaseLabel(epoch({ phase: "Drawing" }), now)).toBe("Drawing — scanning the pool");
+      expect(phaseLabel(epoch({ phase: "Settled" }), now)).toBe("Settled — result sealed");
+    }
+  });
+
+  it("bất biến: subtitle nói 'still count' ⇔ mốc Round open còn active", () => {
+    const phases = ["Open", "Snapshotting", "Drawing", "Settled"] as const;
+    for (const phase of phases) {
+      for (const now of [null, END - 1n, END, END + 86_400n]) {
+        const view = epoch({ phase });
+        const stillOpen = /still count/.test(phaseLabel(view, now));
+        expect(stillOpen).toBe(statusOf(drawTimeline(view, now), "open") === "active");
+      }
+    }
+  });
+});
 
 describe("drawTimeline — vẽ lại cursor, không kể chuyện", () => {
   it("mở round: mốc open đang chạy, phần còn lại chưa tới", () => {

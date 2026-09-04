@@ -138,7 +138,7 @@ function Room({
 
   return (
     <div className="flex flex-col gap-6">
-      <DrawRoomHeader view={view} isCurrent={isCurrent} paused={isCurrent ? load.state.paused : false} />
+      <DrawRoomHeader view={view} now={now} isCurrent={isCurrent} paused={isCurrent ? load.state.paused : false} />
 
       <Tabs value={tab} onChange={setTab} />
 

@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { WalletGate } from "@/components/guards/WalletGate";
 import { EncryptedBadge } from "@/components/ui/Card";
 import { NoticeBanner } from "@/components/ui/ErrorPanel";
+import { depositsClosed } from "@/lib/draw/room";
 import { potReadsStore } from "@/lib/pot/reads";
 import { useStore } from "@/lib/store/external-store";
+import { useNow } from "@/lib/use-now";
 import { AssetsHelper } from "./AssetsHelper";
 import { ClaimPanel } from "./ClaimPanel";
 import { HistoryPanel } from "./HistoryPanel";
@@ -49,8 +51,13 @@ export function SavingsTabs() {
     return () => window.removeEventListener("hashchange", apply);
   }, []);
 
+  const now = useNow();
   const paused = reads.state?.paused ?? false;
-  const depositsClosed = reads.state !== null && reads.state.phase !== "Open";
+  // Cùng guard với contract và với preflight (`phase == Open` VÀ `now < end`):
+  // hết giờ mà chưa ai gọi `beginSnapshot()` thì form deposit chỉ dẫn tới một
+  // tx revert. Trước mount (`now === null`) không đoán là đã đóng.
+  const closed =
+    reads.state !== null && depositsClosed(reads.state, now === null ? null : BigInt(Math.floor(now / 1000)));
 
   return (
     <div className="flex flex-col gap-5">
@@ -87,11 +94,11 @@ export function SavingsTabs() {
       <WalletGate>
         {tab === "deposit" ? (
           <section role="tabpanel" aria-label="Deposit" className="flex flex-col gap-5">
-            {depositsClosed ? (
+            {closed ? (
               <NoticeBanner
                 tone="warning"
                 title="This round has stopped taking deposits"
-                detail="The round is being settled. Your savings stay yours and can be withdrawn at any point — a new round opens after this one finishes."
+                detail="Its deposit window has closed and it is being settled. Your savings stay yours and can be withdrawn at any point — a new round opens after this one finishes."
               />
             ) : (
               <>
